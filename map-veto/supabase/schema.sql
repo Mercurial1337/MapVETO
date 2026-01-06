@@ -219,31 +219,31 @@ CREATE TRIGGER trigger_update_match_state_timestamp
 CREATE OR REPLACE FUNCTION create_match_state_and_links()
 RETURNS TRIGGER AS $$
 DECLARE
-    pool_id UUID;
-    map_ids JSONB;
+    v_pool_id UUID;
+    v_map_ids JSONB;
 BEGIN
     -- Get the map pool for this match's tournament or use default
-    SELECT mp.id INTO pool_id
+    SELECT mp.id INTO v_pool_id
     FROM tournaments t
     JOIN map_pools mp ON mp.id = t.map_pool_id
     WHERE t.id = NEW.tournament_id;
     
     -- If no tournament pool, get default pool for the game
-    IF pool_id IS NULL THEN
-        SELECT mp.id INTO pool_id
+    IF v_pool_id IS NULL THEN
+        SELECT mp.id INTO v_pool_id
         FROM veto_templates vt
         JOIN map_pools mp ON mp.game_id = vt.game_id AND mp.is_default = true
         WHERE vt.id = NEW.veto_template_id;
     END IF;
     
     -- Get all map IDs from the pool
-    SELECT COALESCE(jsonb_agg(pm.map_id ORDER BY pm.display_order), '[]'::jsonb) INTO map_ids
+    SELECT COALESCE(jsonb_agg(pm.map_id ORDER BY pm.display_order), '[]'::jsonb) INTO v_map_ids
     FROM pool_maps pm
-    WHERE pm.pool_id = pool_id;
+    WHERE pm.pool_id = v_pool_id;
     
     -- Create match state
     INSERT INTO match_state (match_id, current_step, current_turn, available_maps)
-    VALUES (NEW.id, 0, 'team_a', map_ids);
+    VALUES (NEW.id, 0, 'team_a', v_map_ids);
     
     -- Create magic links
     INSERT INTO match_links (match_id, link_type) VALUES
