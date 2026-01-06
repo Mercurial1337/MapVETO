@@ -100,7 +100,7 @@ CREATE TABLE matches (
     team_b_name VARCHAR(100) NOT NULL,
     team_b_logo TEXT,
     format VARCHAR(10) NOT NULL CHECK (format IN ('bo1', 'bo3', 'bo5')),
-    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'coin_toss', 'in_progress', 'completed', 'cancelled')),
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'coin_toss', 'side_selection', 'in_progress', 'completed', 'cancelled')),
     coin_toss_winner VARCHAR(10) CHECK (coin_toss_winner IN ('team_a', 'team_b')),
     scheduled_at TIMESTAMPTZ,
     started_at TIMESTAMPTZ,
