@@ -3,5 +3,6 @@ export {
     useRealtime,
     useMatchData,
     useVetoActions,
-    useConnectionStatus
+    useConnectionStatus,
+    useUserRole
 } from './RealtimeProvider';

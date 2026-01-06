@@ -12,10 +12,15 @@ import { createClient } from '@/lib/supabase/client';
 import type { MatchState, Match, VetoActor, SideChoice } from '@/types';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
+type UserRole = 'team_a' | 'team_b' | 'observer' | null;
+
 interface RealtimeContextValue {
     // Match data
     match: Match | null;
     state: MatchState | null;
+
+    // User role based on token
+    userRole: UserRole;
 
     // Connection status
     isConnected: boolean;
@@ -47,13 +52,14 @@ interface RealtimeProviderProps {
 export function RealtimeProvider({ matchId, token, children }: RealtimeProviderProps) {
     const [match, setMatch] = useState<Match | null>(null);
     const [state, setState] = useState<MatchState | null>(null);
+    const [userRole, setUserRole] = useState<UserRole>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const supabase = createClient();
 
-    // Fetch initial data
+    // Fetch initial data and user role
     const fetchData = useCallback(async () => {
         try {
             // Fetch match and state
@@ -74,13 +80,26 @@ export function RealtimeProvider({ matchId, token, children }: RealtimeProviderP
 
             setMatch(matchData);
             setState(matchData.match_state);
+
+            // Fetch user role from token
+            const { data: linkData } = await supabase
+                .from('match_links')
+                .select('link_type')
+                .eq('token', token)
+                .eq('match_id', matchId)
+                .single();
+
+            if (linkData) {
+                setUserRole(linkData.link_type as UserRole);
+            }
+
             setError(null);
         } catch (err) {
             setError('Failed to fetch match data');
         } finally {
             setIsLoading(false);
         }
-    }, [matchId, supabase]);
+    }, [matchId, token, supabase]);
 
     // Subscribe to realtime updates
     useEffect(() => {
@@ -206,6 +225,7 @@ export function RealtimeProvider({ matchId, token, children }: RealtimeProviderP
     const value: RealtimeContextValue = {
         match,
         state,
+        userRole,
         isConnected,
         isLoading,
         error,
@@ -231,8 +251,8 @@ export function useRealtime() {
 
 // Convenience hooks
 export function useMatchData() {
-    const { match, state, isLoading, error } = useRealtime();
-    return { match, state, isLoading, error };
+    const { match, state, isLoading, error, userRole } = useRealtime();
+    return { match, state, isLoading, error, userRole };
 }
 
 export function useVetoActions() {
@@ -282,4 +302,9 @@ export function useVetoActions() {
 export function useConnectionStatus() {
     const { isConnected, isLoading } = useRealtime();
     return { isConnected, isLoading };
+}
+
+export function useUserRole() {
+    const { userRole } = useRealtime();
+    return userRole;
 }

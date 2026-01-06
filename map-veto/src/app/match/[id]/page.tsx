@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams, useParams } from 'next/navigation';
-import { Suspense, useMemo, useEffect, useState } from 'react';
+import { Suspense, useMemo, useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { MapCard } from '@/components/match/MapCard';
 import { VetoTimeline, TurnIndicator } from '@/components/match/VetoTimeline';
@@ -27,7 +27,7 @@ const PLACEHOLDER_MAPS: GameMap[] = [
 ];
 
 function MatchVetoInterface() {
-    const { match, state, isLoading, error } = useMatchData();
+    const { match, state, isLoading, error, userRole } = useMatchData();
     const { banMap, pickMap, pickSide, coinToss, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
     const [isAdmin, setIsAdmin] = useState(false);
@@ -67,11 +67,11 @@ function MatchVetoInterface() {
 
     const currentStepDef = state ? templateSteps[state.current_step] : null;
 
-    // Determine if it's user's turn (simplified - in production check against token)
-    const isMyTurn = (turn: VetoActor | null) => {
-        // This would check against the user's token-derived team
-        return turn === 'team_a'; // Placeholder
-    };
+    // Determine if it's user's turn based on their token role
+    const isMyTurn = useCallback((turn: VetoActor | null) => {
+        if (!userRole || userRole === 'observer') return false;
+        return turn === userRole;
+    }, [userRole]);
 
     // Determine map states
     const mapStates = useMemo(() => {
