@@ -59,13 +59,12 @@ export async function POST(request: NextRequest) {
         crypto.getRandomValues(randomBytes);
         const winner: VetoActor = randomBytes[0] % 2 === 0 ? 'team_a' : 'team_b';
 
-        // Update match
+        // Update match - go to side_selection where winner chooses position
         const { error: updateError } = await supabase
             .from('matches')
             .update({
                 coin_toss_winner: winner,
-                status: 'in_progress',
-                started_at: new Date().toISOString(),
+                status: 'side_selection',
             })
             .eq('id', match_id);
 

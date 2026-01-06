@@ -93,7 +93,7 @@ export interface Tournament {
   created_at: string;
 }
 
-export type MatchStatus = 'pending' | 'coin_toss' | 'in_progress' | 'completed' | 'cancelled';
+export type MatchStatus = 'pending' | 'coin_toss' | 'side_selection' | 'in_progress' | 'completed' | 'cancelled';
 
 export interface Match {
   id: string;

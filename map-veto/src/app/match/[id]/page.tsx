@@ -6,9 +6,10 @@ import { motion } from 'framer-motion';
 import { MapCard } from '@/components/match/MapCard';
 import { VetoTimeline, TurnIndicator } from '@/components/match/VetoTimeline';
 import { CoinTossModal } from '@/components/match/CoinTossModal';
+import { PositionSelectionModal } from '@/components/match/PositionSelectionModal';
 import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus } from '@/lib/realtime';
 import { createClient } from '@/lib/supabase/client';
-import type { MapCardState, GameMap, VetoStep, VetoActor, Match, VetoTemplate } from '@/types';
+import type { MapCardState, VetoStep, VetoActor, Match, VetoTemplate } from '@/types';
 
 // Extended match type that includes joined data from Supabase
 interface MatchWithTemplate extends Omit<Match, 'coin_toss_winner'> {
@@ -16,7 +17,12 @@ interface MatchWithTemplate extends Omit<Match, 'coin_toss_winner'> {
     coin_toss_winner?: VetoActor | null;
 }
 
-function MatchVetoInterface() {
+interface MatchVetoInterfaceProps {
+    token: string;
+    matchId: string;
+}
+
+function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     const { match, state, maps, isLoading, error, userRole } = useMatchData();
     const { banMap, pickMap, pickSide, coinToss, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
@@ -109,6 +115,9 @@ function MatchVetoInterface() {
 
     // Show coin toss modal
     const showCoinToss = match?.status === 'coin_toss';
+
+    // Show position selection modal (after coin toss, winner chooses)
+    const showPositionSelection = match?.status === 'side_selection';
 
     // Loading state
     if (isLoading) {
@@ -256,6 +265,17 @@ function MatchVetoInterface() {
                 onFlip={coinToss}
             />
 
+            {/* Position Selection Modal */}
+            <PositionSelectionModal
+                isOpen={showPositionSelection}
+                teamAName={match.team_a_name}
+                teamBName={match.team_b_name}
+                coinTossWinner={coinTossWinner || null}
+                userRole={userRole}
+                token={token}
+                matchId={matchId}
+            />
+
             {/* Completed Banner */}
             {state?.is_complete && (
                 <motion.div
@@ -296,7 +316,7 @@ function MatchPageContent() {
 
     return (
         <RealtimeProvider matchId={matchId} token={token}>
-            <MatchVetoInterface />
+            <MatchVetoInterface token={token} matchId={matchId} />
         </RealtimeProvider>
     );
 }
