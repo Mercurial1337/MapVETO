@@ -82,12 +82,11 @@ export async function POST(request: NextRequest) {
         // If winner picks second, the other team is first_picker
         const firstPicker = pick_first ? actingTeam : (actingTeam === 'team_a' ? 'team_b' : 'team_a');
 
-        // Update match with position choice and start the veto
+        // Update match status to in_progress
         const { error: updateError } = await supabase
             .from('matches')
             .update({
                 status: 'in_progress',
-                first_picker: firstPicker,
                 started_at: new Date().toISOString(),
             })
             .eq('id', match_id);
