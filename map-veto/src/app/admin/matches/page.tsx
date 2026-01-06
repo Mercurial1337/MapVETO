@@ -1,37 +1,88 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { createClient } from '@/lib/supabase/client';
 
 interface Match {
     id: string;
-    teamA: string;
-    teamB: string;
+    team_a_name: string;
+    team_b_name: string;
     format: string;
     status: 'pending' | 'coin_toss' | 'in_progress' | 'completed' | 'cancelled';
-    scheduledAt: string;
-    createdAt: string;
+    scheduled_at: string | null;
+    created_at: string;
 }
 
-const MOCK_MATCHES: Match[] = [
-    { id: '1', teamA: 'Fnatic', teamB: 'Sentinels', format: 'bo3', status: 'in_progress', scheduledAt: '2026-01-06T14:00', createdAt: '2026-01-05' },
-    { id: '2', teamA: 'Cloud9', teamB: 'NRG', format: 'bo3', status: 'pending', scheduledAt: '2026-01-06T18:00', createdAt: '2026-01-05' },
-    { id: '3', teamA: 'Team Liquid', teamB: 'DRX', format: 'bo5', status: 'completed', scheduledAt: '2026-01-05T20:00', createdAt: '2026-01-04' },
-    { id: '4', teamA: '100 Thieves', teamB: 'LOUD', format: 'bo3', status: 'pending', scheduledAt: '2026-01-07T16:00', createdAt: '2026-01-06' },
-    { id: '5', teamA: 'G2', teamB: 'Heretics', format: 'bo3', status: 'cancelled', scheduledAt: '2026-01-06T12:00', createdAt: '2026-01-05' },
-    { id: '6', teamA: 'NRG', teamB: 'Sentinels', format: 'bo3', status: 'completed', scheduledAt: '2026-01-04T20:00', createdAt: '2026-01-03' },
-];
+interface MatchLinks {
+    team_a: string;
+    team_b: string;
+    observer: string;
+}
 
 export default function MatchesPage() {
+    const [matches, setMatches] = useState<Match[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedMatchLinks, setSelectedMatchLinks] = useState<{ matchId: string; links: MatchLinks } | null>(null);
+    const [loadingLinks, setLoadingLinks] = useState<string | null>(null);
 
-    const filteredMatches = MOCK_MATCHES.filter(match => {
+    const supabase = createClient();
+
+    useEffect(() => {
+        fetchMatches();
+    }, []);
+
+    const fetchMatches = async () => {
+        setIsLoading(true);
+        const { data, error } = await supabase
+            .from('matches')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (!error && data) {
+            setMatches(data);
+        }
+        setIsLoading(false);
+    };
+
+    const fetchMatchLinks = async (matchId: string) => {
+        setLoadingLinks(matchId);
+        const { data, error } = await supabase
+            .from('match_links')
+            .select('link_type, token')
+            .eq('match_id', matchId);
+
+        if (!error && data) {
+            const baseUrl = window.location.origin;
+            const links: MatchLinks = {
+                team_a: '',
+                team_b: '',
+                observer: '',
+            };
+            data.forEach(link => {
+                const url = `${baseUrl}/match/${matchId}?token=${link.token}`;
+                if (link.link_type === 'team_a') links.team_a = url;
+                else if (link.link_type === 'team_b') links.team_b = url;
+                else if (link.link_type === 'observer') links.observer = url;
+            });
+            setSelectedMatchLinks({ matchId, links });
+        }
+        setLoadingLinks(null);
+    };
+
+    const copyToClipboard = async (text: string, label: string) => {
+        await navigator.clipboard.writeText(text);
+        alert(`${label} link copied!`);
+    };
+
+    const filteredMatches = matches.filter(match => {
         if (filter !== 'all' && match.status !== filter) return false;
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
-            return match.teamA.toLowerCase().includes(query) || match.teamB.toLowerCase().includes(query);
+            return match.team_a_name.toLowerCase().includes(query) || match.team_b_name.toLowerCase().includes(query);
         }
         return true;
     });
@@ -51,6 +102,18 @@ export default function MatchesPage() {
         );
     };
 
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center py-20">
+                <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    className="w-8 h-8 border-4 border-white/20 border-t-purple-500 rounded-full"
+                />
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -63,13 +126,13 @@ export default function MatchesPage() {
             {/* Filters */}
             <div className="glass rounded-xl p-4 flex flex-wrap items-center gap-4">
                 <div className="flex gap-2">
-                    {['all', 'pending', 'in_progress', 'completed', 'cancelled'].map((status) => (
+                    {['all', 'pending', 'coin_toss', 'in_progress', 'completed', 'cancelled'].map((status) => (
                         <button
                             key={status}
                             onClick={() => setFilter(status)}
                             className={`px-4 py-2 rounded-lg text-sm transition-colors ${filter === status
-                                    ? 'bg-purple-500 text-white'
-                                    : 'bg-white/10 text-white/60 hover:bg-white/20'
+                                ? 'bg-purple-500 text-white'
+                                : 'bg-white/10 text-white/60 hover:bg-white/20'
                                 }`}
                         >
                             {status === 'all' ? 'All' : status.replace('_', ' ')}
@@ -86,6 +149,53 @@ export default function MatchesPage() {
                 />
             </div>
 
+            {/* Links Modal */}
+            {selectedMatchLinks && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+                    onClick={() => setSelectedMatchLinks(null)}
+                >
+                    <motion.div
+                        initial={{ scale: 0.9 }}
+                        animate={{ scale: 1 }}
+                        className="glass rounded-2xl p-6 max-w-lg w-full mx-4"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-xl font-bold text-white mb-4">Match Links</h3>
+                        <div className="space-y-3">
+                            {[
+                                { label: 'Team A', key: 'team_a' as const, color: 'red' },
+                                { label: 'Team B', key: 'team_b' as const, color: 'blue' },
+                                { label: 'Observer', key: 'observer' as const, color: 'purple' },
+                            ].map(({ label, key, color }) => (
+                                <div key={key} className={`p-3 bg-${color}-500/10 border border-${color}-500/20 rounded-lg`}>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className={`text-${color}-400 font-medium text-sm`}>{label}</span>
+                                        <button
+                                            onClick={() => copyToClipboard(selectedMatchLinks.links[key], label)}
+                                            className={`text-xs px-2 py-1 bg-${color}-500/20 hover:bg-${color}-500/30 rounded text-${color}-300`}
+                                        >
+                                            Copy
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-white/50 font-mono break-all">
+                                        {selectedMatchLinks.links[key]}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                        <button
+                            onClick={() => setSelectedMatchLinks(null)}
+                            className="mt-4 w-full py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+                        >
+                            Close
+                        </button>
+                    </motion.div>
+                </motion.div>
+            )}
+
             {/* Matches List */}
             <div className="glass rounded-2xl overflow-hidden">
                 <table className="w-full">
@@ -94,7 +204,7 @@ export default function MatchesPage() {
                             <th className="px-6 py-4 font-medium">Match</th>
                             <th className="px-6 py-4 font-medium">Format</th>
                             <th className="px-6 py-4 font-medium">Status</th>
-                            <th className="px-6 py-4 font-medium">Scheduled</th>
+                            <th className="px-6 py-4 font-medium">Created</th>
                             <th className="px-6 py-4 font-medium">Actions</th>
                         </tr>
                     </thead>
@@ -107,9 +217,9 @@ export default function MatchesPage() {
                             >
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-white font-medium">{match.teamA}</span>
+                                        <span className="text-white font-medium">{match.team_a_name}</span>
                                         <span className="text-white/40">vs</span>
-                                        <span className="text-white font-medium">{match.teamB}</span>
+                                        <span className="text-white font-medium">{match.team_b_name}</span>
                                     </div>
                                 </td>
                                 <td className="px-6 py-4">
@@ -119,29 +229,25 @@ export default function MatchesPage() {
                                     {getStatusBadge(match.status)}
                                 </td>
                                 <td className="px-6 py-4 text-white/50 text-sm">
-                                    {new Date(match.scheduledAt).toLocaleString()}
+                                    {new Date(match.created_at).toLocaleDateString()}
                                 </td>
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-2">
-                                        <Link
-                                            href={`/match/${match.id}`}
-                                            target="_blank"
-                                            className="px-3 py-1 text-xs bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+                                        <button
+                                            onClick={() => fetchMatchLinks(match.id)}
+                                            disabled={loadingLinks === match.id}
+                                            className="px-3 py-1 text-xs bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-300 transition-colors disabled:opacity-50"
                                         >
-                                            View
-                                        </Link>
-                                        <button className="px-3 py-1 text-xs bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-300 transition-colors">
-                                            Links
+                                            {loadingLinks === match.id ? '...' : 'Links'}
                                         </button>
-                                        {match.status === 'pending' && (
-                                            <button className="px-3 py-1 text-xs bg-green-500/20 hover:bg-green-500/30 rounded-lg text-green-300 transition-colors">
-                                                Start
-                                            </button>
-                                        )}
-                                        {match.status === 'in_progress' && (
-                                            <button className="px-3 py-1 text-xs bg-red-500/20 hover:bg-red-500/30 rounded-lg text-red-300 transition-colors">
-                                                Reset
-                                            </button>
+                                        {(match.status === 'in_progress' || match.status === 'coin_toss' || match.status === 'completed') && (
+                                            <a
+                                                href={`/match/${match.id}?token=observer`}
+                                                target="_blank"
+                                                className="px-3 py-1 text-xs bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+                                            >
+                                                View
+                                            </a>
                                         )}
                                     </div>
                                 </td>
@@ -152,7 +258,7 @@ export default function MatchesPage() {
 
                 {filteredMatches.length === 0 && (
                     <div className="p-12 text-center text-white/40">
-                        No matches found
+                        {matches.length === 0 ? 'No matches yet. Create your first match!' : 'No matches found'}
                     </div>
                 )}
             </div>
