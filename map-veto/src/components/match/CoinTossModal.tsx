@@ -8,8 +8,8 @@ interface CoinTossModalProps {
     isOpen: boolean;
     teamAName: string;
     teamBName: string;
-    onComplete: (winner: VetoActor) => void;
-    autoFlip?: boolean;
+    isAdmin?: boolean;
+    onFlip?: () => Promise<VetoActor | null>;
 }
 
 function cn(...classes: (string | boolean | undefined)[]) {
@@ -20,40 +20,36 @@ export function CoinTossModal({
     isOpen,
     teamAName,
     teamBName,
-    onComplete,
-    autoFlip = false,
+    isAdmin = false,
+    onFlip,
 }: CoinTossModalProps) {
     const [isFlipping, setIsFlipping] = useState(false);
     const [result, setResult] = useState<VetoActor | null>(null);
     const [showResult, setShowResult] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const handleFlip = async () => {
-        if (isFlipping) return;
+        if (isFlipping || !onFlip) return;
 
         setIsFlipping(true);
         setShowResult(false);
+        setError(null);
 
-        // Simulate coin flip animation duration
+        // Start the animation
         await new Promise((resolve) => setTimeout(resolve, 2500));
 
-        // Determine winner (server should do this in production)
-        const winner: VetoActor = Math.random() > 0.5 ? 'team_a' : 'team_b';
-        setResult(winner);
-        setIsFlipping(false);
-        setShowResult(true);
+        // Call the server to get the actual result
+        const winner = await onFlip();
 
-        // Delay before closing
-        setTimeout(() => {
-            onComplete(winner);
-        }, 2000);
-    };
-
-    // Auto flip on mount if specified
-    useState(() => {
-        if (autoFlip && isOpen) {
-            setTimeout(handleFlip, 500);
+        if (winner) {
+            setResult(winner);
+            setShowResult(true);
+        } else {
+            setError('Failed to complete coin toss. Only admins can flip the coin.');
         }
-    });
+
+        setIsFlipping(false);
+    };
 
     return (
         <AnimatePresence>
@@ -183,9 +179,19 @@ export function CoinTossModal({
                             />
                         </div>
 
-                        {/* Result */}
+                        {/* Result / Button / Waiting */}
                         <AnimatePresence mode="wait">
-                            {showResult && result ? (
+                            {error ? (
+                                <motion.div
+                                    key="error"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="text-center"
+                                >
+                                    <div className="text-red-400 text-lg mb-4">{error}</div>
+                                </motion.div>
+                            ) : showResult && result ? (
                                 <motion.div
                                     key="result"
                                     initial={{ opacity: 0, scale: 0.5, y: 20 }}
@@ -206,7 +212,17 @@ export function CoinTossModal({
                                         🎉 Wins the Coin Toss!
                                     </div>
                                 </motion.div>
-                            ) : !isFlipping ? (
+                            ) : isFlipping ? (
+                                <motion.div
+                                    key="flipping"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="text-xl text-white/60 animate-pulse"
+                                >
+                                    Flipping...
+                                </motion.div>
+                            ) : isAdmin ? (
                                 <motion.button
                                     key="button"
                                     initial={{ opacity: 0 }}
@@ -228,13 +244,18 @@ export function CoinTossModal({
                                 </motion.button>
                             ) : (
                                 <motion.div
-                                    key="flipping"
+                                    key="waiting"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
-                                    className="text-xl text-white/60 animate-pulse"
+                                    className="text-center"
                                 >
-                                    Flipping...
+                                    <div className="text-xl text-white/60 mb-2">
+                                        ⏳ Waiting for admin to flip the coin...
+                                    </div>
+                                    <div className="text-sm text-white/40">
+                                        The match will start once the coin toss is complete
+                                    </div>
                                 </motion.div>
                             )}
                         </AnimatePresence>

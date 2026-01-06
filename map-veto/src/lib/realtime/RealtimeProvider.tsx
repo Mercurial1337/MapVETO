@@ -173,13 +173,14 @@ export function RealtimeProvider({ matchId, token, children }: RealtimeProviderP
         [matchId, token]
     );
 
-    // Perform coin toss
+    // Perform coin toss (admin only - uses cookie auth)
     const performCoinToss = useCallback(async (): Promise<VetoActor | null> => {
         try {
             const response = await fetch('/api/veto/coin-toss', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ match_id: matchId, token }),
+                credentials: 'include', // Include cookies for admin auth
+                body: JSON.stringify({ match_id: matchId }),
             });
 
             const data = await response.json();
@@ -194,7 +195,7 @@ export function RealtimeProvider({ matchId, token, children }: RealtimeProviderP
             setError('Network error');
             return null;
         }
-    }, [matchId, token]);
+    }, [matchId]);
 
     // Manual refresh
     const refresh = useCallback(async () => {

@@ -1,15 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createServiceClient, createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import type { VetoActor } from '@/types';
 
 const CoinTossSchema = z.object({
     match_id: z.string().uuid(),
-    token: z.string().uuid(),
 });
 
 export async function POST(request: NextRequest) {
     try {
+        // Check if user is authenticated (admin only)
+        const userClient = await createClient();
+        const { data: { user } } = await userClient.auth.getUser();
+
+        if (!user) {
+            return NextResponse.json(
+                { error: 'Admin authentication required to perform coin toss' },
+                { status: 401 }
+            );
+        }
+
         const body = await request.json();
 
         const validationResult = CoinTossSchema.safeParse(body);
@@ -20,30 +30,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { match_id, token } = validationResult.data;
+        const { match_id } = validationResult.data;
         const supabase = createServiceClient();
-
-        // Validate token - only team links can initiate coin toss
-        const { data: linkData, error: linkError } = await supabase
-            .from('match_links')
-            .select('link_type')
-            .eq('token', token)
-            .eq('match_id', match_id)
-            .single();
-
-        if (linkError || !linkData) {
-            return NextResponse.json(
-                { error: 'Invalid or expired token' },
-                { status: 401 }
-            );
-        }
-
-        if (linkData.link_type === 'observer') {
-            return NextResponse.json(
-                { error: 'Observers cannot initiate coin toss' },
-                { status: 403 }
-            );
-        }
 
         // Get match and verify status
         const { data: matchData, error: matchError } = await supabase

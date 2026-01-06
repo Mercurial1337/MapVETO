@@ -1,12 +1,13 @@
 'use client';
 
 import { useSearchParams, useParams } from 'next/navigation';
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { MapCard } from '@/components/match/MapCard';
 import { VetoTimeline, TurnIndicator } from '@/components/match/VetoTimeline';
 import { CoinTossModal } from '@/components/match/CoinTossModal';
 import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus } from '@/lib/realtime';
+import { createClient } from '@/lib/supabase/client';
 import type { MapCardState, GameMap, VetoStep, VetoActor, Match, VetoTemplate } from '@/types';
 
 // Extended match type that includes joined data from Supabase
@@ -29,6 +30,17 @@ function MatchVetoInterface() {
     const { match, state, isLoading, error } = useMatchData();
     const { banMap, pickMap, pickSide, coinToss, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    // Check if current user is an admin
+    useEffect(() => {
+        const checkAdmin = async () => {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            setIsAdmin(!!user);
+        };
+        checkAdmin();
+    }, []);
 
     // In production, maps come from match.veto_templates or map pool
     const maps = PLACEHOLDER_MAPS;
@@ -249,9 +261,8 @@ function MatchVetoInterface() {
                 isOpen={showCoinToss}
                 teamAName={match.team_a_name}
                 teamBName={match.team_b_name}
-                onComplete={async (winner) => {
-                    await coinToss();
-                }}
+                isAdmin={isAdmin}
+                onFlip={coinToss}
             />
 
             {/* Completed Banner */}
