@@ -288,6 +288,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                         teamAName={match.team_a_name}
                         teamBName={match.team_b_name}
                         mapNames={mapNames}
+                        vetoSteps={templateSteps}
+                        currentStep={state?.current_step || 0}
                     />
                 </div>
             </div>

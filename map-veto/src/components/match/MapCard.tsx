@@ -1,8 +1,25 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import type { MapCardState, SideChoice } from '@/types';
+
+// Map name to local image fallback
+const MAP_IMAGE_FALLBACKS: Record<string, string> = {
+    'Abyss': '/maps/valorant/Abyss.webp',
+    'Bind': '/maps/valorant/Bind.webp',
+    'Haven': '/maps/valorant/Haven.webp',
+    'Pearl': '/maps/valorant/Pearl.webp',
+    'Corrode': '/maps/valorant/Corrode.webp',
+    'Split': '/maps/valorant/Split.webp',
+    'Sunset': '/maps/valorant/Sunset.webp',
+    'Ascent': '/maps/valorant/Ascent.webp',
+    'Icebox': '/maps/valorant/Icebox.webp',
+    'Breeze': '/maps/valorant/Breeze.webp',
+    'Fracture': '/maps/valorant/Fracture.webp',
+    'Lotus': '/maps/valorant/Lotus.webp',
+};
 
 interface MapCardProps {
     map: {
@@ -37,6 +54,12 @@ export function MapCard({
     // We just need to make sure the map is not banned or already picked
     const isInteractive = canInteract && (state === 'available' || state === 'active');
 
+    // Use fallback image if needed
+    const [imgError, setImgError] = useState(false);
+    const imageUrl = imgError || !map.image_url
+        ? (MAP_IMAGE_FALLBACKS[map.name] || '/maps/valorant/default.webp')
+        : map.image_url;
+
     return (
         <motion.div
             layout
@@ -63,12 +86,13 @@ export function MapCard({
         >
             {/* Map Image */}
             <Image
-                src={map.image_url}
+                src={imageUrl}
                 alt={map.name}
                 fill
                 className="object-cover"
                 priority
                 sizes="(max-width: 768px) 140px, (max-width: 1024px) 160px, 200px"
+                onError={() => setImgError(true)}
             />
 
             {/* Gradient Overlays */}
