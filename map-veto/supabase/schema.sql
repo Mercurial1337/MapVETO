@@ -3,6 +3,18 @@
 -- PostgreSQL for Supabase
 -- =============================================
 
+-- RESET (Drop existing tables to start fresh)
+DROP TABLE IF EXISTS match_logs CASCADE;
+DROP TABLE IF EXISTS match_links CASCADE;
+DROP TABLE IF EXISTS match_state CASCADE;
+DROP TABLE IF EXISTS matches CASCADE;
+DROP TABLE IF EXISTS tournaments CASCADE;
+DROP TABLE IF EXISTS veto_templates CASCADE;
+DROP TABLE IF EXISTS pool_maps CASCADE;
+DROP TABLE IF EXISTS map_pools CASCADE;
+DROP TABLE IF EXISTS maps CASCADE;
+DROP TABLE IF EXISTS games CASCADE;
+
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 

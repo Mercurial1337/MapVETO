@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         if (matchError) {
             console.error('Match creation error:', matchError);
             return NextResponse.json(
-                { error: 'Failed to create match' },
+                { error: `Failed to create match: ${matchError.message}` },
                 { status: 500 }
             );
         }
