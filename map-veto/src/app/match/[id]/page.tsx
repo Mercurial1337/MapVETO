@@ -273,6 +273,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                                     teamColor={mapState.pickedBy === match.team_a_name ? '#ef4444' : mapState.pickedBy === match.team_b_name ? '#3b82f6' : '#8b5cf6'}
                                     canInteract={canInteract}
                                     onSelect={() => handleMapSelect(map.id)}
+                                    action={currentStepDef?.action}
                                 />
                             );
                         })}

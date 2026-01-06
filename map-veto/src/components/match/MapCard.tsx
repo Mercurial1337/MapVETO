@@ -34,6 +34,7 @@ interface MapCardProps {
     canInteract: boolean;
     onSelect?: () => void;
     mapNumber?: number;
+    action?: string;
 }
 
 function cn(...classes: (string | boolean | undefined)[]) {
@@ -49,6 +50,7 @@ export function MapCard({
     canInteract,
     onSelect,
     mapNumber,
+    action,
 }: MapCardProps) {
     // canInteract is already computed by the parent based on turn, map state, etc.
     // We just need to make sure the map is not banned or already picked
@@ -59,6 +61,10 @@ export function MapCard({
     const imageUrl = imgError || !map.image_url
         ? (MAP_IMAGE_FALLBACKS[map.name] || '/maps/valorant/default.webp')
         : map.image_url;
+
+    // Determine hover text
+    const hoverText = action === 'ban' ? 'Ban Map' : action === 'pick' ? 'Pick Map' : 'Select Map';
+    const hoverColor = action === 'ban' ? 'bg-red-500/80 border-red-400' : action === 'pick' ? 'bg-green-500/80 border-green-400' : 'bg-white/20 border-white/30';
 
     return (
         <motion.div
@@ -138,32 +144,35 @@ export function MapCard({
                     <motion.p
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-sm text-white/70 mt-1"
+                        className="text-[10px] md:text-xs text-white/80 font-medium"
                     >
                         Picked by {pickedBy}
                     </motion.p>
                 )}
+
+                {state === 'banned' && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -mt-8"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                        </svg>
+                    </motion.div>
+                )}
             </div>
 
-            {/* Banned Overlay with Icon */}
+            {/* Banned Overlay Stripe */}
             {state === 'banned' && (
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="absolute inset-0 flex items-center justify-center bg-black/50"
-                >
-                    <div className="relative w-12 h-12">
-                        {/* Circle */}
-                        <div className="absolute inset-0 rounded-full border-[3px] border-red-500/90" />
-                        {/* Diagonal Line */}
-                        <motion.div
-                            initial={{ rotate: 0, opacity: 0 }}
-                            animate={{ rotate: 45, opacity: 1 }}
-                            transition={{ delay: 0.2 }}
-                            className="absolute top-1/2 left-0 right-0 h-[3px] -translate-y-1/2 bg-red-500/90 rounded-full"
-                        />
-                    </div>
-                </motion.div>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <motion.div
+                        initial={{ rotate: 0, opacity: 0 }}
+                        animate={{ rotate: 45, opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="absolute top-1/2 left-0 right-0 h-[3px] -translate-y-1/2 bg-red-500/90 rounded-full"
+                    />
+                </div>
             )}
 
             {/* Side Badge */}
@@ -209,9 +218,12 @@ export function MapCard({
                     <motion.div
                         initial={{ scale: 0.8 }}
                         whileHover={{ scale: 1 }}
-                        className="px-6 py-3 bg-white/20 backdrop-blur-md rounded-full text-white font-semibold border border-white/30"
+                        className={cn(
+                            "px-6 py-3 backdrop-blur-md rounded-full text-white font-semibold border",
+                            hoverColor
+                        )}
                     >
-                        Select Map
+                        {hoverText}
                     </motion.div>
                 </motion.div>
             )}
