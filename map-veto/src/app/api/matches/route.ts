@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
         if (!templateId) {
             return NextResponse.json(
-                { error: 'No veto template found for this format' },
+                { error: 'No veto template found. Please run schema.sql in your Supabase SQL Editor to set up the database.' },
                 { status: 400 }
             );
         }
