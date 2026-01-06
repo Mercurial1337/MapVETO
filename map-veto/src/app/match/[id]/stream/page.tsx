@@ -8,13 +8,13 @@ import type { GameMap, VetoStep } from '@/types';
 
 // Mock data for demonstration
 const MOCK_MAPS: GameMap[] = [
-    { id: '1', game_id: 'val', name: 'Abyss', slug: 'abyss', image_url: 'https://images.unsplash.com/photo-1614851099175-e5b30eb6f696?w=400&h=225&fit=crop', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
-    { id: '2', game_id: 'val', name: 'Bind', slug: 'bind', image_url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=400&h=225&fit=crop', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
-    { id: '3', game_id: 'val', name: 'Haven', slug: 'haven', image_url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&h=225&fit=crop', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
-    { id: '4', game_id: 'val', name: 'Pearl', slug: 'pearl', image_url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=400&h=225&fit=crop', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
-    { id: '5', game_id: 'val', name: 'Corrode', slug: 'corrode', image_url: 'https://images.unsplash.com/photo-1509114397022-ed747cca3f65?w=400&h=225&fit=crop', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
-    { id: '6', game_id: 'val', name: 'Split', slug: 'split', image_url: 'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=400&h=225&fit=crop', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
-    { id: '7', game_id: 'val', name: 'Sunset', slug: 'sunset', image_url: 'https://images.unsplash.com/photo-1495616811223-4d98c6e9c869?w=400&h=225&fit=crop', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
+    { id: '1', game_id: 'val', name: 'Abyss', slug: 'abyss', image_url: '/maps/valorant/Abyss.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
+    { id: '2', game_id: 'val', name: 'Bind', slug: 'bind', image_url: '/maps/valorant/Bind.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
+    { id: '3', game_id: 'val', name: 'Haven', slug: 'haven', image_url: '/maps/valorant/Haven.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
+    { id: '4', game_id: 'val', name: 'Pearl', slug: 'pearl', image_url: '/maps/valorant/Pearl.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
+    { id: '5', game_id: 'val', name: 'Corrode', slug: 'corrode', image_url: '/maps/valorant/Corrode.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
+    { id: '6', game_id: 'val', name: 'Split', slug: 'split', image_url: '/maps/valorant/Split.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
+    { id: '7', game_id: 'val', name: 'Sunset', slug: 'sunset', image_url: '/maps/valorant/Sunset.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
 ];
 
 // Demo veto results
@@ -167,8 +167,8 @@ function StreamOverlayContent() {
                                 {/* Side Badge */}
                                 <div
                                     className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold uppercase ${result.side === 'attack'
-                                            ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                                            : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
+                                        ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
+                                        : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
                                         }`}
                                 >
                                     {result.side}
