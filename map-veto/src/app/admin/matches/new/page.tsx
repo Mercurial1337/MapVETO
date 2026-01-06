@@ -9,8 +9,16 @@ interface MatchFormData {
     teamALogo: string;
     teamBLogo: string;
     format: 'bo1' | 'bo3' | 'bo5';
-    tournamentId: string;
     scheduledAt: string;
+}
+
+interface CreatedMatch {
+    id: string;
+    links: {
+        team_a: { token: string; url: string };
+        team_b: { token: string; url: string };
+        observer: { token: string; url: string };
+    };
 }
 
 export default function NewMatchPage() {
@@ -20,40 +28,67 @@ export default function NewMatchPage() {
         teamALogo: '',
         teamBLogo: '',
         format: 'bo3',
-        tournamentId: '',
         scheduledAt: '',
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [createdMatch, setCreatedMatch] = useState<{
-        id: string;
-        links: { team_a: string; team_b: string; observer: string };
-    } | null>(null);
+    const [error, setError] = useState('');
+    const [createdMatch, setCreatedMatch] = useState<CreatedMatch | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
+        setError('');
 
-        // Simulate API call - in production, this would call /api/matches/create
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        try {
+            const response = await fetch('/api/matches', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    team_a_name: formData.teamAName,
+                    team_b_name: formData.teamBName,
+                    team_a_logo: formData.teamALogo || null,
+                    team_b_logo: formData.teamBLogo || null,
+                    format: formData.format,
+                    scheduled_at: formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null,
+                }),
+            });
 
-        // Mock response
-        const mockMatchId = crypto.randomUUID();
-        setCreatedMatch({
-            id: mockMatchId,
-            links: {
-                team_a: `${window.location.origin}/match/${mockMatchId}?token=${crypto.randomUUID()}`,
-                team_b: `${window.location.origin}/match/${mockMatchId}?token=${crypto.randomUUID()}`,
-                observer: `${window.location.origin}/match/${mockMatchId}?token=${crypto.randomUUID()}`,
-            },
-        });
+            const data = await response.json();
+
+            if (!response.ok) {
+                setError(data.error || 'Failed to create match');
+                setIsSubmitting(false);
+                return;
+            }
+
+            setCreatedMatch({
+                id: data.match.id,
+                links: data.links,
+            });
+        } catch {
+            setError('Network error. Please try again.');
+        }
 
         setIsSubmitting(false);
     };
 
-    const copyToClipboard = (text: string, label: string) => {
-        navigator.clipboard.writeText(text);
-        // In production, show a toast notification
-        alert(`${label} link copied!`);
+    const copyToClipboard = async (text: string, label: string) => {
+        try {
+            await navigator.clipboard.writeText(text);
+            // Could use a toast library here
+            alert(`${label} link copied!`);
+        } catch {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            alert(`${label} link copied!`);
+        }
     };
 
     if (createdMatch) {
@@ -76,20 +111,23 @@ export default function NewMatchPage() {
 
                     <div className="space-y-4">
                         <h2 className="text-lg font-semibold text-white mb-4">Magic Links</h2>
+                        <p className="text-sm text-white/50 mb-4">
+                            Share these unique links with each team. They can use them to participate in the veto.
+                        </p>
 
                         {/* Team A Link */}
                         <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
                             <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm font-medium text-red-400">Team A ({formData.teamAName})</span>
                                 <button
-                                    onClick={() => copyToClipboard(createdMatch.links.team_a, 'Team A')}
+                                    onClick={() => copyToClipboard(createdMatch.links.team_a.url, 'Team A')}
                                     className="text-xs px-3 py-1 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-red-300 transition-colors"
                                 >
                                     Copy
                                 </button>
                             </div>
                             <p className="text-xs text-white/50 font-mono break-all">
-                                {createdMatch.links.team_a}
+                                {createdMatch.links.team_a.url}
                             </p>
                         </div>
 
@@ -98,14 +136,14 @@ export default function NewMatchPage() {
                             <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm font-medium text-blue-400">Team B ({formData.teamBName})</span>
                                 <button
-                                    onClick={() => copyToClipboard(createdMatch.links.team_b, 'Team B')}
+                                    onClick={() => copyToClipboard(createdMatch.links.team_b.url, 'Team B')}
                                     className="text-xs px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg text-blue-300 transition-colors"
                                 >
                                     Copy
                                 </button>
                             </div>
                             <p className="text-xs text-white/50 font-mono break-all">
-                                {createdMatch.links.team_b}
+                                {createdMatch.links.team_b.url}
                             </p>
                         </div>
 
@@ -114,31 +152,42 @@ export default function NewMatchPage() {
                             <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm font-medium text-purple-400">Observer / Stream</span>
                                 <button
-                                    onClick={() => copyToClipboard(createdMatch.links.observer, 'Observer')}
+                                    onClick={() => copyToClipboard(createdMatch.links.observer.url, 'Observer')}
                                     className="text-xs px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-300 transition-colors"
                                 >
                                     Copy
                                 </button>
                             </div>
                             <p className="text-xs text-white/50 font-mono break-all">
-                                {createdMatch.links.observer}
+                                {createdMatch.links.observer.url}
                             </p>
                         </div>
                     </div>
 
                     <div className="mt-8 flex gap-4">
                         <button
-                            onClick={() => setCreatedMatch(null)}
+                            onClick={() => {
+                                setCreatedMatch(null);
+                                setFormData({
+                                    teamAName: '',
+                                    teamBName: '',
+                                    teamALogo: '',
+                                    teamBLogo: '',
+                                    format: 'bo3',
+                                    scheduledAt: '',
+                                });
+                            }}
                             className="flex-1 px-6 py-3 border border-white/20 rounded-xl text-white hover:bg-white/5 transition-colors"
                         >
                             Create Another
                         </button>
                         <a
-                            href={`/match/${createdMatch.id}`}
+                            href={createdMatch.links.observer.url}
                             target="_blank"
+                            rel="noopener noreferrer"
                             className="flex-1 btn-primary px-6 py-3 rounded-xl text-center"
                         >
-                            Open Match
+                            Open Match (Observer)
                         </a>
                     </div>
                 </div>
@@ -151,6 +200,12 @@ export default function NewMatchPage() {
             <h1 className="text-2xl font-bold text-white mb-6">Create New Match</h1>
 
             <form onSubmit={handleSubmit} className="glass rounded-2xl p-6 space-y-6">
+                {error && (
+                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
+                        {error}
+                    </div>
+                )}
+
                 {/* Teams Section */}
                 <div className="grid grid-cols-2 gap-6">
                     {/* Team A */}

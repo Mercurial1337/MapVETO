@@ -1,95 +1,115 @@
-import Link from 'next/link';
+'use client';
 
-export default function HomePage() {
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+
+export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const supabase = createClient();
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        setError(authError.message);
+        setIsLoading(false);
+        return;
+      }
+
+      router.push('/admin');
+    } catch {
+      setError('An unexpected error occurred');
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Hero Section */}
-      <header className="flex-1 flex flex-col items-center justify-center px-6 py-20">
-        <div className="text-center max-w-4xl mx-auto">
-          {/* Logo/Title */}
-          <h1 className="text-6xl md:text-8xl font-bold mb-6">
+    <div className="min-h-screen flex items-center justify-center px-6">
+      <div className="w-full max-w-md">
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <h1 className="text-5xl font-bold mb-2">
             <span className="gradient-text">MAP VETO</span>
           </h1>
+          <p className="text-white/50">Admin Portal</p>
+        </div>
 
-          <p className="text-xl md:text-2xl text-white/60 mb-12 max-w-2xl mx-auto">
-            Esports-grade map veto system with real-time synchronization for competitive gaming tournaments.
-          </p>
+        {/* Login Card */}
+        <div className="glass rounded-2xl p-8">
+          <h2 className="text-xl font-semibold text-white mb-6 text-center">
+            Sign in to continue
+          </h2>
 
-          {/* Feature Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-            <div className="glass rounded-2xl p-6 text-left">
-              <div className="text-3xl mb-3">🎮</div>
-              <h3 className="text-lg font-semibold text-white mb-2">Multi-Game Support</h3>
-              <p className="text-sm text-white/50">
-                Built for Valorant, extensible to CS2, CoD, and more.
-              </p>
+          <form onSubmit={handleLogin} className="space-y-6">
+            {error && (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm text-center">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm text-white/60 mb-2">
+                Email Address
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="admin@example.com"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition-colors"
+              />
             </div>
 
-            <div className="glass rounded-2xl p-6 text-left">
-              <div className="text-3xl mb-3">⚡</div>
-              <h3 className="text-lg font-semibold text-white mb-2">Real-time Sync</h3>
-              <p className="text-sm text-white/50">
-                Instant updates across all participants via WebSocket.
-              </p>
+            <div>
+              <label className="block text-sm text-white/60 mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition-colors"
+              />
             </div>
 
-            <div className="glass rounded-2xl p-6 text-left">
-              <div className="text-3xl mb-3">📺</div>
-              <h3 className="text-lg font-semibold text-white mb-2">Broadcast Ready</h3>
-              <p className="text-sm text-white/50">
-                OBS overlay support with transparent backgrounds.
-              </p>
-            </div>
-          </div>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/admin"
-              className="btn-primary px-8 py-4 text-lg rounded-xl"
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full btn-primary py-4 rounded-xl text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
             >
-              Admin Dashboard
-            </Link>
-
-            <Link
-              href="/demo"
-              className="px-8 py-4 text-lg rounded-xl border border-white/20 text-white hover:bg-white/10 transition-colors"
-            >
-              View Demo
-            </Link>
-          </div>
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full inline-block animate-spin" />
+                  Signing in...
+                </span>
+              ) : (
+                'Sign In'
+              )}
+            </button>
+          </form>
         </div>
-      </header>
 
-      {/* Supported Games */}
-      <section className="border-t border-white/10 py-12 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <p className="text-sm text-white/40 uppercase tracking-wider mb-6">
-            Supported Games
-          </p>
-          <div className="flex items-center justify-center gap-12">
-            <div className="text-white/60 hover:text-white transition-colors">
-              <span className="text-2xl font-bold">VALORANT</span>
-            </div>
-            <div className="text-white/30">
-              <span className="text-2xl font-bold">CS2</span>
-              <span className="text-xs ml-2 text-white/20">(Coming Soon)</span>
-            </div>
-            <div className="text-white/30">
-              <span className="text-2xl font-bold">CoD</span>
-              <span className="text-xs ml-2 text-white/20">(Coming Soon)</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-white/10 py-6 px-6">
-        <div className="max-w-4xl mx-auto flex items-center justify-between text-sm text-white/40">
-          <span>Map VETO Management System</span>
-          <span>Built for Esports</span>
-        </div>
-      </footer>
+        {/* Footer */}
+        <p className="text-center text-white/30 text-sm mt-8">
+          Map VETO Management System
+        </p>
+      </div>
     </div>
   );
 }

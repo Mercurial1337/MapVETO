@@ -1,17 +1,29 @@
+'use client';
+
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
 
 interface AdminLayoutProps {
     children: React.ReactNode;
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
+    const router = useRouter();
+
+    const handleLogout = async () => {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        router.push('/');
+    };
+
     return (
         <div className="min-h-screen flex">
             {/* Sidebar */}
             <aside className="w-64 bg-black/40 border-r border-white/10 flex flex-col">
                 {/* Logo */}
                 <div className="p-6 border-b border-white/10">
-                    <Link href="/" className="flex items-center gap-2">
+                    <Link href="/admin" className="flex items-center gap-2">
                         <span className="text-2xl font-bold gradient-text">VETO</span>
                         <span className="text-xs text-white/40 uppercase">Admin</span>
                     </Link>
@@ -40,29 +52,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         </li>
                         <li>
                             <Link
-                                href="/admin/tournaments"
+                                href="/admin/matches/new"
                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors"
                             >
-                                <span>🏆</span>
-                                <span>Tournaments</span>
-                            </Link>
-                        </li>
-                        <li>
-                            <Link
-                                href="/admin/maps"
-                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-                            >
-                                <span>🗺️</span>
-                                <span>Map Pools</span>
-                            </Link>
-                        </li>
-                        <li>
-                            <Link
-                                href="/admin/sync"
-                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors"
-                            >
-                                <span>🔄</span>
-                                <span>Google Sheets Sync</span>
+                                <span>➕</span>
+                                <span>Create Match</span>
                             </Link>
                         </li>
                         <li>
@@ -79,15 +73,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
                 {/* User Section */}
                 <div className="p-4 border-t border-white/10">
-                    <div className="flex items-center gap-3 px-4 py-3">
-                        <div className="w-8 h-8 rounded-full bg-purple-500/30 flex items-center justify-center text-sm">
-                            A
-                        </div>
-                        <div>
-                            <p className="text-sm text-white">Admin</p>
-                            <p className="text-xs text-white/40">admin@mapveto.io</p>
-                        </div>
-                    </div>
+                    <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-red-500/10 transition-colors"
+                    >
+                        <span>🚪</span>
+                        <span>Sign Out</span>
+                    </button>
                 </div>
             </aside>
 
@@ -99,9 +91,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         <h1 className="text-lg font-semibold text-white">Admin Dashboard</h1>
                     </div>
                     <div className="flex items-center gap-4">
-                        <button className="btn-primary text-sm px-4 py-2">
+                        <Link href="/admin/matches/new" className="btn-primary text-sm px-4 py-2">
                             + New Match
-                        </button>
+                        </Link>
                     </div>
                 </header>
 
