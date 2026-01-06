@@ -2,7 +2,7 @@
 
 import { useSearchParams, useParams } from 'next/navigation';
 import { Suspense, useMemo, useEffect, useState, useCallback } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MapCard } from '@/components/match/MapCard';
 import { VetoTimeline, TurnIndicator } from '@/components/match/VetoTimeline';
 import { CoinTossModal } from '@/components/match/CoinTossModal';
@@ -47,6 +47,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     const [isAdmin, setIsAdmin] = useState(false);
 
     // Check if current user is an admin
+    // Check if current user is an admin
     useEffect(() => {
         const checkAdmin = async () => {
             const supabase = createClient();
@@ -55,6 +56,16 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
         };
         checkAdmin();
     }, []);
+
+    // Completion banner logic
+    const [showCompletedBanner, setShowCompletedBanner] = useState(false);
+    useEffect(() => {
+        if (state?.is_complete) {
+            setShowCompletedBanner(true);
+            const timer = setTimeout(() => setShowCompletedBanner(false), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [state?.is_complete]);
 
     // Get the coin toss winner from match data
     const matchExt = match as MatchWithTemplate | null;
@@ -336,15 +347,26 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             />
 
             {/* Completed Banner */}
-            {state?.is_complete && (
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="fixed top-20 left-1/2 -translate-x-1/2 bg-green-500/90 text-white px-8 py-4 rounded-2xl shadow-xl"
-                >
-                    <p className="text-lg font-bold">✓ Veto Complete!</p>
-                </motion.div>
-            )}
+            <AnimatePresence>
+                {showCompletedBanner && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="fixed top-20 left-1/2 -translate-x-1/2 bg-green-500/90 text-white pl-8 pr-4 py-4 rounded-2xl shadow-xl flex items-center gap-4 z-50 backdrop-blur-sm"
+                    >
+                        <p className="text-lg font-bold">✓ Veto Complete!</p>
+                        <button
+                            onClick={() => setShowCompletedBanner(false)}
+                            className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }
