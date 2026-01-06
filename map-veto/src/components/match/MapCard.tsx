@@ -33,7 +33,9 @@ export function MapCard({
     onSelect,
     mapNumber,
 }: MapCardProps) {
-    const isInteractive = canInteract && state === 'available';
+    // canInteract is already computed by the parent based on turn, map state, etc.
+    // We just need to make sure the map is not banned or already picked
+    const isInteractive = canInteract && (state === 'available' || state === 'active');
 
     return (
         <motion.div

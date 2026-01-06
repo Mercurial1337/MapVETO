@@ -197,9 +197,10 @@ function MatchVetoInterface() {
                 <div className="flex flex-wrap gap-3 justify-center max-w-7xl">
                     {maps.map((map) => {
                         const mapState = mapStates[map.id] || { state: 'available' as MapCardState };
+                        const isAvailableMap = mapState.state === 'active' || mapState.state === 'available';
                         const canInteract = state !== null &&
                             isMyTurn(state.current_turn) &&
-                            mapState.state === 'active' &&
+                            isAvailableMap &&
                             !isSubmitting &&
                             match.status === 'in_progress';
 

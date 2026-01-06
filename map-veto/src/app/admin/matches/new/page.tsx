@@ -33,6 +33,8 @@ export default function NewMatchPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [createdMatch, setCreatedMatch] = useState<CreatedMatch | null>(null);
+    const [isFlippingCoin, setIsFlippingCoin] = useState(false);
+    const [coinFlipResult, setCoinFlipResult] = useState<'team_a' | 'team_b' | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -77,10 +79,8 @@ export default function NewMatchPage() {
     const copyToClipboard = async (text: string, label: string) => {
         try {
             await navigator.clipboard.writeText(text);
-            // Could use a toast library here
             alert(`${label} link copied!`);
         } catch {
-            // Fallback for older browsers
             const textArea = document.createElement('textarea');
             textArea.value = text;
             document.body.appendChild(textArea);
@@ -89,6 +89,34 @@ export default function NewMatchPage() {
             document.body.removeChild(textArea);
             alert(`${label} link copied!`);
         }
+    };
+
+    const handleCoinFlip = async () => {
+        if (!createdMatch || isFlippingCoin) return;
+
+        setIsFlippingCoin(true);
+        setError('');
+
+        try {
+            const response = await fetch('/api/veto/coin-toss', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ match_id: createdMatch.id }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setError(data.error || 'Failed to flip coin');
+            } else {
+                setCoinFlipResult(data.winner);
+            }
+        } catch {
+            setError('Network error. Please try again.');
+        }
+
+        setIsFlippingCoin(false);
     };
 
     if (createdMatch) {
@@ -164,10 +192,51 @@ export default function NewMatchPage() {
                         </div>
                     </div>
 
+                    {/* Coin Flip Section */}
+                    <div className="mt-8 p-6 bg-white/5 rounded-xl border border-white/10">
+                        <h3 className="text-lg font-semibold text-white mb-3">Coin Toss</h3>
+                        {coinFlipResult ? (
+                            <motion.div
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                className="text-center py-4"
+                            >
+                                <p className="text-yellow-400 text-xl font-bold">
+                                    🎉 {coinFlipResult === 'team_a' ? formData.teamAName : formData.teamBName} wins!
+                                </p>
+                                <p className="text-white/60 text-sm mt-1">They will pick first</p>
+                            </motion.div>
+                        ) : (
+                            <div className="text-center">
+                                <p className="text-white/60 text-sm mb-4">Flip the coin to determine who picks first</p>
+                                <button
+                                    onClick={handleCoinFlip}
+                                    disabled={isFlippingCoin}
+                                    className="px-8 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold rounded-xl hover:from-yellow-400 hover:to-orange-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isFlippingCoin ? (
+                                        <span className="flex items-center gap-2">
+                                            <motion.span
+                                                animate={{ rotate: 360 }}
+                                                transition={{ duration: 0.5, repeat: Infinity, ease: 'linear' }}
+                                            >
+                                                🪙
+                                            </motion.span>
+                                            Flipping...
+                                        </span>
+                                    ) : (
+                                        '🪙 Flip Coin'
+                                    )}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="mt-8 flex gap-4">
                         <button
                             onClick={() => {
                                 setCreatedMatch(null);
+                                setCoinFlipResult(null);
                                 setFormData({
                                     teamAName: '',
                                     teamBName: '',
