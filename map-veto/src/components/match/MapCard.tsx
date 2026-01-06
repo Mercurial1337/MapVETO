@@ -48,12 +48,12 @@ export function MapCard({
             whileTap={isInteractive ? { scale: 0.98 } : {}}
             onClick={isInteractive ? onSelect : undefined}
             className={cn(
-                'relative aspect-[16/9] rounded-2xl overflow-hidden transition-all duration-300',
-                'min-w-[280px] md:min-w-[320px] lg:min-w-[380px]',
-                'shadow-2xl',
+                'relative aspect-[16/9] rounded-xl overflow-hidden transition-all duration-300',
+                'w-[140px] md:w-[160px] lg:w-[180px] xl:w-[200px]',
+                'shadow-xl',
                 isInteractive && 'cursor-pointer',
                 state === 'banned' && 'cursor-not-allowed',
-                state === 'active' && 'ring-4 ring-yellow-400 animate-pulse'
+                state === 'active' && 'ring-2 ring-yellow-400 animate-pulse'
             )}
             style={{
                 boxShadow: state === 'picked' ? `0 0 40px ${teamColor}60, 0 0 80px ${teamColor}30` : undefined,
@@ -66,7 +66,7 @@ export function MapCard({
                 fill
                 className="object-cover"
                 priority
-                sizes="(max-width: 768px) 280px, (max-width: 1024px) 320px, 380px"
+                sizes="(max-width: 768px) 140px, (max-width: 1024px) 160px, 200px"
             />
 
             {/* Gradient Overlays */}
@@ -91,7 +91,7 @@ export function MapCard({
                 <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/80 border-2 flex items-center justify-center text-white font-bold text-lg"
+                    className="absolute top-2 left-2 w-6 h-6 rounded-full bg-black/80 border-2 flex items-center justify-center text-white font-bold text-xs"
                     style={{ borderColor: teamColor }}
                 >
                     {mapNumber}
@@ -99,9 +99,9 @@ export function MapCard({
             )}
 
             {/* Map Name */}
-            <div className="absolute bottom-4 left-4 right-4">
+            <div className="absolute bottom-2 left-2 right-2">
                 <motion.h3
-                    className="text-2xl md:text-3xl font-bold text-white drop-shadow-lg tracking-wide"
+                    className="text-sm md:text-base font-bold text-white drop-shadow-lg tracking-wide"
                     animate={{ opacity: state === 'banned' ? 0.6 : 1 }}
                 >
                     {map.name}
@@ -126,15 +126,15 @@ export function MapCard({
                     animate={{ opacity: 1, scale: 1 }}
                     className="absolute inset-0 flex items-center justify-center bg-black/50"
                 >
-                    <div className="relative w-28 h-28">
+                    <div className="relative w-12 h-12">
                         {/* Circle */}
-                        <div className="absolute inset-0 rounded-full border-[6px] border-red-500/90" />
+                        <div className="absolute inset-0 rounded-full border-[3px] border-red-500/90" />
                         {/* Diagonal Line */}
                         <motion.div
                             initial={{ rotate: 0, opacity: 0 }}
                             animate={{ rotate: 45, opacity: 1 }}
                             transition={{ delay: 0.2 }}
-                            className="absolute top-1/2 left-0 right-0 h-[6px] -translate-y-1/2 bg-red-500/90 rounded-full"
+                            className="absolute top-1/2 left-0 right-0 h-[3px] -translate-y-1/2 bg-red-500/90 rounded-full"
                         />
                     </div>
                 </motion.div>
@@ -147,14 +147,14 @@ export function MapCard({
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ delay: 0.3 }}
                     className={cn(
-                        'absolute top-4 right-4 px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wider',
+                        'absolute top-2 right-2 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
                         'shadow-lg backdrop-blur-sm',
                         side === 'attack'
                             ? 'bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-red-500/30'
                             : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-cyan-500/30'
                     )}
                 >
-                    {side === 'attack' ? '⚔️ Attack' : '🛡️ Defense'}
+                    {side === 'attack' ? 'ATK' : 'DEF'}
                 </motion.div>
             )}
 

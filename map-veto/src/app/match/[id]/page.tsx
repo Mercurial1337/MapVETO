@@ -193,32 +193,30 @@ function MatchVetoInterface() {
             )}
 
             {/* Map Gallery */}
-            <div className="flex-1 flex items-center px-4 py-6">
-                <div className="w-full overflow-x-auto scrollbar-hide">
-                    <div className="flex gap-6 px-4 min-w-max justify-center">
-                        {maps.map((map) => {
-                            const mapState = mapStates[map.id] || { state: 'available' as MapCardState };
-                            const canInteract = state !== null &&
-                                isMyTurn(state.current_turn) &&
-                                mapState.state === 'active' &&
-                                !isSubmitting &&
-                                match.status === 'in_progress';
+            <div className="flex-1 flex items-center justify-center px-4 py-6">
+                <div className="flex flex-wrap gap-3 justify-center max-w-7xl">
+                    {maps.map((map) => {
+                        const mapState = mapStates[map.id] || { state: 'available' as MapCardState };
+                        const canInteract = state !== null &&
+                            isMyTurn(state.current_turn) &&
+                            mapState.state === 'active' &&
+                            !isSubmitting &&
+                            match.status === 'in_progress';
 
-                            return (
-                                <MapCard
-                                    key={map.id}
-                                    map={map}
-                                    state={mapState.state}
-                                    side={mapState.side}
-                                    pickedBy={mapState.pickedBy}
-                                    mapNumber={mapState.mapNumber}
-                                    teamColor={mapState.pickedBy === match.team_a_name ? '#ef4444' : mapState.pickedBy === match.team_b_name ? '#3b82f6' : '#8b5cf6'}
-                                    canInteract={canInteract}
-                                    onSelect={() => handleMapSelect(map.id)}
-                                />
-                            );
-                        })}
-                    </div>
+                        return (
+                            <MapCard
+                                key={map.id}
+                                map={map}
+                                state={mapState.state}
+                                side={mapState.side}
+                                pickedBy={mapState.pickedBy}
+                                mapNumber={mapState.mapNumber}
+                                teamColor={mapState.pickedBy === match.team_a_name ? '#ef4444' : mapState.pickedBy === match.team_b_name ? '#3b82f6' : '#8b5cf6'}
+                                canInteract={canInteract}
+                                onSelect={() => handleMapSelect(map.id)}
+                            />
+                        );
+                    })}
                 </div>
             </div>
 
