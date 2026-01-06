@@ -166,8 +166,8 @@ export default function MatchesPage() {
                         <h3 className="text-xl font-bold text-white mb-4">Match Links</h3>
                         <div className="space-y-3">
                             {[
-                                { label: 'Team A', key: 'team_a' as const, color: 'red' },
-                                { label: 'Team B', key: 'team_b' as const, color: 'blue' },
+                                { label: 'Team 1', key: 'team_a' as const, color: 'red' },
+                                { label: 'Team 2', key: 'team_b' as const, color: 'blue' },
                                 { label: 'Observer', key: 'observer' as const, color: 'purple' },
                             ].map(({ label, key, color }) => (
                                 <div key={key} className={`p-3 bg-${color}-500/10 border border-${color}-500/20 rounded-lg`}>

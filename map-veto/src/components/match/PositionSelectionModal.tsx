@@ -130,10 +130,10 @@ export function PositionSelectionModal({
                                     )}
                                 >
                                     <div className="flex items-center gap-4">
-                                        <span className="text-3xl">⚡</span>
+                                        <span className="text-3xl">🅰️</span>
                                         <div>
-                                            <h3 className="text-xl font-bold text-green-400">Pick First</h3>
-                                            <p className="text-white/60 text-sm">Ban first, then pick your map</p>
+                                            <h3 className="text-xl font-bold text-green-400">Be Team A</h3>
+                                            <p className="text-white/60 text-sm">You go first (Ban/Pick first)</p>
                                         </div>
                                     </div>
                                 </motion.button>
@@ -151,10 +151,10 @@ export function PositionSelectionModal({
                                     )}
                                 >
                                     <div className="flex items-center gap-4">
-                                        <span className="text-3xl">🛡️</span>
+                                        <span className="text-3xl">🅱️</span>
                                         <div>
-                                            <h3 className="text-xl font-bold text-blue-400">Pick Second</h3>
-                                            <p className="text-white/60 text-sm">React to opponent&apos;s ban, pick after</p>
+                                            <h3 className="text-xl font-bold text-blue-400">Be Team B</h3>
+                                            <p className="text-white/60 text-sm">You go second (Ban/Pick second)</p>
                                         </div>
                                     </div>
                                 </motion.button>
