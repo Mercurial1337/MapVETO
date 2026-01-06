@@ -9,7 +9,7 @@ import {
     ReactNode,
 } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { MatchState, Match, VetoActor, SideChoice } from '@/types';
+import type { MatchState, Match, VetoActor, SideChoice, GameMap } from '@/types';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 type UserRole = 'team_a' | 'team_b' | 'observer' | null;
@@ -18,6 +18,7 @@ interface RealtimeContextValue {
     // Match data
     match: Match | null;
     state: MatchState | null;
+    maps: GameMap[];
 
     // User role based on token
     userRole: UserRole;
@@ -52,6 +53,7 @@ interface RealtimeProviderProps {
 export function RealtimeProvider({ matchId, token, children }: RealtimeProviderProps) {
     const [match, setMatch] = useState<Match | null>(null);
     const [state, setState] = useState<MatchState | null>(null);
+    const [maps, setMaps] = useState<GameMap[]>([]);
     const [userRole, setUserRole] = useState<UserRole>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -68,7 +70,7 @@ export function RealtimeProvider({ matchId, token, children }: RealtimeProviderP
                 .select(`
           *,
           match_state(*),
-          veto_templates(id, name, format, sequence)
+          veto_templates(id, name, format, sequence, game_id)
         `)
                 .eq('id', matchId)
                 .single();
@@ -80,6 +82,19 @@ export function RealtimeProvider({ matchId, token, children }: RealtimeProviderP
 
             setMatch(matchData);
             setState(matchData.match_state);
+
+            // Fetch maps for this game
+            if (matchData.veto_templates?.game_id) {
+                const { data: mapsData } = await supabase
+                    .from('maps')
+                    .select('*')
+                    .eq('game_id', matchData.veto_templates.game_id)
+                    .eq('is_active', true);
+
+                if (mapsData) {
+                    setMaps(mapsData);
+                }
+            }
 
             // Fetch user role from token
             const { data: linkData } = await supabase
@@ -225,6 +240,7 @@ export function RealtimeProvider({ matchId, token, children }: RealtimeProviderP
     const value: RealtimeContextValue = {
         match,
         state,
+        maps,
         userRole,
         isConnected,
         isLoading,
@@ -251,8 +267,8 @@ export function useRealtime() {
 
 // Convenience hooks
 export function useMatchData() {
-    const { match, state, isLoading, error, userRole } = useRealtime();
-    return { match, state, isLoading, error, userRole };
+    const { match, state, maps, isLoading, error, userRole } = useRealtime();
+    return { match, state, maps, isLoading, error, userRole };
 }
 
 export function useVetoActions() {

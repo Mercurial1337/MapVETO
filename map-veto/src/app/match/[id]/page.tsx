@@ -11,23 +11,13 @@ import { createClient } from '@/lib/supabase/client';
 import type { MapCardState, GameMap, VetoStep, VetoActor, Match, VetoTemplate } from '@/types';
 
 // Extended match type that includes joined data from Supabase
-interface MatchWithTemplate extends Match {
+interface MatchWithTemplate extends Omit<Match, 'coin_toss_winner'> {
     veto_templates?: Pick<VetoTemplate, 'id' | 'name' | 'format' | 'sequence'>;
+    coin_toss_winner?: VetoActor | null;
 }
 
-// Placeholder maps for demo (will be replaced by real data)
-const PLACEHOLDER_MAPS: GameMap[] = [
-    { id: '1', game_id: 'val', name: 'Abyss', slug: 'abyss', image_url: '/maps/valorant/Abyss.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
-    { id: '2', game_id: 'val', name: 'Bind', slug: 'bind', image_url: '/maps/valorant/Bind.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
-    { id: '3', game_id: 'val', name: 'Haven', slug: 'haven', image_url: '/maps/valorant/Haven.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
-    { id: '4', game_id: 'val', name: 'Pearl', slug: 'pearl', image_url: '/maps/valorant/Pearl.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
-    { id: '5', game_id: 'val', name: 'Corrode', slug: 'corrode', image_url: '/maps/valorant/Corrode.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
-    { id: '6', game_id: 'val', name: 'Split', slug: 'split', image_url: '/maps/valorant/Split.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
-    { id: '7', game_id: 'val', name: 'Sunset', slug: 'sunset', image_url: '/maps/valorant/Sunset.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
-];
-
 function MatchVetoInterface() {
-    const { match, state, isLoading, error, userRole } = useMatchData();
+    const { match, state, maps, isLoading, error, userRole } = useMatchData();
     const { banMap, pickMap, pickSide, coinToss, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
     const [isAdmin, setIsAdmin] = useState(false);
@@ -42,8 +32,9 @@ function MatchVetoInterface() {
         checkAdmin();
     }, []);
 
-    // In production, maps come from match.veto_templates or map pool
-    const maps = PLACEHOLDER_MAPS;
+    // Get the coin toss winner from match data
+    const matchExt = match as MatchWithTemplate | null;
+    const coinTossWinner = matchExt?.coin_toss_winner;
 
     const templateSteps: VetoStep[] = useMemo(() => {
         const matchExt = match as MatchWithTemplate | null;
@@ -261,6 +252,7 @@ function MatchVetoInterface() {
                 teamAName={match.team_a_name}
                 teamBName={match.team_b_name}
                 isAdmin={isAdmin}
+                winner={coinTossWinner}
                 onFlip={coinToss}
             />
 

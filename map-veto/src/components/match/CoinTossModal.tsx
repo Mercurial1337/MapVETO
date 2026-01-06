@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { VetoActor } from '@/types';
 
@@ -9,6 +9,7 @@ interface CoinTossModalProps {
     teamAName: string;
     teamBName: string;
     isAdmin?: boolean;
+    winner?: VetoActor | null;
     onFlip?: () => Promise<VetoActor | null>;
 }
 
@@ -21,12 +22,21 @@ export function CoinTossModal({
     teamAName,
     teamBName,
     isAdmin = false,
+    winner: externalWinner,
     onFlip,
 }: CoinTossModalProps) {
     const [isFlipping, setIsFlipping] = useState(false);
     const [result, setResult] = useState<VetoActor | null>(null);
     const [showResult, setShowResult] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // If external winner is passed, show the result
+    useEffect(() => {
+        if (externalWinner) {
+            setResult(externalWinner);
+            setShowResult(true);
+        }
+    }, [externalWinner]);
 
     const handleFlip = async () => {
         if (isFlipping || !onFlip) return;
