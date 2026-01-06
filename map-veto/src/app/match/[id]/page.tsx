@@ -7,9 +7,27 @@ import { MapCard } from '@/components/match/MapCard';
 import { VetoTimeline, TurnIndicator } from '@/components/match/VetoTimeline';
 import { CoinTossModal } from '@/components/match/CoinTossModal';
 import { PositionSelectionModal } from '@/components/match/PositionSelectionModal';
+import { SideSelectionModal } from '@/components/match/SideSelectionModal';
+import { ActionLog } from '@/components/match/ActionLog';
 import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus } from '@/lib/realtime';
 import { createClient } from '@/lib/supabase/client';
-import type { MapCardState, VetoStep, VetoActor, Match, VetoTemplate } from '@/types';
+import type { MapCardState, VetoStep, VetoActor, Match, VetoTemplate, GameMap } from '@/types';
+
+// Map name to local image fallback
+const MAP_IMAGE_FALLBACKS: Record<string, string> = {
+    'Abyss': '/maps/valorant/Abyss.webp',
+    'Bind': '/maps/valorant/Bind.webp',
+    'Haven': '/maps/valorant/Haven.webp',
+    'Pearl': '/maps/valorant/Pearl.webp',
+    'Corrode': '/maps/valorant/Corrode.webp',
+    'Split': '/maps/valorant/Split.webp',
+    'Sunset': '/maps/valorant/Sunset.webp',
+    'Ascent': '/maps/valorant/Ascent.webp',
+    'Icebox': '/maps/valorant/Icebox.webp',
+    'Breeze': '/maps/valorant/Breeze.webp',
+    'Fracture': '/maps/valorant/Fracture.webp',
+    'Lotus': '/maps/valorant/Lotus.webp',
+};
 
 // Extended match type that includes joined data from Supabase
 interface MatchWithTemplate extends Omit<Match, 'coin_toss_winner'> {
@@ -119,6 +137,42 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     // Show position selection modal (after coin toss, winner chooses)
     const showPositionSelection = match?.status === 'side_selection';
 
+    // Get maps with fallback images
+    const mapsWithImages = useMemo(() => {
+        return maps.map(map => ({
+            ...map,
+            image_url: map.image_url || MAP_IMAGE_FALLBACKS[map.name] || '/maps/valorant/default.webp'
+        }));
+    }, [maps]);
+
+    // Create map name lookup
+    const mapNames = useMemo(() => {
+        const lookup: Record<string, string> = {};
+        maps.forEach(map => {
+            lookup[map.id] = map.name;
+        });
+        return lookup;
+    }, [maps]);
+
+    // Check if we're in a side selection step and get the map that needs side picking
+    const pendingSidePickMap = useMemo(() => {
+        if (!currentStepDef || currentStepDef.action !== 'side' || !state) return null;
+        const pickedMap = state.picked_maps.find(pm => pm.map_number === currentStepDef.map_number);
+        if (pickedMap && !pickedMap.side) {
+            return {
+                mapId: pickedMap.map_id,
+                mapName: mapNames[pickedMap.map_id] || 'Unknown',
+            };
+        }
+        return null;
+    }, [currentStepDef, state, mapNames]);
+
+    // Show side selection modal
+    const showSideSelection = pendingSidePickMap !== null && isMyTurn(state?.current_turn || null);
+
+    // Block map interaction during side pick
+    const isSidePicking = currentStepDef?.action === 'side';
+
     // Loading state
     if (isLoading) {
         return (
@@ -192,58 +246,51 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 </div>
             )}
 
-            {/* Map Gallery */}
-            <div className="flex-1 flex items-center justify-center px-4 py-6">
-                <div className="flex flex-wrap gap-3 justify-center max-w-7xl">
-                    {maps.map((map) => {
-                        const mapState = mapStates[map.id] || { state: 'available' as MapCardState };
-                        const isAvailableMap = mapState.state === 'active' || mapState.state === 'available';
-                        const canInteract = state !== null &&
-                            isMyTurn(state.current_turn) &&
-                            isAvailableMap &&
-                            !isSubmitting &&
-                            match.status === 'in_progress';
+            {/* Main Content - Map Gallery + Action Log */}
+            <div className="flex-1 flex px-4 py-6 gap-4">
+                {/* Map Gallery */}
+                <div className="flex-1 flex items-center justify-center">
+                    <div className="flex flex-wrap gap-3 justify-center max-w-5xl">
+                        {mapsWithImages.map((map) => {
+                            const mapState = mapStates[map.id] || { state: 'available' as MapCardState };
+                            const isAvailableMap = mapState.state === 'active' || mapState.state === 'available';
+                            // Block interaction during side pick
+                            const canInteract = state !== null &&
+                                isMyTurn(state.current_turn) &&
+                                isAvailableMap &&
+                                !isSubmitting &&
+                                !isSidePicking &&
+                                match.status === 'in_progress';
 
-                        return (
-                            <MapCard
-                                key={map.id}
-                                map={map}
-                                state={mapState.state}
-                                side={mapState.side}
-                                pickedBy={mapState.pickedBy}
-                                mapNumber={mapState.mapNumber}
-                                teamColor={mapState.pickedBy === match.team_a_name ? '#ef4444' : mapState.pickedBy === match.team_b_name ? '#3b82f6' : '#8b5cf6'}
-                                canInteract={canInteract}
-                                onSelect={() => handleMapSelect(map.id)}
-                            />
-                        );
-                    })}
+                            return (
+                                <MapCard
+                                    key={map.id}
+                                    map={map}
+                                    state={mapState.state}
+                                    side={mapState.side}
+                                    pickedBy={mapState.pickedBy}
+                                    mapNumber={mapState.mapNumber}
+                                    teamColor={mapState.pickedBy === match.team_a_name ? '#ef4444' : mapState.pickedBy === match.team_b_name ? '#3b82f6' : '#8b5cf6'}
+                                    canInteract={canInteract}
+                                    onSelect={() => handleMapSelect(map.id)}
+                                />
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Action Log Panel */}
+                <div className="w-64 glass rounded-xl p-4 hidden lg:block">
+                    <h3 className="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wider">Action Log</h3>
+                    <ActionLog
+                        bannedMaps={state?.banned_maps || []}
+                        pickedMaps={state?.picked_maps || []}
+                        teamAName={match.team_a_name}
+                        teamBName={match.team_b_name}
+                        mapNames={mapNames}
+                    />
                 </div>
             </div>
-
-            {/* Side Selection */}
-            {currentStepDef?.action === 'side' && state && isMyTurn(state.current_turn) && (
-                <motion.div
-                    initial={{ opacity: 0, y: 50 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="fixed bottom-8 left-1/2 -translate-x-1/2 glass-dark rounded-2xl p-6 flex gap-4"
-                >
-                    <button
-                        onClick={() => pickSide('attack')}
-                        disabled={isSubmitting}
-                        className="badge-attack px-8 py-4 text-lg disabled:opacity-50"
-                    >
-                        ⚔️ Attack
-                    </button>
-                    <button
-                        onClick={() => pickSide('defense')}
-                        disabled={isSubmitting}
-                        className="badge-defense px-8 py-4 text-lg disabled:opacity-50"
-                    >
-                        🛡️ Defense
-                    </button>
-                </motion.div>
-            )}
 
             {/* Timeline */}
             <div className="glass-dark border-t border-white/10">
@@ -254,6 +301,15 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     teamBName={match.team_b_name}
                 />
             </div>
+
+            {/* Side Selection Modal */}
+            <SideSelectionModal
+                isOpen={showSideSelection}
+                mapName={pendingSidePickMap?.mapName || ''}
+                teamName={state?.current_turn === 'team_a' ? match.team_a_name : match.team_b_name}
+                onSelect={pickSide}
+                isSubmitting={isSubmitting}
+            />
 
             {/* Coin Toss Modal */}
             <CoinTossModal
