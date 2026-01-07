@@ -149,9 +149,9 @@ export default function NewMatchPage() {
                         {/* Team A Link */}
                         <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-red-400">Team A ({formData.teamAName})</span>
+                                <span className="text-sm font-medium text-red-400">{formData.teamAName}</span>
                                 <button
-                                    onClick={() => copyToClipboard(createdMatch.links.team_a.url, 'Team A')}
+                                    onClick={() => copyToClipboard(createdMatch.links.team_a.url, formData.teamAName)}
                                     className="text-xs px-3 py-1 bg-red-500/20 hover:bg-red-500/30 rounded-lg text-red-300 transition-colors"
                                 >
                                     Copy
@@ -165,9 +165,9 @@ export default function NewMatchPage() {
                         {/* Team B Link */}
                         <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-blue-400">Team B ({formData.teamBName})</span>
+                                <span className="text-sm font-medium text-blue-400">{formData.teamBName}</span>
                                 <button
-                                    onClick={() => copyToClipboard(createdMatch.links.team_b.url, 'Team B')}
+                                    onClick={() => copyToClipboard(createdMatch.links.team_b.url, formData.teamBName)}
                                     className="text-xs px-3 py-1 bg-blue-500/20 hover:bg-blue-500/30 rounded-lg text-blue-300 transition-colors"
                                 >
                                     Copy
@@ -306,7 +306,7 @@ export default function NewMatchPage() {
                 <div className="grid grid-cols-2 gap-6">
                     {/* Team A */}
                     <div className="space-y-4">
-                        <h3 className="text-sm font-medium text-red-400 uppercase tracking-wider">Team A</h3>
+                        <h3 className="text-sm font-medium text-red-400 uppercase tracking-wider">Team 1</h3>
                         <div>
                             <label className="block text-sm text-white/60 mb-2">Team Name *</label>
                             <input
@@ -332,7 +332,7 @@ export default function NewMatchPage() {
 
                     {/* Team B */}
                     <div className="space-y-4">
-                        <h3 className="text-sm font-medium text-blue-400 uppercase tracking-wider">Team B</h3>
+                        <h3 className="text-sm font-medium text-blue-400 uppercase tracking-wider">Team 2</h3>
                         <div>
                             <label className="block text-sm text-white/60 mb-2">Team Name *</label>
                             <input

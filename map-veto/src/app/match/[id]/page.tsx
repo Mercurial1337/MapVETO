@@ -100,8 +100,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
         if (!actorMapping || !match) {
             // No mapping, use original names
             return {
-                teamA: match?.team_a_name || 'Team A',
-                teamB: match?.team_b_name || 'Team B',
+                teamA: match?.team_a_name || 'Team 1',
+                teamB: match?.team_b_name || 'Team 2',
             };
         }
         // Find which real team plays as template team_a
@@ -273,12 +273,12 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 <div className="max-w-4xl mx-auto flex items-center justify-center gap-8">
                     <div className="text-center">
                         <h2 className="text-2xl font-bold text-white">{displayedTeams.teamA}</h2>
-                        <span className="text-xs text-red-400 uppercase tracking-wider">Team A</span>
+                        <span className="text-xs text-red-400 uppercase tracking-wider">Team 1</span>
                     </div>
                     <div className="text-4xl font-light text-white/30">VS</div>
                     <div className="text-center">
                         <h2 className="text-2xl font-bold text-white">{displayedTeams.teamB}</h2>
-                        <span className="text-xs text-blue-400 uppercase tracking-wider">Team B</span>
+                        <span className="text-xs text-blue-400 uppercase tracking-wider">Team 2</span>
                     </div>
                 </div>
             </div>

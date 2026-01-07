@@ -96,7 +96,7 @@ function StreamOverlayContent() {
                         </div>
                         <div className="text-right">
                             <h2 className="text-2xl font-bold text-white">{DEMO_RESULTS.teamA}</h2>
-                            <span className="text-xs text-red-400/70 uppercase tracking-wider">Team A</span>
+                            <span className="text-xs text-red-400/70 uppercase tracking-wider">Team 1</span>
                         </div>
                     </div>
 
@@ -106,7 +106,7 @@ function StreamOverlayContent() {
                     <div className="flex items-center gap-4">
                         <div className="text-left">
                             <h2 className="text-2xl font-bold text-white">{DEMO_RESULTS.teamB}</h2>
-                            <span className="text-xs text-blue-400/70 uppercase tracking-wider">Team B</span>
+                            <span className="text-xs text-blue-400/70 uppercase tracking-wider">Team 2</span>
                         </div>
                         <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500/30 to-blue-600/20 border border-blue-500/40 flex items-center justify-center">
                             <span className="text-2xl font-bold text-blue-400">S</span>

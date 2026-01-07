@@ -109,7 +109,7 @@ export function CoinTossModal({
                                 )}
                             >
                                 <div className="text-xl md:text-2xl font-bold">{teamAName}</div>
-                                <div className="text-sm text-white/50 mt-1">Team A</div>
+                                <div className="text-sm text-white/50 mt-1">Team 1</div>
                             </motion.div>
 
                             <div className="text-3xl text-white/30 font-light">vs</div>
@@ -122,7 +122,7 @@ export function CoinTossModal({
                                 )}
                             >
                                 <div className="text-xl md:text-2xl font-bold">{teamBName}</div>
-                                <div className="text-sm text-white/50 mt-1">Team B</div>
+                                <div className="text-sm text-white/50 mt-1">Team 2</div>
                             </motion.div>
                         </div>
 
