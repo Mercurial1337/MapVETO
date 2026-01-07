@@ -91,7 +91,7 @@ export default function NewMatchPage() {
         }
     };
 
-    const handleCoinFlip = async () => {
+    const handleCoinFlip = async (forcedWinner?: 'team_a' | 'team_b') => {
         if (!createdMatch || isFlippingCoin) return;
 
         setIsFlippingCoin(true);
@@ -102,7 +102,10 @@ export default function NewMatchPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ match_id: createdMatch.id }),
+                body: JSON.stringify({
+                    match_id: createdMatch.id,
+                    forced_winner: forcedWinner,
+                }),
             });
 
             const data = await response.json();
@@ -206,28 +209,52 @@ export default function NewMatchPage() {
                                 </p>
                                 <p className="text-white/60 text-sm mt-1">They will pick first</p>
                             </motion.div>
-                        ) : (
-                            <div className="text-center">
-                                <p className="text-white/60 text-sm mb-4">Flip the coin to determine who picks first</p>
-                                <button
-                                    onClick={handleCoinFlip}
-                                    disabled={isFlippingCoin}
-                                    className="px-8 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold rounded-xl hover:from-yellow-400 hover:to-orange-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        ) : isFlippingCoin ? (
+                            <div className="text-center py-4">
+                                <motion.span
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 0.5, repeat: Infinity, ease: 'linear' }}
+                                    className="text-4xl inline-block"
                                 >
-                                    {isFlippingCoin ? (
-                                        <span className="flex items-center gap-2">
-                                            <motion.span
-                                                animate={{ rotate: 360 }}
-                                                transition={{ duration: 0.5, repeat: Infinity, ease: 'linear' }}
-                                            >
-                                                🪙
-                                            </motion.span>
-                                            Flipping...
-                                        </span>
-                                    ) : (
-                                        '🪙 Flip Coin'
-                                    )}
-                                </button>
+                                    🪙
+                                </motion.span>
+                                <p className="text-white/60 mt-2">Flipping...</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {/* Random Coin Flip */}
+                                <div className="text-center">
+                                    <p className="text-white/60 text-sm mb-3">Flip the coin to determine who picks first</p>
+                                    <button
+                                        onClick={() => handleCoinFlip()}
+                                        className="px-8 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold rounded-xl hover:from-yellow-400 hover:to-orange-400 transition-all"
+                                    >
+                                        🎲 Flip Coin
+                                    </button>
+                                </div>
+
+                                {/* Divider */}
+                                <div className="flex items-center gap-3">
+                                    <div className="flex-1 h-px bg-white/10" />
+                                    <span className="text-white/30 text-xs">or select winner (seeded match)</span>
+                                    <div className="flex-1 h-px bg-white/10" />
+                                </div>
+
+                                {/* Manual Selection Buttons */}
+                                <div className="flex gap-3 justify-center">
+                                    <button
+                                        onClick={() => handleCoinFlip('team_a')}
+                                        className="px-6 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl text-red-400 font-medium transition-colors"
+                                    >
+                                        {formData.teamAName}
+                                    </button>
+                                    <button
+                                        onClick={() => handleCoinFlip('team_b')}
+                                        className="px-6 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-xl text-blue-400 font-medium transition-colors"
+                                    >
+                                        {formData.teamBName}
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>

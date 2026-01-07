@@ -36,7 +36,7 @@ interface RealtimeContextValue {
     ) => Promise<boolean>;
 
     // Coin toss
-    performCoinToss: () => Promise<VetoActor | null>;
+    performCoinToss: (forcedWinner?: VetoActor) => Promise<VetoActor | null>;
 
     // Refresh
     refresh: () => Promise<void>;
@@ -308,9 +308,9 @@ export function useVetoActions() {
         [performAction]
     );
 
-    const coinToss = useCallback(async () => {
+    const coinToss = useCallback(async (forcedWinner?: VetoActor) => {
         setIsSubmitting(true);
-        const result = await performCoinToss();
+        const result = await performCoinToss(forcedWinner);
         setIsSubmitting(false);
         return result;
     }, [performCoinToss]);
