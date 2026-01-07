@@ -93,6 +93,44 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
 
     const currentStepDef = state ? templateSteps[state.current_step] : null;
 
+    // Get displayed team names based on actor_mapping
+    // After position choice, teams may have swapped roles
+    const displayedTeams = useMemo(() => {
+        const actorMapping = state?.actor_mapping;
+        if (!actorMapping || !match) {
+            // No mapping, use original names
+            return {
+                teamA: match?.team_a_name || 'Team A',
+                teamB: match?.team_b_name || 'Team B',
+            };
+        }
+        // Find which real team plays as template team_a
+        const realTeamPlayingAsA = Object.entries(actorMapping).find(
+            ([, role]) => role === 'team_a'
+        )?.[0] as 'team_a' | 'team_b' | undefined;
+
+        if (realTeamPlayingAsA === 'team_a') {
+            // No swap needed
+            return {
+                teamA: match.team_a_name,
+                teamB: match.team_b_name,
+            };
+        } else {
+            // team_b is playing as Team A, swap names
+            return {
+                teamA: match.team_b_name,
+                teamB: match.team_a_name,
+            };
+        }
+    }, [state?.actor_mapping, match]);
+
+    // Get team name for current turn
+    const getCurrentTurnTeamName = useCallback(() => {
+        if (!state?.current_turn || !match) return '';
+        // current_turn is the real team (token holder)
+        return state.current_turn === 'team_a' ? match.team_a_name : match.team_b_name;
+    }, [state?.current_turn, match]);
+
     // Determine if it's user's turn based on their token role
     const isMyTurn = useCallback((turn: VetoActor | null) => {
         if (!userRole || userRole === 'observer') return false;
@@ -234,12 +272,12 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             <div className="bg-black/40 border-b border-white/5 px-6 py-6">
                 <div className="max-w-4xl mx-auto flex items-center justify-center gap-8">
                     <div className="text-center">
-                        <h2 className="text-2xl font-bold text-white">{match.team_a_name}</h2>
+                        <h2 className="text-2xl font-bold text-white">{displayedTeams.teamA}</h2>
                         <span className="text-xs text-red-400 uppercase tracking-wider">Team A</span>
                     </div>
                     <div className="text-4xl font-light text-white/30">VS</div>
                     <div className="text-center">
-                        <h2 className="text-2xl font-bold text-white">{match.team_b_name}</h2>
+                        <h2 className="text-2xl font-bold text-white">{displayedTeams.teamB}</h2>
                         <span className="text-xs text-blue-400 uppercase tracking-wider">Team B</span>
                     </div>
                 </div>
@@ -250,8 +288,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 <div className="flex justify-center py-6">
                     <TurnIndicator
                         currentStep={currentStepDef}
-                        teamAName={match.team_a_name}
-                        teamBName={match.team_b_name}
+                        teamAName={displayedTeams.teamA}
+                        teamBName={displayedTeams.teamB}
                         isMyTurn={state ? isMyTurn(state.current_turn) : false}
                     />
                 </div>
@@ -297,8 +335,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     <ActionLog
                         bannedMaps={state?.banned_maps || []}
                         pickedMaps={state?.picked_maps || []}
-                        teamAName={match.team_a_name}
-                        teamBName={match.team_b_name}
+                        teamAName={displayedTeams.teamA}
+                        teamBName={displayedTeams.teamB}
                         mapNames={mapNames}
                         vetoSteps={templateSteps}
                         currentStep={state?.current_step || 0}
@@ -311,8 +349,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 <VetoTimeline
                     steps={templateSteps}
                     currentStep={state?.current_step || 0}
-                    teamAName={match.team_a_name}
-                    teamBName={match.team_b_name}
+                    teamAName={displayedTeams.teamA}
+                    teamBName={displayedTeams.teamB}
                 />
             </div>
 
@@ -320,7 +358,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             <SideSelectionModal
                 isOpen={showSideSelection}
                 mapName={pendingSidePickMap?.mapName || ''}
-                teamName={state?.current_turn === 'team_a' ? match.team_a_name : match.team_b_name}
+                teamName={getCurrentTurnTeamName()}
                 onSelect={pickSide}
                 isSubmitting={isSubmitting}
             />
