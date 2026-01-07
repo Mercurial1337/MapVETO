@@ -208,13 +208,16 @@ export function RealtimeProvider({ matchId, token, children }: RealtimeProviderP
     );
 
     // Perform coin toss (admin only - uses cookie auth)
-    const performCoinToss = useCallback(async (): Promise<VetoActor | null> => {
+    const performCoinToss = useCallback(async (forcedWinner?: VetoActor): Promise<VetoActor | null> => {
         try {
             const response = await fetch('/api/veto/coin-toss', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include', // Include cookies for admin auth
-                body: JSON.stringify({ match_id: matchId }),
+                body: JSON.stringify({
+                    match_id: matchId,
+                    forced_winner: forcedWinner,
+                }),
             });
 
             const data = await response.json();

@@ -10,7 +10,7 @@ interface CoinTossModalProps {
     teamBName: string;
     isAdmin?: boolean;
     winner?: VetoActor | null;
-    onFlip?: () => Promise<VetoActor | null>;
+    onFlip?: (forcedWinner?: VetoActor) => Promise<VetoActor | null>;
 }
 
 function cn(...classes: (string | boolean | undefined)[]) {
@@ -38,18 +38,18 @@ export function CoinTossModal({
         }
     }, [externalWinner]);
 
-    const handleFlip = async () => {
+    const handleFlip = async (forcedWinner?: VetoActor) => {
         if (isFlipping || !onFlip) return;
 
         setIsFlipping(true);
         setShowResult(false);
         setError(null);
 
-        // Start the animation
-        await new Promise((resolve) => setTimeout(resolve, 2500));
+        // Start the animation (shorter for forced winner)
+        await new Promise((resolve) => setTimeout(resolve, forcedWinner ? 1000 : 2500));
 
         // Call the server to get the actual result
-        const winner = await onFlip();
+        const winner = await onFlip(forcedWinner);
 
         if (winner) {
             setResult(winner);
@@ -59,6 +59,10 @@ export function CoinTossModal({
         }
 
         setIsFlipping(false);
+    };
+
+    const handleForceWinner = (team: VetoActor) => {
+        handleFlip(team);
     };
 
     return (
@@ -233,25 +237,71 @@ export function CoinTossModal({
                                     Flipping...
                                 </motion.div>
                             ) : isAdmin ? (
-                                <motion.button
-                                    key="button"
+                                <motion.div
+                                    key="admin-controls"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={handleFlip}
-                                    className={cn(
-                                        'px-10 py-4 rounded-2xl font-bold text-lg',
-                                        'bg-gradient-to-r from-purple-600 via-pink-600 to-red-500',
-                                        'text-white shadow-xl shadow-purple-500/30',
-                                        'hover:shadow-2xl hover:shadow-purple-500/50',
-                                        'transition-all duration-300',
-                                        'border border-white/20'
-                                    )}
+                                    className="flex flex-col items-center gap-4"
                                 >
-                                    Flip Coin
-                                </motion.button>
+                                    {/* Random Coin Flip */}
+                                    <motion.button
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => handleFlip()}
+                                        className={cn(
+                                            'px-10 py-4 rounded-2xl font-bold text-lg',
+                                            'bg-gradient-to-r from-purple-600 via-pink-600 to-red-500',
+                                            'text-white shadow-xl shadow-purple-500/30',
+                                            'hover:shadow-2xl hover:shadow-purple-500/50',
+                                            'transition-all duration-300',
+                                            'border border-white/20'
+                                        )}
+                                    >
+                                        🎲 Flip Coin
+                                    </motion.button>
+
+                                    {/* Divider */}
+                                    <div className="flex items-center gap-3 w-full max-w-xs">
+                                        <div className="flex-1 h-px bg-white/20" />
+                                        <span className="text-white/40 text-sm">or select winner</span>
+                                        <div className="flex-1 h-px bg-white/20" />
+                                    </div>
+
+                                    {/* Manual Selection Buttons */}
+                                    <div className="flex gap-3">
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => handleForceWinner('team_a')}
+                                            className={cn(
+                                                'px-6 py-3 rounded-xl font-semibold',
+                                                'bg-red-500/20 hover:bg-red-500/30',
+                                                'text-red-400 border border-red-500/30',
+                                                'transition-all duration-200'
+                                            )}
+                                        >
+                                            {teamAName}
+                                        </motion.button>
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={() => handleForceWinner('team_b')}
+                                            className={cn(
+                                                'px-6 py-3 rounded-xl font-semibold',
+                                                'bg-blue-500/20 hover:bg-blue-500/30',
+                                                'text-blue-400 border border-blue-500/30',
+                                                'transition-all duration-200'
+                                            )}
+                                        >
+                                            {teamBName}
+                                        </motion.button>
+                                    </div>
+
+                                    <p className="text-xs text-white/30 text-center max-w-xs">
+                                        Use manual selection for seeded matchups where higher seed picks first
+                                    </p>
+                                </motion.div>
                             ) : (
                                 <motion.div
                                     key="waiting"

@@ -313,20 +313,21 @@ INSERT INTO veto_templates (game_id, name, format, is_default, sequence) VALUES
 INSERT INTO veto_templates (game_id, name, format, sequence) VALUES
 ((SELECT id FROM games WHERE slug = 'valorant'), 'Bo5 Grand Finals', 'bo5', '{
   "format": "bo5",
-  "total_steps": 11,
+  "total_steps": 12,
   "winner_bracket_team": "team_a",
   "steps": [
-    {"step": 1, "action": "ban", "actor": "team_a", "count": 2, "description": "Winners Bracket Team bans 2 maps"},
-    {"step": 2, "action": "pick", "actor": "team_a", "map_number": 1, "description": "Team A picks Map 1"},
-    {"step": 3, "action": "side", "actor": "team_b", "map_number": 1, "description": "Team B picks side for Map 1"},
-    {"step": 4, "action": "pick", "actor": "team_b", "map_number": 2, "description": "Team B picks Map 2"},
-    {"step": 5, "action": "side", "actor": "team_a", "map_number": 2, "description": "Team A picks side for Map 2"},
-    {"step": 6, "action": "pick", "actor": "team_a", "map_number": 3, "description": "Team A picks Map 3"},
-    {"step": 7, "action": "side", "actor": "team_b", "map_number": 3, "description": "Team B picks side for Map 3"},
-    {"step": 8, "action": "pick", "actor": "team_b", "map_number": 4, "description": "Team B picks Map 4"},
-    {"step": 9, "action": "side", "actor": "team_a", "map_number": 4, "description": "Team A picks side for Map 4"},
-    {"step": 10, "action": "decider", "actor": "system", "map_number": 5, "description": "Remaining map is decider"},
-    {"step": 11, "action": "side", "actor": "team_b", "map_number": 5, "description": "Team B picks side for Map 5"}
+    {"step": 1, "action": "ban", "actor": "team_a", "description": "Winners Bracket Team bans a map"},
+    {"step": 2, "action": "ban", "actor": "team_a", "description": "Winners Bracket Team bans a map"},
+    {"step": 3, "action": "pick", "actor": "team_a", "map_number": 1, "description": "Team A picks Map 1"},
+    {"step": 4, "action": "side", "actor": "team_b", "map_number": 1, "description": "Team B picks side for Map 1"},
+    {"step": 5, "action": "pick", "actor": "team_b", "map_number": 2, "description": "Team B picks Map 2"},
+    {"step": 6, "action": "side", "actor": "team_a", "map_number": 2, "description": "Team A picks side for Map 2"},
+    {"step": 7, "action": "pick", "actor": "team_a", "map_number": 3, "description": "Team A picks Map 3"},
+    {"step": 8, "action": "side", "actor": "team_b", "map_number": 3, "description": "Team B picks side for Map 3"},
+    {"step": 9, "action": "pick", "actor": "team_b", "map_number": 4, "description": "Team B picks Map 4"},
+    {"step": 10, "action": "side", "actor": "team_a", "map_number": 4, "description": "Team A picks side for Map 4"},
+    {"step": 11, "action": "decider", "actor": "system", "map_number": 5, "description": "Remaining map is decider (Map 5)"},
+    {"step": 12, "action": "side", "actor": "team_b", "map_number": 5, "description": "Team B picks side for Map 5"}
   ]
 }'::jsonb);
 

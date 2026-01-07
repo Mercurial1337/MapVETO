@@ -5,6 +5,7 @@ import type { VetoActor } from '@/types';
 
 const CoinTossSchema = z.object({
     match_id: z.string().uuid(),
+    forced_winner: z.enum(['team_a', 'team_b']).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { match_id } = validationResult.data;
+        const { match_id, forced_winner } = validationResult.data;
         const supabase = createServiceClient();
 
         // Get match and verify status
@@ -54,10 +55,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Perform coin toss (cryptographically random)
-        const randomBytes = new Uint8Array(1);
-        crypto.getRandomValues(randomBytes);
-        const winner: VetoActor = randomBytes[0] % 2 === 0 ? 'team_a' : 'team_b';
+        // Use forced winner if provided, otherwise perform random coin toss
+        let winner: VetoActor;
+        if (forced_winner) {
+            winner = forced_winner;
+        } else {
+            // Perform coin toss (cryptographically random)
+            const randomBytes = new Uint8Array(1);
+            crypto.getRandomValues(randomBytes);
+            winner = randomBytes[0] % 2 === 0 ? 'team_a' : 'team_b';
+        }
 
         // Update match - go to side_selection where winner chooses position
         const { error: updateError } = await supabase

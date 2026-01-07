@@ -34,34 +34,36 @@ export const BO3_STANDARD: VetoSequence = {
 /**
  * Bo5 Grand Finals Veto Sequence
  * 
- * 1. Winner's Bracket Team Bans 2 maps
- * 2. Team A Pick (Map 1)
- * 3. Team B Side Pick (Map 1)
- * 4. Team B Pick (Map 2)
- * 5. Team A Side Pick (Map 2)
- * 6. Team A Pick (Map 3)
- * 7. Team B Side Pick (Map 3)
- * 8. Team B Pick (Map 4)
- * 9. Team A Side Pick (Map 4)
- * 10. Decider (Auto)
- * 11. Team B Side Pick (Map 5)
+ * 1. Winner's Bracket Team Ban 1
+ * 2. Winner's Bracket Team Ban 2
+ * 3. Team A Pick (Map 1)
+ * 4. Team B Side Pick (Map 1)
+ * 5. Team B Pick (Map 2)
+ * 6. Team A Side Pick (Map 2)
+ * 7. Team A Pick (Map 3)
+ * 8. Team B Side Pick (Map 3)
+ * 9. Team B Pick (Map 4)
+ * 10. Team A Side Pick (Map 4)
+ * 11. Decider (Map 5)
+ * 12. Team B Side Pick (Map 5)
  */
 export const BO5_GRAND_FINALS: VetoSequence = {
     format: 'bo5',
-    total_steps: 11,
+    total_steps: 12,
     winner_bracket_team: 'team_a',
     steps: [
-        { step: 1, action: 'ban', actor: 'team_a', count: 2, description: "Winner's Bracket Team bans 2 maps" },
-        { step: 2, action: 'pick', actor: 'team_a', map_number: 1, description: 'Team A picks Map 1' },
-        { step: 3, action: 'side', actor: 'team_b', map_number: 1, description: 'Team B picks side for Map 1' },
-        { step: 4, action: 'pick', actor: 'team_b', map_number: 2, description: 'Team B picks Map 2' },
-        { step: 5, action: 'side', actor: 'team_a', map_number: 2, description: 'Team A picks side for Map 2' },
-        { step: 6, action: 'pick', actor: 'team_a', map_number: 3, description: 'Team A picks Map 3' },
-        { step: 7, action: 'side', actor: 'team_b', map_number: 3, description: 'Team B picks side for Map 3' },
-        { step: 8, action: 'pick', actor: 'team_b', map_number: 4, description: 'Team B picks Map 4' },
-        { step: 9, action: 'side', actor: 'team_a', map_number: 4, description: 'Team A picks side for Map 4' },
-        { step: 10, action: 'decider', actor: 'system', map_number: 5, description: 'Remaining map is decider' },
-        { step: 11, action: 'side', actor: 'team_b', map_number: 5, description: 'Team B picks side for Map 5' },
+        { step: 1, action: 'ban', actor: 'team_a', description: "Winner's Bracket Team bans a map" },
+        { step: 2, action: 'ban', actor: 'team_a', description: "Winner's Bracket Team bans a map" },
+        { step: 3, action: 'pick', actor: 'team_a', map_number: 1, description: 'Team A picks Map 1' },
+        { step: 4, action: 'side', actor: 'team_b', map_number: 1, description: 'Team B picks side for Map 1' },
+        { step: 5, action: 'pick', actor: 'team_b', map_number: 2, description: 'Team B picks Map 2' },
+        { step: 6, action: 'side', actor: 'team_a', map_number: 2, description: 'Team A picks side for Map 2' },
+        { step: 7, action: 'pick', actor: 'team_a', map_number: 3, description: 'Team A picks Map 3' },
+        { step: 8, action: 'side', actor: 'team_b', map_number: 3, description: 'Team B picks side for Map 3' },
+        { step: 9, action: 'pick', actor: 'team_b', map_number: 4, description: 'Team B picks Map 4' },
+        { step: 10, action: 'side', actor: 'team_a', map_number: 4, description: 'Team A picks side for Map 4' },
+        { step: 11, action: 'decider', actor: 'system', map_number: 5, description: 'Remaining map is decider (Map 5)' },
+        { step: 12, action: 'side', actor: 'team_b', map_number: 5, description: 'Team B picks side for Map 5' },
     ],
 };
 
