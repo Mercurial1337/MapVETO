@@ -119,7 +119,9 @@ CREATE TABLE match_state (
     picked_maps JSONB NOT NULL DEFAULT '[]',
     results JSONB NOT NULL DEFAULT '[]',
     is_complete BOOLEAN DEFAULT false,
-    updated_at TIMESTAMPTZ DEFAULT NOW()
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
+    -- Maps real team (link_type) to template role after position choice
+    actor_mapping JSONB DEFAULT NULL
 );
 
 -- Match Links table (magic links)
