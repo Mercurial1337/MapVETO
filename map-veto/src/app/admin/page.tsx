@@ -33,10 +33,6 @@ export default function AdminDashboard() {
 
     const supabase = createClient();
 
-    useEffect(() => {
-        fetchData();
-    }, []);
-
     const fetchData = async () => {
         setIsLoading(true);
 
@@ -69,6 +65,31 @@ export default function AdminDashboard() {
 
         setIsLoading(false);
     };
+
+    useEffect(() => {
+        fetchData();
+
+        // Subscribe to realtime updates for matches table
+        const channel = supabase
+            .channel('admin-matches')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'matches',
+                },
+                () => {
+                    // Refetch data when any match is created, updated, or deleted
+                    fetchData();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
 
     const getStatusBadge = (status: string) => {
         switch (status) {

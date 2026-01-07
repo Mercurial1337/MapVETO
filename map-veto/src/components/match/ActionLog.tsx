@@ -125,7 +125,7 @@ export function ActionLog({
                 lines.push(`${teamName} picks ${entry.mapName} (Map ${entry.mapNumber})`);
             } else if (entry.type === 'side') {
                 const sideText = entry.side === 'attack' ? 'Attack' : 'Defense';
-                lines.push(`${teamName} picks ${sideText} side for Map ${entry.mapNumber}`);
+                lines.push(`${teamName} picks ${sideText} side for ${entry.mapName} (Map ${entry.mapNumber})`);
             } else if (entry.type === 'decider') {
                 lines.push(`${entry.mapName} is the decider (Map ${entry.mapNumber})`);
             }
@@ -216,7 +216,7 @@ export function ActionLog({
                             )}
                             {entry.type === 'side' && entry.mapNumber && (
                                 <span className="text-white/40 text-xs">
-                                    {' '}for Map {entry.mapNumber}
+                                    {' '}for {entry.mapName} (Map {entry.mapNumber})
                                 </span>
                             )}
                             {entry.type === 'decider' && (

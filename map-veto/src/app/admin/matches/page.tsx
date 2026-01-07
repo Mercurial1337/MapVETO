@@ -31,10 +31,6 @@ export default function MatchesPage() {
 
     const supabase = createClient();
 
-    useEffect(() => {
-        fetchMatches();
-    }, []);
-
     const fetchMatches = async () => {
         setIsLoading(true);
         const { data, error } = await supabase
@@ -47,6 +43,31 @@ export default function MatchesPage() {
         }
         setIsLoading(false);
     };
+
+    useEffect(() => {
+        fetchMatches();
+
+        // Subscribe to realtime updates for matches table
+        const channel = supabase
+            .channel('matches-list')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'matches',
+                },
+                () => {
+                    // Refetch data when any match is created, updated, or deleted
+                    fetchMatches();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
 
     const fetchMatchLinks = async (matchId: string) => {
         setLoadingLinks(matchId);
