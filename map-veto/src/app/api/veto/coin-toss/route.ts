@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         // Get match and verify status
         const { data: matchData, error: matchError } = await supabase
             .from('matches')
-            .select('status, coin_toss_winner')
+            .select('status, coin_toss_winner, format')
             .eq('id', match_id)
             .single();
 
@@ -66,7 +66,61 @@ export async function POST(request: NextRequest) {
             winner = randomBytes[0] % 2 === 0 ? 'team_a' : 'team_b';
         }
 
-        // Update match - go to side_selection where winner chooses position
+        // Special case for Bo5 with forced winner:
+        // Upper bracket team is automatically Team A - skip position selection
+        const isBo5WithForcedWinner = matchData.format === 'bo5' && forced_winner;
+
+        if (isBo5WithForcedWinner) {
+            // Forced winner becomes Team A automatically
+            // Create actor mapping: forced winner = team_a role
+            const otherTeam = forced_winner === 'team_a' ? 'team_b' : 'team_a';
+            const actorMapping = {
+                [forced_winner]: 'team_a',
+                [otherTeam]: 'team_b',
+            };
+
+            // Update match to in_progress directly (skip position selection)
+            const { error: updateError } = await supabase
+                .from('matches')
+                .update({
+                    coin_toss_winner: winner,
+                    status: 'in_progress',
+                    started_at: new Date().toISOString(),
+                })
+                .eq('id', match_id);
+
+            if (updateError) {
+                return NextResponse.json(
+                    { error: 'Failed to update match' },
+                    { status: 500 }
+                );
+            }
+
+            // Update match_state with actor mapping and starting turn (Team A = forced winner)
+            await supabase
+                .from('match_state')
+                .update({
+                    current_turn: forced_winner,
+                    actor_mapping: actorMapping,
+                })
+                .eq('match_id', match_id);
+
+            // Log the coin toss
+            await supabase.from('match_logs').insert({
+                match_id,
+                step_number: -1,
+                action_type: 'coin_toss',
+                actor: winner,
+            });
+
+            return NextResponse.json({
+                success: true,
+                winner,
+                auto_team_a: true, // Indicate that position was auto-assigned
+            });
+        }
+
+        // Normal flow: go to side_selection where winner chooses position
         const { error: updateError } = await supabase
             .from('matches')
             .update({
@@ -102,3 +156,4 @@ export async function POST(request: NextRequest) {
         );
     }
 }
+
