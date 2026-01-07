@@ -188,27 +188,47 @@ export default function MatchesPage() {
                         <div className="space-y-3">
                             {(() => {
                                 const match = matches.find(m => m.id === selectedMatchLinks.matchId);
+                                const colorStyles = {
+                                    red: {
+                                        container: 'bg-red-500/5 border-red-500/10',
+                                        label: 'text-red-400',
+                                        button: 'bg-red-500/10 hover:bg-red-500/20 text-red-300',
+                                    },
+                                    blue: {
+                                        container: 'bg-blue-500/5 border-blue-500/10',
+                                        label: 'text-blue-400',
+                                        button: 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-300',
+                                    },
+                                    purple: {
+                                        container: 'bg-purple-500/5 border-purple-500/10',
+                                        label: 'text-purple-400',
+                                        button: 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-300',
+                                    },
+                                };
                                 return [
-                                    { label: match?.team_a_name || 'Team 1', key: 'team_a' as const, color: 'red' },
-                                    { label: match?.team_b_name || 'Team 2', key: 'team_b' as const, color: 'blue' },
-                                    { label: 'Observer', key: 'observer' as const, color: 'purple' },
-                                ];
-                            })().map(({ label, key, color }) => (
-                                <div key={key} className={`p-3 bg-${color}-500/10 border border-${color}-500/20 rounded-lg`}>
-                                    <div className="flex items-center justify-between mb-1">
-                                        <span className={`text-${color}-400 font-medium text-sm`}>{label}</span>
-                                        <button
-                                            onClick={() => copyToClipboard(selectedMatchLinks.links[key], label)}
-                                            className={`text-xs px-2 py-1 bg-${color}-500/20 hover:bg-${color}-500/30 rounded text-${color}-300`}
-                                        >
-                                            Copy
-                                        </button>
-                                    </div>
-                                    <p className="text-xs text-white/50 font-mono break-all">
-                                        {selectedMatchLinks.links[key]}
-                                    </p>
-                                </div>
-                            ))}
+                                    { label: match?.team_a_name || 'Team 1', key: 'team_a' as const, color: 'red' as const },
+                                    { label: match?.team_b_name || 'Team 2', key: 'team_b' as const, color: 'blue' as const },
+                                    { label: 'Observer', key: 'observer' as const, color: 'purple' as const },
+                                ].map(({ label, key, color }) => {
+                                    const styles = colorStyles[color];
+                                    return (
+                                        <div key={key} className={`p-3 ${styles.container} border rounded-lg`}>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className={`${styles.label} font-medium text-sm`}>{label}</span>
+                                                <button
+                                                    onClick={() => copyToClipboard(selectedMatchLinks.links[key], label)}
+                                                    className={`text-xs px-2 py-1 ${styles.button} rounded`}
+                                                >
+                                                    Copy
+                                                </button>
+                                            </div>
+                                            <p className="text-xs text-white/40 font-mono break-all">
+                                                {selectedMatchLinks.links[key]}
+                                            </p>
+                                        </div>
+                                    );
+                                });
+                            })()}
                         </div>
                         <button
                             onClick={() => setSelectedMatchLinks(null)}
