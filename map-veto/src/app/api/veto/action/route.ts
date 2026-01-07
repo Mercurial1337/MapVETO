@@ -100,9 +100,10 @@ export async function POST(request: NextRequest) {
         }
 
         // 3. Validate it's this team's turn
-        if (currentStepDef.actor !== actingTeam) {
+        // Use current_turn from state (set by position choice) instead of template's actor
+        if (state.current_turn !== actingTeam) {
             return NextResponse.json(
-                { error: `Not your turn. Current turn: ${currentStepDef.actor}` },
+                { error: `Not your turn. Current turn: ${state.current_turn}` },
                 { status: 403 }
             );
         }
@@ -198,7 +199,22 @@ export async function POST(request: NextRequest) {
             isComplete = nextStep >= template.steps.length;
         }
 
-        const currentTurn: VetoActor | null = isComplete ? null : (nextStepDef?.actor as VetoActor);
+        // Determine next turn using actor_mapping
+        // Template says next step is for "team_a" or "team_b" - we need to find which real team maps to that role
+        let currentTurn: VetoActor | null = null;
+        if (!isComplete && nextStepDef?.actor && nextStepDef.actor !== 'system') {
+            const templateActor = nextStepDef.actor as 'team_a' | 'team_b';
+            // Find which real team is mapped to this template role
+            if (state.actor_mapping) {
+                // Reverse lookup: find the key (real team) that has value = templateActor
+                currentTurn = (Object.entries(state.actor_mapping).find(
+                    ([, role]) => role === templateActor
+                )?.[0] as VetoActor) || templateActor;
+            } else {
+                // Fallback: no mapping, use template directly
+                currentTurn = templateActor;
+            }
+        }
 
         // Build final results if complete
         if (isComplete) {

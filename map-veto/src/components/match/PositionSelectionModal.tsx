@@ -131,10 +131,7 @@ export function PositionSelectionModal({
                                 >
                                     <div className="flex items-center gap-4">
                                         <span className="text-3xl">🅰️</span>
-                                        <div>
-                                            <h3 className="text-xl font-bold text-green-400">Be Team A</h3>
-                                            <p className="text-white/60 text-sm">You go first (Ban/Pick first)</p>
-                                        </div>
+                                        <h3 className="text-xl font-bold text-green-400">Be Team A</h3>
                                     </div>
                                 </motion.button>
 
@@ -152,10 +149,7 @@ export function PositionSelectionModal({
                                 >
                                     <div className="flex items-center gap-4">
                                         <span className="text-3xl">🅱️</span>
-                                        <div>
-                                            <h3 className="text-xl font-bold text-blue-400">Be Team B</h3>
-                                            <p className="text-white/60 text-sm">You go second (Ban/Pick second)</p>
-                                        </div>
+                                        <h3 className="text-xl font-bold text-blue-400">Be Team B</h3>
                                     </div>
                                 </motion.button>
                             </div>

@@ -78,9 +78,26 @@ export async function POST(request: NextRequest) {
         }
 
         // Determine who goes first based on choice
-        // If winner picks first, they are first_picker
-        // If winner picks second, the other team is first_picker
-        const firstPicker = pick_first ? actingTeam : (actingTeam === 'team_a' ? 'team_b' : 'team_a');
+        // If winner picks first (wants to be Team A), they map to template team_a
+        // If winner picks second (wants to be Team B), they map to template team_b
+
+        // The acting team (coin toss winner) chooses their role
+        // pick_first = true means they want to be Team A (first in template)
+        // pick_first = false means they want to be Team B (second in template)
+
+        // Create actor mapping: maps real team to template role
+        // e.g., if team_b wins coin toss and picks first, they become template team_a
+        const actorMapping = pick_first
+            ? {
+                // Winner wants to be Team A (first)
+                [actingTeam]: 'team_a',
+                [actingTeam === 'team_a' ? 'team_b' : 'team_a']: 'team_b',
+            }
+            : {
+                // Winner wants to be Team B (second)
+                [actingTeam]: 'team_b',
+                [actingTeam === 'team_a' ? 'team_b' : 'team_a']: 'team_a',
+            };
 
         // Update match status to in_progress
         const { error: updateError } = await supabase
@@ -99,11 +116,15 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Update match_state to set the correct starting turn
+        // Update match_state with actor mapping and starting turn
+        // Template step 1 is for team_a, so find who maps to team_a
+        const firstPicker = actorMapping.team_a === 'team_a' ? 'team_a' : 'team_b';
+
         await supabase
             .from('match_state')
             .update({
-                current_turn: firstPicker,
+                current_turn: Object.entries(actorMapping).find(([, role]) => role === 'team_a')?.[0] as 'team_a' | 'team_b',
+                actor_mapping: actorMapping,
             })
             .eq('match_id', match_id);
 

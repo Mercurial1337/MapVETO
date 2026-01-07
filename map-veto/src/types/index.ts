@@ -140,6 +140,12 @@ export interface MatchState {
   results: PickedMap[]; // Final ordered list
   is_complete: boolean;
   updated_at: string;
+  // Maps real team (link_type) to template role
+  // e.g., { team_a: 'team_b', team_b: 'team_a' } means token team_a plays as template team_b
+  actor_mapping?: {
+    team_a: 'team_a' | 'team_b';
+    team_b: 'team_a' | 'team_b';
+  };
 }
 
 // ============================================
