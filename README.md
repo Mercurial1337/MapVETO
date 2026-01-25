@@ -7,6 +7,10 @@ A real-time competitive map veto system for esports tournaments. Built with Next
 ![Supabase](https://img.shields.io/badge/Supabase-Realtime-green?logo=supabase)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38bdf8?logo=tailwindcss)
 
+## 📸 Screenshot
+
+![MapVETO Application](MAPBAN%20Sample.png)
+
 ## ✨ Features
 
 - **🔄 Real-time Veto System** - Live synchronization between teams with Supabase Realtime
