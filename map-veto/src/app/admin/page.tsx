@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 interface Match {
     id: string;
@@ -30,16 +31,18 @@ export default function AdminDashboard() {
     });
     const [recentMatches, setRecentMatches] = useState<Match[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(null);
 
     const supabase = createClient();
 
-    const fetchData = async () => {
+    const fetchData = useCallback(async (userId: string) => {
         setIsLoading(true);
 
-        // Fetch all matches
+        // Fetch matches created by the current user
         const { data: matches, error } = await supabase
             .from('matches')
             .select('*')
+            .eq('created_by', userId)
             .order('created_at', { ascending: false });
 
         if (!error && matches) {
@@ -64,32 +67,50 @@ export default function AdminDashboard() {
         }
 
         setIsLoading(false);
-    };
+    }, [supabase]);
 
     useEffect(() => {
-        fetchData();
+        let channel: ReturnType<typeof supabase.channel> | null = null;
 
-        // Subscribe to realtime updates for matches table
-        const channel = supabase
-            .channel('admin-matches')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'matches',
-                },
-                () => {
-                    // Refetch data when any match is created, updated, or deleted
-                    fetchData();
-                }
-            )
-            .subscribe();
+        const initUser = async () => {
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            if (currentUser) {
+                setUser(currentUser);
+                fetchData(currentUser.id);
+
+                // Subscribe to realtime updates for matches created by this user
+                channel = supabase
+                    .channel('admin-matches')
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: '*',
+                            schema: 'public',
+                            table: 'matches',
+                            filter: `created_by=eq.${currentUser.id}`,
+                        },
+                        () => {
+                            fetchData(currentUser.id);
+                        }
+                    )
+                    .subscribe();
+            }
+        };
+
+        initUser();
 
         return () => {
-            supabase.removeChannel(channel);
+            if (channel) {
+                supabase.removeChannel(channel);
+            }
         };
-    }, []);
+    }, [supabase, fetchData]);
+
+    const handleRefresh = () => {
+        if (user) {
+            fetchData(user.id);
+        }
+    };
 
     const getStatusBadge = (status: string) => {
         switch (status) {
@@ -167,7 +188,7 @@ export default function AdminDashboard() {
                         <span className="text-sm text-white">Quick Veto</span>
                     </Link>
                     <button
-                        onClick={fetchData}
+                        onClick={handleRefresh}
                         className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 transition-colors text-center"
                     >
                         <span className="text-2xl block mb-2">🔄</span>

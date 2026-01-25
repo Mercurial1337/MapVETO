@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 interface Match {
     id: string;
@@ -28,46 +29,60 @@ export default function MatchesPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMatchLinks, setSelectedMatchLinks] = useState<{ matchId: string; links: MatchLinks } | null>(null);
     const [loadingLinks, setLoadingLinks] = useState<string | null>(null);
+    const [user, setUser] = useState<User | null>(null);
 
     const supabase = createClient();
 
-    const fetchMatches = async () => {
+    const fetchMatches = useCallback(async (userId: string) => {
         setIsLoading(true);
         const { data, error } = await supabase
             .from('matches')
             .select('*')
+            .eq('created_by', userId)
             .order('created_at', { ascending: false });
 
         if (!error && data) {
             setMatches(data);
         }
         setIsLoading(false);
-    };
+    }, [supabase]);
 
     useEffect(() => {
-        fetchMatches();
+        let channel: ReturnType<typeof supabase.channel> | null = null;
 
-        // Subscribe to realtime updates for matches table
-        const channel = supabase
-            .channel('matches-list')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'matches',
-                },
-                () => {
-                    // Refetch data when any match is created, updated, or deleted
-                    fetchMatches();
-                }
-            )
-            .subscribe();
+        const initUser = async () => {
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            if (currentUser) {
+                setUser(currentUser);
+                fetchMatches(currentUser.id);
+
+                // Subscribe to realtime updates for matches created by this user
+                channel = supabase
+                    .channel('matches-list')
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: '*',
+                            schema: 'public',
+                            table: 'matches',
+                            filter: `created_by=eq.${currentUser.id}`,
+                        },
+                        () => {
+                            fetchMatches(currentUser.id);
+                        }
+                    )
+                    .subscribe();
+            }
+        };
+
+        initUser();
 
         return () => {
-            supabase.removeChannel(channel);
+            if (channel) {
+                supabase.removeChannel(channel);
+            }
         };
-    }, []);
+    }, [supabase, fetchMatches]);
 
     const fetchMatchLinks = async (matchId: string) => {
         setLoadingLinks(matchId);

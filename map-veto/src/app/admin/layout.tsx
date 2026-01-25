@@ -1,8 +1,10 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import type { User } from '@supabase/supabase-js';
 
 interface AdminLayoutProps {
     children: React.ReactNode;
@@ -10,9 +12,18 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
     const router = useRouter();
+    const [user, setUser] = useState<User | null>(null);
+    const supabase = createClient();
+
+    useEffect(() => {
+        const getUser = async () => {
+            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            setUser(currentUser);
+        };
+        getUser();
+    }, [supabase]);
 
     const handleLogout = async () => {
-        const supabase = createClient();
         await supabase.auth.signOut();
         router.push('/');
     };
@@ -73,6 +84,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
                 {/* User Section */}
                 <div className="p-4 border-t border-white/10">
+                    {user && (
+                        <div className="px-4 py-2 mb-2">
+                            <p className="text-xs text-white/40">Signed in as</p>
+                            <p className="text-sm text-white/70 truncate">{user.email}</p>
+                        </div>
+                    )}
                     <button
                         onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-red-500/10 transition-colors"

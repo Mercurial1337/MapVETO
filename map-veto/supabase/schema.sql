@@ -102,6 +102,7 @@ CREATE TABLE matches (
     format VARCHAR(10) NOT NULL CHECK (format IN ('bo1', 'bo3', 'bo5')),
     status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'coin_toss', 'side_selection', 'in_progress', 'completed', 'cancelled')),
     coin_toss_winner VARCHAR(10) CHECK (coin_toss_winner IN ('team_a', 'team_b')),
+    created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     scheduled_at TIMESTAMPTZ,
     started_at TIMESTAMPTZ,
     completed_at TIMESTAMPTZ,

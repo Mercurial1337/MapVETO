@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createServiceClient, createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -30,6 +30,10 @@ export async function POST(request: NextRequest) {
 
         const data = validationResult.data;
         const supabase = createServiceClient();
+
+        // Get the authenticated user who is creating this match
+        const authClient = await createClient();
+        const { data: { user } } = await authClient.auth.getUser();
 
         // Get default template for format if not specified
         let templateId = data.template_id;
@@ -77,6 +81,7 @@ export async function POST(request: NextRequest) {
                 format: data.format,
                 status: 'coin_toss',
                 scheduled_at: data.scheduled_at || null,
+                created_by: user?.id || null,
             });
 
         if (matchError) {
