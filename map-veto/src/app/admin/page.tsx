@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
+import { PlusCircle, ClipboardList, Gamepad2, RefreshCw } from 'lucide-react';
 
 interface Match {
     id: string;
@@ -168,30 +169,30 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <Link
                         href="/admin/matches/new"
-                        className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition-colors text-center"
+                        className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition-colors text-center flex flex-col items-center gap-2"
                     >
-                        <span className="text-2xl block mb-2">➕</span>
+                        <PlusCircle size={24} className="text-purple-400" />
                         <span className="text-sm text-white">Create Match</span>
                     </Link>
                     <Link
                         href="/admin/matches"
-                        className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-colors text-center"
+                        className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-colors text-center flex flex-col items-center gap-2"
                     >
-                        <span className="text-2xl block mb-2">📋</span>
+                        <ClipboardList size={24} className="text-blue-400" />
                         <span className="text-sm text-white">All Matches</span>
                     </Link>
                     <Link
                         href="/admin/matches/new"
-                        className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 hover:bg-green-500/20 transition-colors text-center"
+                        className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 hover:bg-green-500/20 transition-colors text-center flex flex-col items-center gap-2"
                     >
-                        <span className="text-2xl block mb-2">🎮</span>
+                        <Gamepad2 size={24} className="text-green-400" />
                         <span className="text-sm text-white">Quick Veto</span>
                     </Link>
                     <button
                         onClick={handleRefresh}
-                        className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 transition-colors text-center"
+                        className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 transition-colors text-center flex flex-col items-center gap-2"
                     >
-                        <span className="text-2xl block mb-2">🔄</span>
+                        <RefreshCw size={24} className="text-orange-400" />
                         <span className="text-sm text-white">Refresh</span>
                     </button>
                 </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
+import { LayoutDashboard, Gamepad2, PlusCircle, Monitor, LogOut } from 'lucide-react';
 
 interface AdminLayoutProps {
     children: React.ReactNode;
@@ -35,7 +36,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 {/* Logo */}
                 <div className="p-6 border-b border-white/10">
                     <Link href="/admin" className="flex items-center gap-2">
-                        <span className="text-2xl font-bold gradient-text">VETO</span>
+                        <span className="text-2xl font-bold text-purple-500">VETO</span>
                         <span className="text-xs text-white/40 uppercase">Admin</span>
                     </Link>
                 </div>
@@ -48,7 +49,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                 href="/admin"
                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors"
                             >
-                                <span>📊</span>
+                                <LayoutDashboard size={20} />
                                 <span>Dashboard</span>
                             </Link>
                         </li>
@@ -57,7 +58,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                 href="/admin/matches"
                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors"
                             >
-                                <span>🎮</span>
+                                <Gamepad2 size={20} />
                                 <span>Matches</span>
                             </Link>
                         </li>
@@ -66,7 +67,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                 href="/admin/matches/new"
                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors"
                             >
-                                <span>➕</span>
+                                <PlusCircle size={20} />
                                 <span>Create Match</span>
                             </Link>
                         </li>
@@ -75,7 +76,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                 href="/admin/stream"
                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-white/5 transition-colors"
                             >
-                                <span>📺</span>
+                                <Monitor size={20} />
                                 <span>Stream Overlay</span>
                             </Link>
                         </li>
@@ -94,7 +95,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-red-500/10 transition-colors"
                     >
-                        <span>🚪</span>
+                        <LogOut size={20} />
                         <span>Sign Out</span>
                     </button>
                 </div>

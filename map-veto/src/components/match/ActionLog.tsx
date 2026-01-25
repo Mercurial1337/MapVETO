@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import type { BannedMap, PickedMap, VetoActor, VetoStep } from '@/types';
+import { Ban, Check, Swords, Shield, Dices, Copy } from 'lucide-react';
 
 interface ActionLogProps {
     bannedMaps: BannedMap[];
@@ -158,12 +159,12 @@ export function ActionLog({
             >
                 {copied ? (
                     <>
-                        <span>✓</span>
+                        <Check size={14} />
                         <span>Copied!</span>
                     </>
                 ) : (
                     <>
-                        <span>📋</span>
+                        <Copy size={14} />
                         <span>Copy Log</span>
                     </>
                 )}
@@ -181,10 +182,10 @@ export function ActionLog({
                     >
                         {/* Icon */}
                         <span className="w-5 text-center flex-shrink-0 mt-0.5">
-                            {entry.type === 'ban' && '🚫'}
-                            {entry.type === 'pick' && '✅'}
-                            {entry.type === 'side' && (entry.side === 'attack' ? '⚔️' : '🛡️')}
-                            {entry.type === 'decider' && '🎲'}
+                            {entry.type === 'ban' && <Ban size={16} className="text-red-400" />}
+                            {entry.type === 'pick' && <Check size={16} className="text-green-400" />}
+                            {entry.type === 'side' && (entry.side === 'attack' ? <Swords size={16} className="text-red-400" /> : <Shield size={16} className="text-blue-400" />)}
+                            {entry.type === 'decider' && <Dices size={16} className="text-purple-400" />}
                         </span>
 
                         {/* Text */}
