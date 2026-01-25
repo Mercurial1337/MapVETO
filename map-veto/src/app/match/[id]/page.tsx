@@ -253,31 +253,31 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     return (
         <div className="min-h-screen flex flex-col">
             {/* Header */}
-            <header className="glass-dark border-b border-white/10 px-6 py-4">
+            <header className="glass-dark border-b border-white/10 px-4 md:px-6 py-3 md:py-4">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <h1 className="gradient-text text-2xl font-bold">MAP VETO</h1>
-                        <div className={`px-3 py-1 rounded-full text-xs font-medium ${isConnected ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
+                    <div className="flex items-center gap-2 md:gap-4">
+                        <h1 className="text-purple-500 text-lg md:text-2xl font-bold">MAP VETO</h1>
+                        <div className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium ${isConnected ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
                             }`}>
                             {isConnected ? '● Live' : '○ Connecting...'}
                         </div>
                     </div>
-                    <div className="text-sm text-white/60">
+                    <div className="text-xs md:text-sm text-white/60">
                         {match.format.toUpperCase()}
                     </div>
                 </div>
             </header>
 
             {/* Teams Banner */}
-            <div className="bg-black/40 border-b border-white/5 px-6 py-6">
-                <div className="max-w-4xl mx-auto flex items-center justify-center gap-8">
-                    <div className="text-center">
-                        <h2 className="text-2xl font-bold text-white">{displayedTeams.teamA}</h2>
+            <div className="bg-black/40 border-b border-white/5 px-4 md:px-6 py-4 md:py-6">
+                <div className="max-w-4xl mx-auto flex items-center justify-center gap-4 md:gap-8">
+                    <div className="text-center flex-1 md:flex-none">
+                        <h2 className="text-base md:text-2xl font-bold text-white truncate">{displayedTeams.teamA}</h2>
                         <span className="text-xs text-red-400 uppercase tracking-wider">Team 1</span>
                     </div>
-                    <div className="text-4xl font-light text-white/30">VS</div>
-                    <div className="text-center">
-                        <h2 className="text-2xl font-bold text-white">{displayedTeams.teamB}</h2>
+                    <div className="text-2xl md:text-4xl font-light text-white/30">VS</div>
+                    <div className="text-center flex-1 md:flex-none">
+                        <h2 className="text-base md:text-2xl font-bold text-white truncate">{displayedTeams.teamB}</h2>
                         <span className="text-xs text-blue-400 uppercase tracking-wider">Team 2</span>
                     </div>
                 </div>
@@ -296,10 +296,10 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             )}
 
             {/* Main Content - Map Gallery + Action Log */}
-            <div className="flex-1 flex px-4 py-6 gap-4">
+            <div className="flex-1 flex flex-col lg:flex-row px-2 md:px-4 py-4 md:py-6 gap-4">
                 {/* Map Gallery */}
-                <div className="flex-1 flex items-center justify-center">
-                    <div className="flex flex-wrap gap-3 justify-center max-w-5xl">
+                <div className="flex-1 flex items-start lg:items-center justify-center">
+                    <div className="flex flex-wrap gap-2 md:gap-3 justify-center max-w-5xl">
                         {mapsWithImages.map((map) => {
                             const mapState = mapStates[map.id] || { state: 'available' as MapCardState };
                             const isAvailableMap = mapState.state === 'active' || mapState.state === 'available';
@@ -329,7 +329,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     </div>
                 </div>
 
-                {/* Action Log Panel */}
+                {/* Action Log Panel - Desktop */}
                 <div className="w-64 glass rounded-xl p-4 hidden lg:block">
                     <h3 className="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wider">Action Log</h3>
                     <ActionLog

@@ -80,7 +80,7 @@ export function MapCard({
             onClick={isInteractive ? onSelect : undefined}
             className={cn(
                 'relative aspect-[16/9] rounded-xl overflow-hidden transition-all duration-300',
-                'w-[140px] md:w-[160px] lg:w-[180px] xl:w-[200px]',
+                'w-[96px] sm:w-[120px] md:w-[160px] lg:w-[180px] xl:w-[200px]',
                 'shadow-xl',
                 isInteractive && 'cursor-pointer',
                 state === 'banned' && 'cursor-not-allowed',
@@ -97,7 +97,7 @@ export function MapCard({
                 fill
                 className="object-cover"
                 priority
-                sizes="(max-width: 768px) 140px, (max-width: 1024px) 160px, 200px"
+                sizes="(max-width: 640px) 96px, (max-width: 768px) 120px, (max-width: 1024px) 160px, 200px"
                 onError={() => setImgError(true)}
             />
 
