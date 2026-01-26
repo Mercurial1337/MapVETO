@@ -11,6 +11,7 @@ interface CoinTossModalProps {
     isAdmin?: boolean;
     winner?: VetoActor | null;
     onFlip?: (forcedWinner?: VetoActor) => Promise<VetoActor | null>;
+    customCoinImage?: string | null;
 }
 
 function cn(...classes: (string | boolean | undefined)[]) {
@@ -24,6 +25,7 @@ export function CoinTossModal({
     isAdmin = false,
     winner: externalWinner,
     onFlip,
+    customCoinImage,
 }: CoinTossModalProps) {
     const [isFlipping, setIsFlipping] = useState(false);
     const [result, setResult] = useState<VetoActor | null>(null);
@@ -145,37 +147,66 @@ export function CoinTossModal({
                                 style={{ transformStyle: 'preserve-3d' }}
                             >
                                 {/* Coin Face A */}
-                                <div
-                                    className={cn(
-                                        'absolute inset-0 rounded-full flex items-center justify-center text-6xl font-bold',
-                                        'bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-600',
-                                        'shadow-2xl shadow-yellow-500/50',
-                                        'border-4 border-yellow-200/50'
-                                    )}
-                                    style={{ backfaceVisibility: 'hidden' }}
-                                >
-                                    <span className="bg-gradient-to-b from-yellow-800 to-yellow-950 bg-clip-text text-transparent drop-shadow-sm">
-                                        A
-                                    </span>
-                                </div>
+                                {customCoinImage ? (
+                                    <div
+                                        className="absolute inset-0 rounded-full overflow-hidden shadow-2xl border-4 border-yellow-400/50"
+                                        style={{ backfaceVisibility: 'hidden' }}
+                                    >
+                                        <img
+                                            src={customCoinImage}
+                                            alt="Coin"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div
+                                        className={cn(
+                                            'absolute inset-0 rounded-full flex items-center justify-center text-6xl font-bold',
+                                            'bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-600',
+                                            'shadow-2xl shadow-yellow-500/50',
+                                            'border-4 border-yellow-200/50'
+                                        )}
+                                        style={{ backfaceVisibility: 'hidden' }}
+                                    >
+                                        <span className="bg-gradient-to-b from-yellow-800 to-yellow-950 bg-clip-text text-transparent drop-shadow-sm">
+                                            A
+                                        </span>
+                                    </div>
+                                )}
 
                                 {/* Coin Face B */}
-                                <div
-                                    className={cn(
-                                        'absolute inset-0 rounded-full flex items-center justify-center text-6xl font-bold',
-                                        'bg-gradient-to-br from-slate-300 via-slate-400 to-slate-600',
-                                        'shadow-2xl shadow-slate-500/50',
-                                        'border-4 border-slate-200/50'
-                                    )}
-                                    style={{
-                                        backfaceVisibility: 'hidden',
-                                        transform: 'rotateY(180deg)',
-                                    }}
-                                >
-                                    <span className="bg-gradient-to-b from-slate-700 to-slate-900 bg-clip-text text-transparent drop-shadow-sm">
-                                        B
-                                    </span>
-                                </div>
+                                {customCoinImage ? (
+                                    <div
+                                        className="absolute inset-0 rounded-full overflow-hidden shadow-2xl border-4 border-yellow-400/50"
+                                        style={{
+                                            backfaceVisibility: 'hidden',
+                                            transform: 'rotateY(180deg)',
+                                        }}
+                                    >
+                                        <img
+                                            src={customCoinImage}
+                                            alt="Coin"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div
+                                        className={cn(
+                                            'absolute inset-0 rounded-full flex items-center justify-center text-6xl font-bold',
+                                            'bg-gradient-to-br from-slate-300 via-slate-400 to-slate-600',
+                                            'shadow-2xl shadow-slate-500/50',
+                                            'border-4 border-slate-200/50'
+                                        )}
+                                        style={{
+                                            backfaceVisibility: 'hidden',
+                                            transform: 'rotateY(180deg)',
+                                        }}
+                                    >
+                                        <span className="bg-gradient-to-b from-slate-700 to-slate-900 bg-clip-text text-transparent drop-shadow-sm">
+                                            B
+                                        </span>
+                                    </div>
+                                )}
                             </motion.div>
 
                             {/* Glow effect */}

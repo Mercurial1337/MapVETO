@@ -12,6 +12,13 @@ import { createClient } from '@/lib/supabase/client';
 import type { MatchState, Match, VetoActor, SideChoice, GameMap } from '@/types';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
+interface EventBranding {
+    logo_url: string | null;
+    coin_image_url: string | null;
+    custom_font_url: string | null;
+    custom_font_name: string | null;
+}
+
 type UserRole = 'team_a' | 'team_b' | 'observer' | null;
 
 interface RealtimeContextValue {
@@ -19,6 +26,9 @@ interface RealtimeContextValue {
     match: Match | null;
     state: MatchState | null;
     maps: GameMap[];
+
+    // Event branding
+    eventBranding: EventBranding | null;
 
     // User role based on token
     userRole: UserRole;
@@ -54,6 +64,7 @@ export function RealtimeProvider({ matchId, token, children }: RealtimeProviderP
     const [match, setMatch] = useState<Match | null>(null);
     const [state, setState] = useState<MatchState | null>(null);
     const [maps, setMaps] = useState<GameMap[]>([]);
+    const [eventBranding, setEventBranding] = useState<EventBranding | null>(null);
     const [userRole, setUserRole] = useState<UserRole>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
@@ -64,14 +75,15 @@ export function RealtimeProvider({ matchId, token, children }: RealtimeProviderP
     // Fetch initial data and user role
     const fetchData = useCallback(async () => {
         try {
-            // Fetch match and state
+            // Fetch match and state with event if exists
             const { data: matchData, error: matchError } = await supabase
                 .from('matches')
                 .select(`
-          *,
-          match_state(*),
-          veto_templates(id, name, format, sequence, game_id)
-        `)
+                    *,
+                    match_state(*),
+                    veto_templates(id, name, format, sequence, game_id),
+                    events(logo_url, coin_image_url, custom_font_url, custom_font_name)
+                `)
                 .eq('id', matchId)
                 .single();
 
@@ -81,6 +93,13 @@ export function RealtimeProvider({ matchId, token, children }: RealtimeProviderP
             }
 
             setMatch(matchData);
+
+            // Set event branding if exists
+            if (matchData.events) {
+                setEventBranding(matchData.events);
+            } else {
+                setEventBranding(null);
+            }
             setState(matchData.match_state);
 
             // Fetch maps for this game
@@ -244,6 +263,7 @@ export function RealtimeProvider({ matchId, token, children }: RealtimeProviderP
         match,
         state,
         maps,
+        eventBranding,
         userRole,
         isConnected,
         isLoading,
@@ -270,8 +290,8 @@ export function useRealtime() {
 
 // Convenience hooks
 export function useMatchData() {
-    const { match, state, maps, isLoading, error, userRole } = useRealtime();
-    return { match, state, maps, isLoading, error, userRole };
+    const { match, state, maps, eventBranding, isLoading, error, userRole } = useRealtime();
+    return { match, state, maps, eventBranding, isLoading, error, userRole };
 }
 
 export function useVetoActions() {

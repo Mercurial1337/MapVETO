@@ -41,7 +41,7 @@ interface MatchVetoInterfaceProps {
 }
 
 function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
-    const { match, state, maps, isLoading, error, userRole } = useMatchData();
+    const { match, state, maps, eventBranding, isLoading, error, userRole } = useMatchData();
     const { banMap, pickMap, pickSide, coinToss, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
     const [isAdmin, setIsAdmin] = useState(false);
@@ -66,6 +66,26 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             return () => clearTimeout(timer);
         }
     }, [state?.is_complete]);
+
+    // Load custom font if event has one
+    useEffect(() => {
+        if (eventBranding?.custom_font_url && eventBranding?.custom_font_name) {
+            const fontFace = new FontFace(
+                eventBranding.custom_font_name,
+                `url(${eventBranding.custom_font_url})`
+            );
+            fontFace.load().then((loadedFont) => {
+                document.fonts.add(loadedFont);
+                document.body.style.fontFamily = `"${eventBranding.custom_font_name}", sans-serif`;
+            }).catch((err) => {
+                console.error('Failed to load custom font:', err);
+            });
+
+            return () => {
+                document.body.style.fontFamily = '';
+            };
+        }
+    }, [eventBranding?.custom_font_url, eventBranding?.custom_font_name]);
 
     // Get the coin toss winner from match data
     const matchExt = match as MatchWithTemplate | null;
@@ -256,7 +276,15 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             <header className="glass-dark border-b border-white/10 px-4 md:px-6 py-3 md:py-4">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-2 md:gap-4">
-                        <h1 className="text-purple-500 text-lg md:text-2xl font-bold">MAP VETO</h1>
+                        {eventBranding?.logo_url ? (
+                            <img
+                                src={eventBranding.logo_url}
+                                alt="Event Logo"
+                                className="h-8 md:h-10 object-contain"
+                            />
+                        ) : (
+                            <h1 className="text-purple-500 text-lg md:text-2xl font-bold">MAP VETO</h1>
+                        )}
                         <div className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium ${isConnected ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
                             }`}>
                             {isConnected ? '● Live' : '○ Connecting...'}
@@ -371,6 +399,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 isAdmin={isAdmin}
                 winner={coinTossWinner}
                 onFlip={coinToss}
+                customCoinImage={eventBranding?.coin_image_url}
             />
 
             {/* Position Selection Modal */}
