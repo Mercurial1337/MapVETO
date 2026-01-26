@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
-import { LayoutDashboard, Gamepad2, PlusCircle, Monitor, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Gamepad2, PlusCircle, Monitor, LogOut, Menu, X, Calendar } from 'lucide-react';
 
 interface AdminLayoutProps {
     children: React.ReactNode;
@@ -39,6 +39,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     const navItems = [
         { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
         { href: '/admin/matches', icon: Gamepad2, label: 'Matches' },
+        { href: '/admin/events', icon: Calendar, label: 'Events' },
         { href: '/admin/matches/new', icon: PlusCircle, label: 'Create Match' },
         { href: '/admin/stream', icon: Monitor, label: 'Stream Overlay' },
     ];
@@ -104,8 +105,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                                     <Link
                                         href={item.href}
                                         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive
-                                                ? 'bg-purple-500/20 text-purple-400'
-                                                : 'text-white/70 hover:text-white hover:bg-white/5'
+                                            ? 'bg-purple-500/20 text-purple-400'
+                                            : 'text-white/70 hover:text-white hover:bg-white/5'
                                             }`}
                                     >
                                         <Icon size={20} />
