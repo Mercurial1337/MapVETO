@@ -240,3 +240,20 @@ body::before {
 .chroma-key::before {
   display: none !important;
 }
+
+/* Select/Dropdown Dark Mode Fix */
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #1a1a24;
+  color: #ededed;
+  padding: 8px;
+}
+
+select option:hover,
+select option:checked {
+  background-color: #8b5cf6;
+  color: white;
+}
