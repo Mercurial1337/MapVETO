@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { VetoTemplate, VetoSequence, VetoStep } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -26,6 +27,9 @@ interface MatchFormData {
     customMaps: string[];
     scheduledAt: string;
     eventId: string;
+    templateId: string;
+    isCustomSequence: boolean;
+    customSequence: VetoSequence | null;
 }
 
 interface CreatedMatch {
@@ -48,8 +52,12 @@ export default function NewMatchPage() {
         customMaps: [],
         scheduledAt: '',
         eventId: '',
+        templateId: '',
+        isCustomSequence: false,
+        customSequence: null,
     });
     const [events, setEvents] = useState<Event[]>([]);
+    const [templates, setTemplates] = useState<VetoTemplate[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [createdMatch, setCreatedMatch] = useState<CreatedMatch | null>(null);
@@ -72,6 +80,31 @@ export default function NewMatchPage() {
         fetchEvents();
     }, []);
 
+    // Fetch templates when format changes
+    useEffect(() => {
+        const fetchTemplates = async () => {
+            try {
+                const response = await fetch(`/api/templates?format=${formData.format}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setTemplates(data.templates || []);
+                    // Auto-select first/default template
+                    const defaultTemplate = data.templates?.find((t: VetoTemplate) => t.is_default) || data.templates?.[0];
+                    if (defaultTemplate) {
+                        setFormData(prev => ({
+                            ...prev,
+                            templateId: defaultTemplate.id,
+                            customSequence: prev.isCustomSequence ? prev.customSequence : defaultTemplate.sequence
+                        }));
+                    }
+                }
+            } catch (err) {
+                console.error('Error fetching templates:', err);
+            }
+        };
+        fetchTemplates();
+    }, [formData.format]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
@@ -93,6 +126,8 @@ export default function NewMatchPage() {
                     custom_maps: formData.mapPoolType === 'custom' ? formData.customMaps : null,
                     scheduled_at: formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null,
                     event_id: formData.eventId || null,
+                    template_id: formData.templateId,
+                    custom_veto_sequence: formData.isCustomSequence ? formData.customSequence : null,
                 }),
             });
 
@@ -128,6 +163,54 @@ export default function NewMatchPage() {
             document.body.removeChild(textArea);
             alert(`${label} link copied!`);
         }
+    };
+
+    const updateSequenceStep = (index: number, updates: Partial<VetoStep>) => {
+        if (!formData.customSequence) return;
+        const newSteps = [...formData.customSequence.steps];
+        newSteps[index] = { ...newSteps[index], ...updates };
+        setFormData({
+            ...formData,
+            customSequence: {
+                ...formData.customSequence,
+                steps: newSteps,
+                total_steps: newSteps.length
+            }
+        });
+    };
+
+    const addSequenceStep = () => {
+        if (!formData.customSequence) return;
+        const lastStep = formData.customSequence.steps[formData.customSequence.steps.length - 1];
+        const newStep: VetoStep = {
+            step: (lastStep?.step || 0) + 1,
+            action: 'ban',
+            actor: 'team_a',
+            description: 'Custom step'
+        };
+        const newSteps = [...formData.customSequence.steps, newStep];
+        setFormData({
+            ...formData,
+            customSequence: {
+                ...formData.customSequence,
+                steps: newSteps,
+                total_steps: newSteps.length
+            }
+        });
+    };
+
+    const removeSequenceStep = (index: number) => {
+        if (!formData.customSequence) return;
+        const newSteps = formData.customSequence.steps.filter((_, i) => i !== index)
+            .map((step, i) => ({ ...step, step: i + 1 })); // Re-index
+        setFormData({
+            ...formData,
+            customSequence: {
+                ...formData.customSequence,
+                steps: newSteps,
+                total_steps: newSteps.length
+            }
+        });
     };
 
     const handleCoinFlip = async (forcedWinner?: 'team_a' | 'team_b') => {
@@ -313,6 +396,9 @@ export default function NewMatchPage() {
                                     customMaps: [],
                                     scheduledAt: '',
                                     eventId: '',
+                                    templateId: '',
+                                    isCustomSequence: false,
+                                    customSequence: null,
                                 });
                             }}
                             className="flex-1 px-6 py-3 border border-white/20 rounded-xl text-white hover:bg-white/5 transition-colors"
@@ -467,8 +553,8 @@ export default function NewMatchPage() {
                                 type="button"
                                 onClick={() => setFormData({ ...formData, mapPoolType: 'competitive', customMaps: [] })}
                                 className={`p-4 rounded-xl border-2 text-left transition-all ${formData.mapPoolType === 'competitive'
-                                        ? 'border-cyan-500 bg-cyan-500/10'
-                                        : 'border-white/10 bg-white/5 hover:border-white/30'
+                                    ? 'border-cyan-500 bg-cyan-500/10'
+                                    : 'border-white/10 bg-white/5 hover:border-white/30'
                                     }`}
                             >
                                 <h4 className={`font-semibold mb-1 ${formData.mapPoolType === 'competitive' ? 'text-cyan-400' : 'text-white'}`}>
@@ -485,8 +571,8 @@ export default function NewMatchPage() {
                                 type="button"
                                 onClick={() => setFormData({ ...formData, mapPoolType: 'all', customMaps: [] })}
                                 className={`p-4 rounded-xl border-2 text-left transition-all ${formData.mapPoolType === 'all'
-                                        ? 'border-cyan-500 bg-cyan-500/10'
-                                        : 'border-white/10 bg-white/5 hover:border-white/30'
+                                    ? 'border-cyan-500 bg-cyan-500/10'
+                                    : 'border-white/10 bg-white/5 hover:border-white/30'
                                     }`}
                             >
                                 <h4 className={`font-semibold mb-1 ${formData.mapPoolType === 'all' ? 'text-cyan-400' : 'text-white'}`}>
@@ -503,8 +589,8 @@ export default function NewMatchPage() {
                                 type="button"
                                 onClick={() => setFormData({ ...formData, mapPoolType: 'custom', customMaps: formData.customMaps.length > 0 ? formData.customMaps : [...COMPETITIVE_MAPS] })}
                                 className={`p-4 rounded-xl border-2 text-left transition-all ${formData.mapPoolType === 'custom'
-                                        ? 'border-cyan-500 bg-cyan-500/10'
-                                        : 'border-white/10 bg-white/5 hover:border-white/30'
+                                    ? 'border-cyan-500 bg-cyan-500/10'
+                                    : 'border-white/10 bg-white/5 hover:border-white/30'
                                     }`}
                             >
                                 <h4 className={`font-semibold mb-1 ${formData.mapPoolType === 'custom' ? 'text-cyan-400' : 'text-white'}`}>
@@ -553,8 +639,8 @@ export default function NewMatchPage() {
                                                         }
                                                     }}
                                                     className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-all ${isSelected
-                                                            ? 'border-cyan-500 ring-2 ring-cyan-500/30'
-                                                            : 'border-transparent opacity-50 grayscale hover:opacity-75 hover:grayscale-0'
+                                                        ? 'border-cyan-500 ring-2 ring-cyan-500/30'
+                                                        : 'border-transparent opacity-50 grayscale hover:opacity-75 hover:grayscale-0'
                                                         }`}
                                                 >
                                                     <Image
@@ -584,6 +670,113 @@ export default function NewMatchPage() {
                                 </div>
                             </motion.div>
                         )}
+                    </div>
+                    {/* Veto Sequence */}
+                    <div className="border-t border-white/10 pt-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">Veto Order</h3>
+                                <p className="text-xs text-white/40 mt-1">
+                                    Choose the ban/pick sequence for this match
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, isCustomSequence: !formData.isCustomSequence })}
+                                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${formData.isCustomSequence
+                                        ? 'bg-purple-500 text-white'
+                                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                    }`}
+                            >
+                                {formData.isCustomSequence ? '✓ Custom Mode' : 'Customize Order'}
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            {!formData.isCustomSequence ? (
+                                <select
+                                    value={formData.templateId}
+                                    onChange={(e) => {
+                                        const template = templates.find(t => t.id === e.target.value);
+                                        setFormData({
+                                            ...formData,
+                                            templateId: e.target.value,
+                                            customSequence: template?.sequence || null
+                                        });
+                                    }}
+                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500/50"
+                                >
+                                    {templates.map((template) => (
+                                        <option key={template.id} value={template.id}>
+                                            {template.name} {template.is_default ? '(Default)' : ''}
+                                        </option>
+                                    ))}
+                                </select>
+                            ) : (
+                                <div className="space-y-3">
+                                    {formData.customSequence?.steps.map((step, index) => (
+                                        <div key={index} className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
+                                            <span className="w-6 h-6 flex items-center justify-center bg-white/10 rounded text-[10px] font-bold text-white/40">
+                                                {index + 1}
+                                            </span>
+
+                                            <select
+                                                value={step.action}
+                                                onChange={(e) => updateSequenceStep(index, { action: e.target.value as any })}
+                                                className="bg-transparent text-sm text-cyan-400 font-semibold focus:outline-none"
+                                            >
+                                                <option value="ban" className="bg-slate-900">Ban</option>
+                                                <option value="pick" className="bg-slate-900">Pick Map</option>
+                                                <option value="side" className="bg-slate-900">Pick Side</option>
+                                                <option value="decider" className="bg-slate-900">Decider</option>
+                                            </select>
+
+                                            <span className="text-white/40 text-xs">:</span>
+
+                                            <select
+                                                value={step.actor}
+                                                onChange={(e) => updateSequenceStep(index, { actor: e.target.value as any })}
+                                                className="bg-transparent text-sm text-white/80 focus:outline-none"
+                                            >
+                                                <option value="team_a" className="bg-slate-900">Team A</option>
+                                                <option value="team_b" className="bg-slate-900">Team B</option>
+                                                <option value="system" className="bg-slate-900">System (Auto)</option>
+                                            </select>
+
+                                            {['pick', 'side'].includes(step.action) && (
+                                                <div className="flex items-center gap-2 ml-auto">
+                                                    <span className="text-[10px] text-white/30 uppercase">Map #</span>
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        max="5"
+                                                        value={step.map_number || 1}
+                                                        onChange={(e) => updateSequenceStep(index, { map_number: parseInt(e.target.value) })}
+                                                        className="w-10 bg-white/10 rounded text-center text-xs text-white"
+                                                    />
+                                                </div>
+                                            )}
+
+                                            <button
+                                                type="button"
+                                                onClick={() => removeSequenceStep(index)}
+                                                className="p-1.5 text-white/20 hover:text-red-500 transition-colors ml-auto"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    ))}
+
+                                    <button
+                                        type="button"
+                                        onClick={addSequenceStep}
+                                        className="w-full py-2 border-2 border-dashed border-white/10 rounded-xl text-xs text-white/40 hover:border-white/20 hover:text-white/60 transition-all"
+                                    >
+                                        + Add Veto Step
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 

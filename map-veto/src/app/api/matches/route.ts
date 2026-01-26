@@ -16,6 +16,7 @@ const CreateMatchSchema = z.object({
     event_id: z.string().uuid().optional().nullable(),
     scheduled_at: z.string().datetime().optional().nullable(),
     template_id: z.string().uuid().optional(),
+    custom_veto_sequence: z.any().optional().nullable(),
 });
 
 export async function POST(request: NextRequest) {
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
                 status: 'coin_toss',
                 scheduled_at: data.scheduled_at || null,
                 created_by: user?.id || null,
+                custom_veto_sequence: data.custom_veto_sequence || null,
             });
 
         if (matchError) {

@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         }
 
         const state = matchData.match_state as MatchState;
-        const template = matchData.veto_templates.sequence as VetoSequence;
+        const template = (matchData.custom_veto_sequence || matchData.veto_templates.sequence) as VetoSequence;
         const currentStepDef = template.steps[state.current_step] as VetoStep;
 
         if (!currentStepDef) {
