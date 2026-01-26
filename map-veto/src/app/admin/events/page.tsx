@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
-import { Plus, Pencil, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Plus, Pencil, Trash2, Image as ImageIcon, Eye } from 'lucide-react';
 
 interface Event {
     id: string;
@@ -151,6 +151,14 @@ export default function EventsPage() {
 
                             {/* Actions */}
                             <div className="flex gap-2">
+                                <Link
+                                    href={`/admin/matches?event=${event.id}`}
+                                    className="px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-sm text-purple-400 flex items-center gap-1 transition-colors"
+                                    title="View matches in this event"
+                                >
+                                    <Eye size={14} />
+                                    {event.matches?.[0]?.count || 0}
+                                </Link>
                                 <Link
                                     href={`/admin/events/${event.id}/edit`}
                                     className="flex-1 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-white flex items-center justify-center gap-2 transition-colors"

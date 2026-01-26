@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
@@ -14,6 +15,7 @@ interface Match {
     status: 'pending' | 'coin_toss' | 'in_progress' | 'completed' | 'cancelled';
     scheduled_at: string | null;
     created_at: string;
+    event_id: string | null;
 }
 
 interface MatchLinks {
@@ -23,6 +25,8 @@ interface MatchLinks {
 }
 
 export default function MatchesPage() {
+    const searchParams = useSearchParams();
+    const eventFilter = searchParams.get('event');
     const [matches, setMatches] = useState<Match[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<string>('all');
@@ -35,17 +39,24 @@ export default function MatchesPage() {
 
     const fetchMatches = useCallback(async (userId: string) => {
         setIsLoading(true);
-        const { data, error } = await supabase
+        let query = supabase
             .from('matches')
             .select('*')
             .eq('created_by', userId)
             .order('created_at', { ascending: false });
 
+        // Filter by event if event param is present
+        if (eventFilter) {
+            query = query.eq('event_id', eventFilter);
+        }
+
+        const { data, error } = await query;
+
         if (!error && data) {
             setMatches(data);
         }
         setIsLoading(false);
-    }, [supabase]);
+    }, [supabase, eventFilter]);
 
     useEffect(() => {
         let channel: ReturnType<typeof supabase.channel> | null = null;
