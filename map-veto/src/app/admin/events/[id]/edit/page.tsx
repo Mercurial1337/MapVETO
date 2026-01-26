@@ -7,6 +7,8 @@ import { Upload, Image as ImageIcon, Type, Check, ArrowLeft, X } from 'lucide-re
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
+export const dynamic = 'force-dynamic';
+
 interface EventFormData {
     name: string;
     logo_url: string;
@@ -33,8 +35,6 @@ export default function EditEventPage({ params }: PageProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [uploading, setUploading] = useState<string | null>(null);
-
-    const supabase = createClient();
 
     // Fetch existing event data
     useEffect(() => {
@@ -66,6 +66,7 @@ export default function EditEventPage({ params }: PageProps) {
         setError('');
 
         try {
+            const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 

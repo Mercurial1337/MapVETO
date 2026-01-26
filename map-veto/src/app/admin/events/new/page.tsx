@@ -7,6 +7,8 @@ import { Upload, Image as ImageIcon, Type, Check, ArrowLeft } from 'lucide-react
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
+export const dynamic = 'force-dynamic';
+
 interface EventFormData {
     name: string;
     logo_url: string;
@@ -28,13 +30,12 @@ export default function NewEventPage() {
     const [error, setError] = useState('');
     const [uploading, setUploading] = useState<string | null>(null);
 
-    const supabase = createClient();
-
     const handleFileUpload = async (file: File, type: 'logo' | 'coin' | 'font') => {
         setUploading(type);
         setError('');
 
         try {
+            const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('Not authenticated');
 

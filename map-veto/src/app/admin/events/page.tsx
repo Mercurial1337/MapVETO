@@ -7,6 +7,8 @@ import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Plus, Pencil, Trash2, Image as ImageIcon, Eye } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 interface Event {
     id: string;
     name: string;
