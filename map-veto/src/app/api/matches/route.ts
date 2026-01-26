@@ -10,6 +10,8 @@ const CreateMatchSchema = z.object({
     team_a_logo: z.string().url().optional().nullable(),
     team_b_logo: z.string().url().optional().nullable(),
     format: z.enum(['bo1', 'bo3', 'bo5']).default('bo3'),
+    map_pool_type: z.enum(['competitive', 'all', 'custom']).default('competitive'),
+    custom_maps: z.array(z.string()).optional().nullable(),
     tournament_id: z.string().uuid().optional().nullable(),
     event_id: z.string().uuid().optional().nullable(),
     scheduled_at: z.string().datetime().optional().nullable(),
@@ -81,6 +83,8 @@ export async function POST(request: NextRequest) {
                 team_b_name: data.team_b_name,
                 team_b_logo: data.team_b_logo || null,
                 format: data.format,
+                map_pool_type: data.map_pool_type,
+                custom_maps: data.custom_maps || null,
                 status: 'coin_toss',
                 scheduled_at: data.scheduled_at || null,
                 created_by: user?.id || null,
@@ -92,6 +96,40 @@ export async function POST(request: NextRequest) {
                 { error: `Failed to create match: ${matchError.message}` },
                 { status: 500 }
             );
+        }
+
+        // Update match_state with the correct maps based on pool type
+        // The trigger created match_state with default pool, now we override if needed
+        const COMPETITIVE_MAPS = ['Abyss', 'Bind', 'Corrode', 'Haven', 'Pearl', 'Split', 'Sunset'];
+        const ALL_MAPS = ['Abyss', 'Ascent', 'Bind', 'Breeze', 'Corrode', 'Fracture', 'Haven', 'Icebox', 'Lotus', 'Pearl', 'Split', 'Sunset'];
+
+        let selectedMaps: string[];
+        switch (data.map_pool_type) {
+            case 'all':
+                selectedMaps = ALL_MAPS;
+                break;
+            case 'custom':
+                selectedMaps = data.custom_maps || COMPETITIVE_MAPS;
+                break;
+            case 'competitive':
+            default:
+                selectedMaps = COMPETITIVE_MAPS;
+        }
+
+        // Get map IDs for the selected maps
+        const { data: mapData } = await supabase
+            .from('maps')
+            .select('id, name')
+            .in('name', selectedMaps);
+
+        const mapIds = mapData?.map(m => m.id) || [];
+
+        // Update match_state with the correct available_maps
+        if (mapIds.length > 0) {
+            await supabase
+                .from('match_state')
+                .update({ available_maps: mapIds })
+                .eq('match_id', matchId);
         }
 
         // The trigger should have created match_state and match_links

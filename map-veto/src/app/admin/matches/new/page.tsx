@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Event {
     id: string;
@@ -10,12 +11,19 @@ interface Event {
     logo_url: string | null;
 }
 
+type MapPoolType = 'competitive' | 'all' | 'custom';
+
+const COMPETITIVE_MAPS = ['Abyss', 'Bind', 'Corrode', 'Haven', 'Pearl', 'Split', 'Sunset'];
+const ALL_MAPS = ['Abyss', 'Ascent', 'Bind', 'Breeze', 'Corrode', 'Fracture', 'Haven', 'Icebox', 'Lotus', 'Pearl', 'Split', 'Sunset'];
+
 interface MatchFormData {
     teamAName: string;
     teamBName: string;
     teamALogo: string;
     teamBLogo: string;
     format: 'bo1' | 'bo3' | 'bo5';
+    mapPoolType: MapPoolType;
+    customMaps: string[];
     scheduledAt: string;
     eventId: string;
 }
@@ -36,6 +44,8 @@ export default function NewMatchPage() {
         teamALogo: '',
         teamBLogo: '',
         format: 'bo3',
+        mapPoolType: 'competitive',
+        customMaps: [],
         scheduledAt: '',
         eventId: '',
     });
@@ -79,6 +89,8 @@ export default function NewMatchPage() {
                     team_a_logo: formData.teamALogo || null,
                     team_b_logo: formData.teamBLogo || null,
                     format: formData.format,
+                    map_pool_type: formData.mapPoolType,
+                    custom_maps: formData.mapPoolType === 'custom' ? formData.customMaps : null,
                     scheduled_at: formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null,
                     event_id: formData.eventId || null,
                 }),
@@ -297,6 +309,8 @@ export default function NewMatchPage() {
                                     teamALogo: '',
                                     teamBLogo: '',
                                     format: 'bo3',
+                                    mapPoolType: 'competitive',
+                                    customMaps: [],
                                     scheduledAt: '',
                                     eventId: '',
                                 });
@@ -437,6 +451,139 @@ export default function NewMatchPage() {
                         <p className="text-xs text-white/40 mt-1">
                             Assign to an event to use custom branding (logo, coin, font)
                         </p>
+                    </div>
+
+                    {/* Map Pool Selection */}
+                    <div className="border-t border-white/10 pt-6">
+                        <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider mb-4">Map Pool</h3>
+                        <p className="text-xs text-white/40 mb-4">
+                            Select which maps will be available for the veto process
+                        </p>
+
+                        {/* Pool Type Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            {/* Competitive Maps */}
+                            <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, mapPoolType: 'competitive', customMaps: [] })}
+                                className={`p-4 rounded-xl border-2 text-left transition-all ${formData.mapPoolType === 'competitive'
+                                        ? 'border-cyan-500 bg-cyan-500/10'
+                                        : 'border-white/10 bg-white/5 hover:border-white/30'
+                                    }`}
+                            >
+                                <h4 className={`font-semibold mb-1 ${formData.mapPoolType === 'competitive' ? 'text-cyan-400' : 'text-white'}`}>
+                                    Competitive Maps
+                                </h4>
+                                <p className="text-xs text-white/50 mb-2">7 maps</p>
+                                <p className="text-xs text-white/40">
+                                    {COMPETITIVE_MAPS.join(', ')}
+                                </p>
+                            </button>
+
+                            {/* All Maps */}
+                            <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, mapPoolType: 'all', customMaps: [] })}
+                                className={`p-4 rounded-xl border-2 text-left transition-all ${formData.mapPoolType === 'all'
+                                        ? 'border-cyan-500 bg-cyan-500/10'
+                                        : 'border-white/10 bg-white/5 hover:border-white/30'
+                                    }`}
+                            >
+                                <h4 className={`font-semibold mb-1 ${formData.mapPoolType === 'all' ? 'text-cyan-400' : 'text-white'}`}>
+                                    All Maps
+                                </h4>
+                                <p className="text-xs text-white/50 mb-2">12 maps</p>
+                                <p className="text-xs text-white/40">
+                                    All available maps including retired
+                                </p>
+                            </button>
+
+                            {/* Custom */}
+                            <button
+                                type="button"
+                                onClick={() => setFormData({ ...formData, mapPoolType: 'custom', customMaps: formData.customMaps.length > 0 ? formData.customMaps : [...COMPETITIVE_MAPS] })}
+                                className={`p-4 rounded-xl border-2 text-left transition-all ${formData.mapPoolType === 'custom'
+                                        ? 'border-cyan-500 bg-cyan-500/10'
+                                        : 'border-white/10 bg-white/5 hover:border-white/30'
+                                    }`}
+                            >
+                                <h4 className={`font-semibold mb-1 ${formData.mapPoolType === 'custom' ? 'text-cyan-400' : 'text-white'}`}>
+                                    Custom Map Pool
+                                </h4>
+                                <p className="text-xs text-white/50 mb-2">
+                                    {formData.mapPoolType === 'custom' ? `${formData.customMaps.length} maps` : 'Your selection'}
+                                </p>
+                                <p className="text-xs text-white/40">
+                                    Choose exactly which maps to include
+                                </p>
+                            </button>
+                        </div>
+
+                        {/* Custom Map Selector */}
+                        {formData.mapPoolType === 'custom' && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <p className="text-sm text-white/60">Select maps for this match</p>
+                                        <span className="text-xs text-cyan-400">{formData.customMaps.length} selected</span>
+                                    </div>
+                                    <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                                        {ALL_MAPS.map((mapName) => {
+                                            const isSelected = formData.customMaps.includes(mapName);
+                                            return (
+                                                <button
+                                                    key={mapName}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (isSelected) {
+                                                            setFormData({
+                                                                ...formData,
+                                                                customMaps: formData.customMaps.filter(m => m !== mapName)
+                                                            });
+                                                        } else {
+                                                            setFormData({
+                                                                ...formData,
+                                                                customMaps: [...formData.customMaps, mapName]
+                                                            });
+                                                        }
+                                                    }}
+                                                    className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-all ${isSelected
+                                                            ? 'border-cyan-500 ring-2 ring-cyan-500/30'
+                                                            : 'border-transparent opacity-50 grayscale hover:opacity-75 hover:grayscale-0'
+                                                        }`}
+                                                >
+                                                    <Image
+                                                        src={`/maps/valorant/${mapName}.webp`}
+                                                        alt={mapName}
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                                                    <span className={`absolute bottom-1 left-2 text-xs font-medium ${isSelected ? 'text-cyan-400' : 'text-white/80'}`}>
+                                                        {mapName}
+                                                    </span>
+                                                    {isSelected && (
+                                                        <div className="absolute top-1 right-1 w-5 h-5 bg-cyan-500 rounded-full flex items-center justify-center">
+                                                            <span className="text-white text-xs">✓</span>
+                                                        </div>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                    {formData.customMaps.length < 3 && (
+                                        <p className="text-xs text-yellow-400 mt-3">
+                                            ⚠ Select at least 3 maps for a proper veto
+                                        </p>
+                                    )}
+                                </div>
+                            </motion.div>
+                        )}
                     </div>
                 </div>
 
