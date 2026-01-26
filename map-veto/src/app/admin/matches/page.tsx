@@ -7,6 +7,11 @@ import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
+interface Event {
+    id: string;
+    name: string;
+}
+
 interface Match {
     id: string;
     team_a_name: string;
@@ -16,6 +21,7 @@ interface Match {
     scheduled_at: string | null;
     created_at: string;
     event_id: string | null;
+    events: { name: string } | null;
 }
 
 interface MatchLinks {
@@ -24,12 +30,18 @@ interface MatchLinks {
     observer: string;
 }
 
+type SortOrder = 'newest' | 'oldest';
+
 export default function MatchesPage() {
     const searchParams = useSearchParams();
     const eventFilter = searchParams.get('event');
     const [matches, setMatches] = useState<Match[]>([]);
+    const [events, setEvents] = useState<Event[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [filter, setFilter] = useState<string>('all');
+    const [formatFilter, setFormatFilter] = useState<string>('all');
+    const [eventFilterLocal, setEventFilterLocal] = useState<string>('all');
+    const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMatchLinks, setSelectedMatchLinks] = useState<{ matchId: string; links: MatchLinks } | null>(null);
     const [loadingLinks, setLoadingLinks] = useState<string | null>(null);
@@ -37,13 +49,22 @@ export default function MatchesPage() {
 
     const supabase = createClient();
 
+    const fetchEvents = useCallback(async (userId: string) => {
+        const { data } = await supabase
+            .from('events')
+            .select('id, name')
+            .eq('created_by', userId)
+            .order('name');
+        if (data) setEvents(data);
+    }, [supabase]);
+
     const fetchMatches = useCallback(async (userId: string) => {
         setIsLoading(true);
         let query = supabase
             .from('matches')
-            .select('*')
+            .select('*, events(name)')
             .eq('created_by', userId)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: sortOrder === 'oldest' });
 
         // Filter by event if event param is present
         if (eventFilter) {
@@ -56,7 +77,7 @@ export default function MatchesPage() {
             setMatches(data);
         }
         setIsLoading(false);
-    }, [supabase, eventFilter]);
+    }, [supabase, eventFilter, sortOrder]);
 
     useEffect(() => {
         let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -66,6 +87,7 @@ export default function MatchesPage() {
             if (currentUser) {
                 setUser(currentUser);
                 fetchMatches(currentUser.id);
+                fetchEvents(currentUser.id);
 
                 // Subscribe to realtime updates for matches created by this user
                 channel = supabase
@@ -126,10 +148,21 @@ export default function MatchesPage() {
     };
 
     const filteredMatches = matches.filter(match => {
+        // Status filter
         if (filter !== 'all' && match.status !== filter) return false;
+        // Format filter
+        if (formatFilter !== 'all' && match.format !== formatFilter) return false;
+        // Event filter (local dropdown, separate from URL param)
+        if (eventFilterLocal !== 'all') {
+            if (eventFilterLocal === 'none' && match.event_id !== null) return false;
+            if (eventFilterLocal !== 'none' && match.event_id !== eventFilterLocal) return false;
+        }
+        // Search query
         if (searchQuery) {
             const query = searchQuery.toLowerCase();
-            return match.team_a_name.toLowerCase().includes(query) || match.team_b_name.toLowerCase().includes(query);
+            const teamMatch = match.team_a_name.toLowerCase().includes(query) || match.team_b_name.toLowerCase().includes(query);
+            const eventMatch = match.events?.name?.toLowerCase().includes(query);
+            return teamMatch || eventMatch;
         }
         return true;
     });
@@ -171,8 +204,9 @@ export default function MatchesPage() {
             </div>
 
             {/* Filters */}
-            <div className="glass rounded-xl p-4 flex flex-wrap items-center gap-4">
-                <div className="flex gap-2">
+            <div className="glass rounded-xl p-4 space-y-4">
+                {/* Status Filter Buttons */}
+                <div className="flex flex-wrap gap-2">
                     {['all', 'pending', 'coin_toss', 'in_progress', 'completed', 'cancelled'].map((status) => (
                         <button
                             key={status}
@@ -186,14 +220,60 @@ export default function MatchesPage() {
                         </button>
                     ))}
                 </div>
-                <div className="flex-1" />
-                <input
-                    type="text"
-                    placeholder="Search teams..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 text-sm focus:outline-none focus:border-purple-500/50"
-                />
+
+                {/* Filter Dropdowns Row */}
+                <div className="flex flex-wrap items-center gap-3">
+                    {/* Format Filter */}
+                    <select
+                        value={formatFilter}
+                        onChange={(e) => setFormatFilter(e.target.value)}
+                        className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 cursor-pointer"
+                    >
+                        <option value="all" className="bg-gray-900">All Formats</option>
+                        <option value="bo1" className="bg-gray-900">BO1</option>
+                        <option value="bo3" className="bg-gray-900">BO3</option>
+                        <option value="bo5" className="bg-gray-900">BO5</option>
+                    </select>
+
+                    {/* Event Filter */}
+                    <select
+                        value={eventFilterLocal}
+                        onChange={(e) => setEventFilterLocal(e.target.value)}
+                        className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 cursor-pointer min-w-[140px]"
+                    >
+                        <option value="all" className="bg-gray-900">All Events</option>
+                        <option value="none" className="bg-gray-900">No Event</option>
+                        {events.map((event) => (
+                            <option key={event.id} value={event.id} className="bg-gray-900">
+                                {event.name}
+                            </option>
+                        ))}
+                    </select>
+
+                    {/* Sort Order */}
+                    <select
+                        value={sortOrder}
+                        onChange={(e) => {
+                            setSortOrder(e.target.value as SortOrder);
+                            if (user) fetchMatches(user.id);
+                        }}
+                        className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 cursor-pointer"
+                    >
+                        <option value="newest" className="bg-gray-900">Newest First</option>
+                        <option value="oldest" className="bg-gray-900">Oldest First</option>
+                    </select>
+
+                    <div className="flex-1" />
+
+                    {/* Search Input */}
+                    <input
+                        type="text"
+                        placeholder="Search teams or events..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 text-sm focus:outline-none focus:border-purple-500/50 min-w-[200px]"
+                    />
+                </div>
             </div>
 
             {/* Links Modal */}
@@ -272,6 +352,7 @@ export default function MatchesPage() {
                     <thead>
                         <tr className="text-left text-sm text-white/50 border-b border-white/10">
                             <th className="px-6 py-4 font-medium">Match</th>
+                            <th className="px-6 py-4 font-medium">Event</th>
                             <th className="px-6 py-4 font-medium">Format</th>
                             <th className="px-6 py-4 font-medium">Status</th>
                             <th className="px-6 py-4 font-medium">Created</th>
@@ -291,6 +372,15 @@ export default function MatchesPage() {
                                         <span className="text-white/40">vs</span>
                                         <span className="text-white font-medium">{match.team_b_name}</span>
                                     </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    {match.events?.name ? (
+                                        <span className="px-2 py-1 bg-purple-500/10 border border-purple-500/20 rounded-lg text-purple-300 text-xs">
+                                            {match.events.name}
+                                        </span>
+                                    ) : (
+                                        <span className="text-white/30 text-sm">—</span>
+                                    )}
                                 </td>
                                 <td className="px-6 py-4">
                                     <span className="text-white/60 uppercase text-sm">{match.format}</span>
