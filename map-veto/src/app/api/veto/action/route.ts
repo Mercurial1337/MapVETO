@@ -184,7 +184,9 @@ export async function POST(request: NextRequest) {
         // Handle auto-decider step
         if (nextStepDef?.action === 'decider') {
             const deciderId = newState.available_maps![0];
-            newState.available_maps = [];
+            // Remove ONLY the decider map from available maps, leave others to be shown as "crossed out"
+            newState.available_maps = newState.available_maps!.filter(id => id !== deciderId);
+
             const deciderMap = {
                 map_id: deciderId,
                 picked_by: 'system' as VetoActor,

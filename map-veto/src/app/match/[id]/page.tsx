@@ -182,7 +182,11 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
 
         state.available_maps.forEach(mapId => {
             if (!states[mapId]) {
-                states[mapId] = { state: isMyTurn(state.current_turn) ? 'active' : 'available' };
+                states[mapId] = {
+                    state: state.is_complete
+                        ? 'banned'
+                        : (isMyTurn(state.current_turn) ? 'active' : 'available')
+                };
             }
         });
 
@@ -206,13 +210,24 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     // Show position selection modal (after coin toss, winner chooses)
     const showPositionSelection = match?.status === 'side_selection';
 
-    // Get maps with fallback images
+    // Get maps with fallback images and filter based on the current pool
     const mapsWithImages = useMemo(() => {
-        return maps.map(map => ({
-            ...map,
-            image_url: map.image_url || MAP_IMAGE_FALLBACKS[map.name] || '/maps/valorant/default.webp'
-        }));
-    }, [maps]);
+        if (!state) return [];
+
+        // Combine all maps that are part of the current match's pool
+        const poolMapIds = new Set([
+            ...state.available_maps,
+            ...state.banned_maps.map(b => b.map_id),
+            ...state.picked_maps.map(p => p.map_id)
+        ]);
+
+        return maps
+            .filter(map => poolMapIds.has(map.id))
+            .map(map => ({
+                ...map,
+                image_url: map.image_url || MAP_IMAGE_FALLBACKS[map.name] || '/maps/valorant/default.webp'
+            }));
+    }, [maps, state]);
 
     // Create map name lookup
     const mapNames = useMemo(() => {

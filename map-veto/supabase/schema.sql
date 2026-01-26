@@ -289,13 +289,18 @@ INSERT INTO games (name, slug, logo_url) VALUES
 
 -- Insert Valorant maps
 INSERT INTO maps (game_id, name, slug, image_url) VALUES
-((SELECT id FROM games WHERE slug = 'valorant'), 'Abyss', 'abyss', '/maps/valorant/abyss.webp'),
-((SELECT id FROM games WHERE slug = 'valorant'), 'Bind', 'bind', '/maps/valorant/bind.webp'),
-((SELECT id FROM games WHERE slug = 'valorant'), 'Haven', 'haven', '/maps/valorant/haven.webp'),
-((SELECT id FROM games WHERE slug = 'valorant'), 'Pearl', 'pearl', '/maps/valorant/pearl.webp'),
-((SELECT id FROM games WHERE slug = 'valorant'), 'Corrode', 'corrode', '/maps/valorant/corrode.webp'),
-((SELECT id FROM games WHERE slug = 'valorant'), 'Split', 'split', '/maps/valorant/split.webp'),
-((SELECT id FROM games WHERE slug = 'valorant'), 'Sunset', 'sunset', '/maps/valorant/sunset.webp');
+((SELECT id FROM games WHERE slug = 'valorant'), 'Abyss', 'abyss', '/maps/valorant/Abyss.webp'),
+((SELECT id FROM games WHERE slug = 'valorant'), 'Bind', 'bind', '/maps/valorant/Bind.webp'),
+((SELECT id FROM games WHERE slug = 'valorant'), 'Haven', 'haven', '/maps/valorant/Haven.webp'),
+((SELECT id FROM games WHERE slug = 'valorant'), 'Pearl', 'pearl', '/maps/valorant/Pearl.webp'),
+((SELECT id FROM games WHERE slug = 'valorant'), 'Corrode', 'corrode', '/maps/valorant/Corrode.webp'),
+((SELECT id FROM games WHERE slug = 'valorant'), 'Split', 'split', '/maps/valorant/Split.webp'),
+((SELECT id FROM games WHERE slug = 'valorant'), 'Sunset', 'sunset', '/maps/valorant/Sunset.webp'),
+((SELECT id FROM games WHERE slug = 'valorant'), 'Ascent', 'ascent', '/maps/valorant/Ascent.webp'),
+((SELECT id FROM games WHERE slug = 'valorant'), 'Icebox', 'icebox', '/maps/valorant/Icebox.webp'),
+((SELECT id FROM games WHERE slug = 'valorant'), 'Breeze', 'breeze', '/maps/valorant/Breeze.webp'),
+((SELECT id FROM games WHERE slug = 'valorant'), 'Fracture', 'fracture', '/maps/valorant/Fracture.webp'),
+((SELECT id FROM games WHERE slug = 'valorant'), 'Lotus', 'lotus', '/maps/valorant/Lotus.webp');
 
 -- Create default map pool
 INSERT INTO map_pools (game_id, name, description, is_default) VALUES
