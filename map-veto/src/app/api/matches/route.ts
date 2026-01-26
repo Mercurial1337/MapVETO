@@ -11,6 +11,7 @@ const CreateMatchSchema = z.object({
     team_b_logo: z.string().url().optional().nullable(),
     format: z.enum(['bo1', 'bo3', 'bo5']).default('bo3'),
     tournament_id: z.string().uuid().optional().nullable(),
+    event_id: z.string().uuid().optional().nullable(),
     scheduled_at: z.string().datetime().optional().nullable(),
     template_id: z.string().uuid().optional(),
 });
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
             .insert({
                 id: matchId,
                 tournament_id: data.tournament_id || null,
+                event_id: data.event_id || null,
                 veto_template_id: templateId,
                 team_a_name: data.team_a_name,
                 team_a_logo: data.team_a_logo || null,
