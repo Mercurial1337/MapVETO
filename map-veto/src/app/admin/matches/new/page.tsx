@@ -1,7 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
+
+interface Event {
+    id: string;
+    name: string;
+    logo_url: string | null;
+}
 
 interface MatchFormData {
     teamAName: string;
@@ -10,6 +17,7 @@ interface MatchFormData {
     teamBLogo: string;
     format: 'bo1' | 'bo3' | 'bo5';
     scheduledAt: string;
+    eventId: string;
 }
 
 interface CreatedMatch {
@@ -29,12 +37,30 @@ export default function NewMatchPage() {
         teamBLogo: '',
         format: 'bo3',
         scheduledAt: '',
+        eventId: '',
     });
+    const [events, setEvents] = useState<Event[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [createdMatch, setCreatedMatch] = useState<CreatedMatch | null>(null);
     const [isFlippingCoin, setIsFlippingCoin] = useState(false);
     const [coinFlipResult, setCoinFlipResult] = useState<'team_a' | 'team_b' | null>(null);
+
+    // Fetch events on mount
+    useEffect(() => {
+        const fetchEvents = async () => {
+            try {
+                const response = await fetch('/api/events');
+                if (response.ok) {
+                    const data = await response.json();
+                    setEvents(data.events || []);
+                }
+            } catch (err) {
+                console.error('Error fetching events:', err);
+            }
+        };
+        fetchEvents();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,6 +80,7 @@ export default function NewMatchPage() {
                     team_b_logo: formData.teamBLogo || null,
                     format: formData.format,
                     scheduled_at: formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null,
+                    event_id: formData.eventId || null,
                 }),
             });
 
@@ -271,6 +298,7 @@ export default function NewMatchPage() {
                                     teamBLogo: '',
                                     format: 'bo3',
                                     scheduledAt: '',
+                                    eventId: '',
                                 });
                             }}
                             className="flex-1 px-6 py-3 border border-white/20 rounded-xl text-white hover:bg-white/5 transition-colors"
@@ -361,7 +389,7 @@ export default function NewMatchPage() {
                 <div className="border-t border-white/10 pt-6 space-y-4">
                     <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">Match Settings</h3>
 
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="block text-sm text-white/60 mb-2">Format *</label>
                             <select
@@ -384,6 +412,31 @@ export default function NewMatchPage() {
                                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500/50"
                             />
                         </div>
+                    </div>
+
+                    {/* Event Selection */}
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="block text-sm text-white/60">Event (Optional)</label>
+                            <Link href="/admin/events/new" className="text-xs text-purple-400 hover:text-purple-300">
+                                + Create Event
+                            </Link>
+                        </div>
+                        <select
+                            value={formData.eventId}
+                            onChange={(e) => setFormData({ ...formData, eventId: e.target.value })}
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500/50"
+                        >
+                            <option value="">No Event (Standalone Match)</option>
+                            {events.map((event) => (
+                                <option key={event.id} value={event.id}>
+                                    {event.name}
+                                </option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-white/40 mt-1">
+                            Assign to an event to use custom branding (logo, coin, font)
+                        </p>
                     </div>
                 </div>
 
