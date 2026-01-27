@@ -49,24 +49,15 @@ export async function POST(req: NextRequest) {
             }, { status: 500 });
         }
 
-        // Nuclear normalization: 
-        // 1. Remove all \n literal sequences
-        // 2. Remove all whitespace, quotes, and existing headers/footers
-        // 3. Re-wrap the raw Base64 into a perfect PEM format
-        let cleanKey = rawKey
-            .replace(/\\n/g, '')
-            .replace(/-----BEGIN PRIVATE KEY-----/g, '')
-            .replace(/-----END PRIVATE KEY-----/g, '')
-            .replace(/["']/g, '')
-            .replace(/\s/g, '');
-
-        // Reconstruct perfectly
-        const formattedKey = `-----BEGIN PRIVATE KEY-----\n${cleanKey}\n-----END PRIVATE KEY-----`;
+        // Use the standard fix suggested for environment variable multiline strings:
+        const privateKey = rawKey
+            .replace(/^["']|["']$/g, '') // Strip wrapping quotes if present
+            .replace(/\\n/g, '\n');      // Convert literal \n sequences to actual newlines
 
         const auth = new google.auth.GoogleAuth({
             credentials: {
                 client_email: rawEmail,
-                private_key: formattedKey,
+                private_key: privateKey,
             },
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         });
