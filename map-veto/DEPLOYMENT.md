@@ -29,8 +29,18 @@ Add these environment variables in Vercel dashboard:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key |
 | `NEXT_PUBLIC_APP_URL` | Your Vercel URL |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` | Service Account email (`client_email`) |
+| `GOOGLE_PRIVATE_KEY` | Full private key from JSON (including \n) |
 
-### Step 3: (Optional) Add Rate Limiting
+### Step 3: Configure Google Sheets (New Export Feature)
+
+1.  **Get Credentials**: Open your Service Account JSON file.
+2.  **Add to Vercel**:
+    *   `GOOGLE_SERVICE_ACCOUNT_EMAIL`: Copy exactly.
+    *   `GOOGLE_PRIVATE_KEY`: Copy the **entire** block including `-----BEGIN...` and `...END PRIVATE KEY-----\n`. If using Vercel, wrap it in double quotes if it's a single raw string with `\n`.
+3.  **Share your Sheets**: You **MUST** share any Google Sheet you want to export to with your Service Account email as an **Editor**.
+
+### Step 4: (Optional) Add Rate Limiting
 
 1. Create account at [upstash.com](https://upstash.com)
 2. Create Redis database
