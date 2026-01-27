@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { LayoutDashboard, Gamepad2, PlusCircle, Monitor, LogOut, Menu, X, Calendar } from 'lucide-react';
@@ -14,6 +14,7 @@ interface AdminSidebarProps {
 export function AdminSidebar({ children }: AdminSidebarProps) {
     const router = useRouter();
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [user, setUser] = useState<User | null>(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const supabase = createClient();
@@ -145,12 +146,10 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
                     </div>
                     <div className="flex items-center gap-4">
                         <Link
-                            href={(() => {
-                                // Check if we're viewing an event's matches
-                                const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-                                const eventId = params.get('event');
-                                return eventId ? `/admin/matches/new?event=${eventId}` : '/admin/matches/new';
-                            })()}
+                            href={searchParams.get('event')
+                                ? `/admin/matches/new?event=${searchParams.get('event')}`
+                                : '/admin/matches/new'
+                            }
                             className="btn-primary text-sm px-4 py-2"
                         >
                             + New Match

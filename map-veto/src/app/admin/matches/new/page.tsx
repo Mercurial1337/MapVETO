@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { VetoTemplate, VetoSequence, VetoStep } from '@/types';
@@ -42,7 +42,7 @@ interface CreatedMatch {
     };
 }
 
-export default function NewMatchPage() {
+function NewMatchContent() {
     const searchParams = useSearchParams();
     const preselectedEventId = searchParams.get('event') || '';
 
@@ -60,6 +60,13 @@ export default function NewMatchPage() {
         isCustomSequence: false,
         customSequence: null,
     });
+
+    // Sync eventId from URL if it changes (and if not already set manually)
+    useEffect(() => {
+        if (preselectedEventId && !formData.eventId) {
+            setFormData(prev => ({ ...prev, eventId: preselectedEventId }));
+        }
+    }, [preselectedEventId]);
     const [events, setEvents] = useState<Event[]>([]);
     const [templates, setTemplates] = useState<VetoTemplate[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -818,5 +825,21 @@ export default function NewMatchPage() {
                 </div>
             </form>
         </div>
+    );
+}
+
+export default function NewMatchPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center py-20">
+                <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    className="w-8 h-8 border-4 border-white/20 border-t-purple-500 rounded-full"
+                />
+            </div>
+        }>
+            <NewMatchContent />
+        </Suspense>
     );
 }
