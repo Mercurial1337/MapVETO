@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { VetoTemplate, VetoSequence, VetoStep } from '@/types';
 import Link from 'next/link';
@@ -42,6 +43,9 @@ interface CreatedMatch {
 }
 
 export default function NewMatchPage() {
+    const searchParams = useSearchParams();
+    const preselectedEventId = searchParams.get('event') || '';
+
     const [formData, setFormData] = useState<MatchFormData>({
         teamAName: '',
         teamBName: '',
@@ -51,7 +55,7 @@ export default function NewMatchPage() {
         mapPoolType: 'competitive',
         customMaps: [],
         scheduledAt: '',
-        eventId: '',
+        eventId: preselectedEventId,
         templateId: '',
         isCustomSequence: false,
         customSequence: null,

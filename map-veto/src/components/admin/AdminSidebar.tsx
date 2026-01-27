@@ -144,7 +144,15 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
                         <h1 className="text-lg font-semibold text-white">Admin Dashboard</h1>
                     </div>
                     <div className="flex items-center gap-4">
-                        <Link href="/admin/matches/new" className="btn-primary text-sm px-4 py-2">
+                        <Link
+                            href={(() => {
+                                // Check if we're viewing an event's matches
+                                const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+                                const eventId = params.get('event');
+                                return eventId ? `/admin/matches/new?event=${eventId}` : '/admin/matches/new';
+                            })()}
+                            className="btn-primary text-sm px-4 py-2"
+                        >
                             + New Match
                         </Link>
                     </div>
