@@ -113,15 +113,17 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
 
     const currentStepDef = state ? templateSteps[state.current_step] : null;
 
-    // Get displayed team names based on actor_mapping
+    // Get displayed team names and logos based on actor_mapping
     // After position choice, teams may have swapped roles
     const displayedTeams = useMemo(() => {
         const actorMapping = state?.actor_mapping;
         if (!actorMapping || !match) {
-            // No mapping, use original names
+            // No mapping, use original names and logos
             return {
                 teamA: match?.team_a_name || 'Team 1',
                 teamB: match?.team_b_name || 'Team 2',
+                logoA: match?.team_a_logo || null,
+                logoB: match?.team_b_logo || null,
             };
         }
         // Find which real team plays as template team_a
@@ -134,12 +136,16 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             return {
                 teamA: match.team_a_name,
                 teamB: match.team_b_name,
+                logoA: match.team_a_logo || null,
+                logoB: match.team_b_logo || null,
             };
         } else {
-            // team_b is playing as Team A, swap names
+            // team_b is playing as Team A, swap names and logos
             return {
                 teamA: match.team_b_name,
                 teamB: match.team_a_name,
+                logoA: match.team_b_logo || null,
+                logoB: match.team_a_logo || null,
             };
         }
     }, [state?.actor_mapping, match]);
@@ -315,9 +321,9 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             <div className="bg-black/40 border-b border-white/5 px-4 md:px-6 py-4 md:py-6">
                 <div className="max-w-4xl mx-auto flex items-center justify-center gap-4 md:gap-8">
                     <div className="text-center flex-1 md:flex-none flex items-center justify-end gap-3">
-                        {match.team_a_logo && (
+                        {displayedTeams.logoA && (
                             <img
-                                src={match.team_a_logo}
+                                src={displayedTeams.logoA}
                                 alt={displayedTeams.teamA}
                                 className="w-10 h-10 md:w-14 md:h-14 rounded-lg object-contain flex-shrink-0"
                             />
@@ -333,9 +339,9 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                             <h2 className="text-base md:text-2xl font-bold text-white truncate">{displayedTeams.teamB}</h2>
                             <span className="text-xs text-blue-400 uppercase tracking-wider">Team 2</span>
                         </div>
-                        {match.team_b_logo && (
+                        {displayedTeams.logoB && (
                             <img
-                                src={match.team_b_logo}
+                                src={displayedTeams.logoB}
                                 alt={displayedTeams.teamB}
                                 className="w-10 h-10 md:w-14 md:h-14 rounded-lg object-contain flex-shrink-0"
                             />
