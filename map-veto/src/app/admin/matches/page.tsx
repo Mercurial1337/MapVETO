@@ -198,9 +198,6 @@ export default function MatchesPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-white">Matches</h1>
-                <Link href="/admin/matches/new" className="btn-primary px-4 py-2 rounded-xl text-sm">
-                    + New Match
-                </Link>
             </div>
 
             {/* Filters */}
