@@ -6,6 +6,8 @@ import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
+import { FileSpreadsheet } from 'lucide-react';
+import { ExportModal } from '@/components/admin/ExportModal';
 
 interface Event {
     id: string;
@@ -46,6 +48,7 @@ export default function MatchesPage() {
     const [selectedMatchLinks, setSelectedMatchLinks] = useState<{ matchId: string; links: MatchLinks } | null>(null);
     const [loadingLinks, setLoadingLinks] = useState<string | null>(null);
     const [user, setUser] = useState<User | null>(null);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
     const supabase = createClient();
 
@@ -198,6 +201,13 @@ export default function MatchesPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-white">Matches</h1>
+                <button
+                    onClick={() => setIsExportModalOpen(true)}
+                    className="btn-secondary px-4 py-2 rounded-xl text-sm flex items-center gap-2"
+                >
+                    <FileSpreadsheet size={18} />
+                    Export
+                </button>
             </div>
 
             {/* Filters */}

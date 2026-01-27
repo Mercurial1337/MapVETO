@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
-import { PlusCircle, ClipboardList, Gamepad2, RefreshCw } from 'lucide-react';
+import { PlusCircle, ClipboardList, Gamepad2, RefreshCw, FileSpreadsheet } from 'lucide-react';
+import { ExportModal } from '@/components/admin/ExportModal';
 
 interface Match {
     id: string;
@@ -33,6 +34,7 @@ export default function AdminDashboard() {
     const [recentMatches, setRecentMatches] = useState<Match[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
     const supabase = createClient();
 
@@ -166,7 +168,7 @@ export default function AdminDashboard() {
             {/* Quick Actions */}
             <div className="glass rounded-2xl p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                     <Link
                         href="/admin/matches/new"
                         className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition-colors text-center flex flex-col items-center gap-2"
@@ -195,8 +197,20 @@ export default function AdminDashboard() {
                         <RefreshCw size={24} className="text-orange-400" />
                         <span className="text-sm text-white">Refresh</span>
                     </button>
+                    <button
+                        onClick={() => setIsExportModalOpen(true)}
+                        className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 hover:bg-green-500/20 transition-colors text-center flex flex-col items-center gap-2"
+                    >
+                        <FileSpreadsheet size={24} className="text-green-400" />
+                        <span className="text-sm text-white">Export Reports</span>
+                    </button>
                 </div>
             </div>
+
+            <ExportModal
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+            />
 
             {/* Recent Matches */}
             <div className="glass rounded-2xl p-6">
