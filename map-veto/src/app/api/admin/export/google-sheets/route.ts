@@ -21,10 +21,10 @@ export async function POST(req: NextRequest) {
             .order('completed_at', { ascending: true });
 
         if (date_from) {
-            query = query.gte('completed_at', date_from);
+            query = query.gte('completed_at', `${date_from}T00:00:00Z`);
         }
         if (date_to) {
-            query = query.lte('completed_at', date_to);
+            query = query.lte('completed_at', `${date_to}T23:59:59.999Z`);
         }
         if (event_id && event_id !== 'all') {
             query = query.eq('event_id', event_id);
