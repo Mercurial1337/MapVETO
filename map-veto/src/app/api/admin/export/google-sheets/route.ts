@@ -49,20 +49,24 @@ export async function POST(req: NextRequest) {
             }, { status: 500 });
         }
 
-        let privateKey = rawKey
-            .replace(/^["']|["']$/g, '') // Remove wrapping quotes
-            .replace(/\\n/g, '\n')       // Replace escaped newlines with actual newlines
-            .trim();                     // Remove accidental trailing spaces
+        // Nuclear normalization: 
+        // 1. Remove all \n literal sequences
+        // 2. Remove all whitespace, quotes, and existing headers/footers
+        // 3. Re-wrap the raw Base64 into a perfect PEM format
+        let cleanKey = rawKey
+            .replace(/\\n/g, '')
+            .replace(/-----BEGIN PRIVATE KEY-----/g, '')
+            .replace(/-----END PRIVATE KEY-----/g, '')
+            .replace(/["']/g, '')
+            .replace(/\s/g, '');
 
-        // Ensure the key has the correct header/footer
-        if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
-            privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----`;
-        }
+        // Reconstruct perfectly
+        const formattedKey = `-----BEGIN PRIVATE KEY-----\n${cleanKey}\n-----END PRIVATE KEY-----`;
 
         const auth = new google.auth.GoogleAuth({
             credentials: {
                 client_email: rawEmail,
-                private_key: privateKey,
+                private_key: formattedKey,
             },
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         });
