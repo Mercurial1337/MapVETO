@@ -319,7 +319,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                             <img
                                 src={match.team_a_logo}
                                 alt={displayedTeams.teamA}
-                                className="w-10 h-10 md:w-14 md:h-14 rounded-lg object-contain bg-white/5 flex-shrink-0"
+                                className="w-10 h-10 md:w-14 md:h-14 rounded-lg object-contain flex-shrink-0"
                             />
                         )}
                         <div>
@@ -337,7 +337,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                             <img
                                 src={match.team_b_logo}
                                 alt={displayedTeams.teamB}
-                                className="w-10 h-10 md:w-14 md:h-14 rounded-lg object-contain bg-white/5 flex-shrink-0"
+                                className="w-10 h-10 md:w-14 md:h-14 rounded-lg object-contain flex-shrink-0"
                             />
                         )}
                     </div>
