@@ -38,10 +38,16 @@ export async function POST(req: NextRequest) {
         }
 
         // 2. Prepare Google Sheets Auth
+        let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
+        if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+            privateKey = privateKey.substring(1, privateKey.length - 1);
+        }
+        privateKey = privateKey.replace(/\\n/g, '\n');
+
         const auth = new google.auth.GoogleAuth({
             credentials: {
                 client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-                private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+                private_key: privateKey,
             },
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
         });
