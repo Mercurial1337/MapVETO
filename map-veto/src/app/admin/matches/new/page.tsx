@@ -67,6 +67,7 @@ export default function NewMatchPage() {
     const [createdMatch, setCreatedMatch] = useState<CreatedMatch | null>(null);
     const [isFlippingCoin, setIsFlippingCoin] = useState(false);
     const [coinFlipResult, setCoinFlipResult] = useState<'team_a' | 'team_b' | null>(null);
+    const [wasForced, setWasForced] = useState(false);
 
     // Fetch events on mount
     useEffect(() => {
@@ -240,6 +241,7 @@ export default function NewMatchPage() {
                 setError(data.error || 'Failed to flip coin');
             } else {
                 setCoinFlipResult(data.winner);
+                setWasForced(!!forcedWinner);
             }
         } catch {
             setError('Network error. Please try again.');
@@ -258,7 +260,7 @@ export default function NewMatchPage() {
                 <div className="glass rounded-2xl p-8">
                     <div className="text-center mb-8">
                         <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span className="text-4xl">✓</span>
+                            <span className="text-3xl text-green-400">✓</span>
                         </div>
                         <h1 className="text-2xl font-bold text-white mb-2">Match Created!</h1>
                         <p className="text-white/60">
@@ -283,9 +285,6 @@ export default function NewMatchPage() {
                                     Copy
                                 </button>
                             </div>
-                            <p className="text-xs text-white/50 font-mono break-all">
-                                {createdMatch.links.team_a.url}
-                            </p>
                         </div>
 
                         {/* Team B Link */}
@@ -299,15 +298,12 @@ export default function NewMatchPage() {
                                     Copy
                                 </button>
                             </div>
-                            <p className="text-xs text-white/50 font-mono break-all">
-                                {createdMatch.links.team_b.url}
-                            </p>
                         </div>
 
                         {/* Observer Link */}
                         <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-purple-400">Observer / Stream</span>
+                                <span className="text-sm font-medium text-purple-400">Observer</span>
                                 <button
                                     onClick={() => copyToClipboard(createdMatch.links.observer.url, 'Observer')}
                                     className="text-xs px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-300 transition-colors"
@@ -315,9 +311,6 @@ export default function NewMatchPage() {
                                     Copy
                                 </button>
                             </div>
-                            <p className="text-xs text-white/50 font-mono break-all">
-                                {createdMatch.links.observer.url}
-                            </p>
                         </div>
                     </div>
 
@@ -331,9 +324,11 @@ export default function NewMatchPage() {
                                 className="text-center py-4"
                             >
                                 <p className="text-yellow-400 text-xl font-bold">
-                                    🎉 {coinFlipResult === 'team_a' ? formData.teamAName : formData.teamBName} wins!
+                                    {coinFlipResult === 'team_a' ? formData.teamAName : formData.teamBName} wins!
                                 </p>
-                                <p className="text-white/60 text-sm mt-1">They will pick first</p>
+                                <p className="text-white/60 text-sm mt-1">
+                                    {wasForced ? 'Admin selected winner' : 'They will pick first'}
+                                </p>
                             </motion.div>
                         ) : isFlippingCoin ? (
                             <div className="text-center py-4">
@@ -355,7 +350,7 @@ export default function NewMatchPage() {
                                         onClick={() => handleCoinFlip()}
                                         className="px-8 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold rounded-xl hover:from-yellow-400 hover:to-orange-400 transition-all"
                                     >
-                                        🎲 Flip Coin
+                                        Flip Coin
                                     </button>
                                 </div>
 
