@@ -38,15 +38,30 @@ export async function POST(req: NextRequest) {
         }
 
         // 2. Prepare Google Sheets Auth
-        let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
-        if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-            privateKey = privateKey.substring(1, privateKey.length - 1);
+        const rawEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+        const rawKey = process.env.GOOGLE_PRIVATE_KEY;
+
+        if (!rawEmail || !rawKey) {
+            console.error('Missing Google Sheets credentials in environment variables');
+            return NextResponse.json({
+                error: 'Server configuration error: Google credentials missing',
+                details: `Email: ${rawEmail ? 'Set' : 'Missing'}, Key: ${rawKey ? 'Set' : 'Missing'}`
+            }, { status: 500 });
         }
-        privateKey = privateKey.replace(/\\n/g, '\n');
+
+        let privateKey = rawKey
+            .replace(/^["']|["']$/g, '') // Remove wrapping quotes
+            .replace(/\\n/g, '\n')       // Replace escaped newlines with actual newlines
+            .trim();                     // Remove accidental trailing spaces
+
+        // Ensure the key has the correct header/footer
+        if (!privateKey.includes('-----BEGIN PRIVATE KEY-----')) {
+            privateKey = `-----BEGIN PRIVATE KEY-----\n${privateKey}\n-----END PRIVATE KEY-----`;
+        }
 
         const auth = new google.auth.GoogleAuth({
             credentials: {
-                client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
+                client_email: rawEmail,
                 private_key: privateKey,
             },
             scopes: ['https://www.googleapis.com/auth/spreadsheets'],
