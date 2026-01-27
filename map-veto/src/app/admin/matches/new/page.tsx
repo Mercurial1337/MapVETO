@@ -447,14 +447,28 @@ export default function NewMatchPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm text-white/60 mb-2">Logo URL</label>
-                            <input
-                                type="url"
-                                value={formData.teamALogo}
-                                onChange={(e) => setFormData({ ...formData, teamALogo: e.target.value })}
-                                placeholder="https://..."
-                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-red-500/50"
-                            />
+                            <label className="block text-sm text-white/60 mb-2">Team Logo (Optional)</label>
+                            <div className="flex items-center gap-3">
+                                {formData.teamALogo && (
+                                    <img src={formData.teamALogo} alt="Team A" className="w-12 h-12 rounded-lg object-cover bg-white/10" />
+                                )}
+                                <label className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white/50 cursor-pointer hover:bg-white/10 transition-colors text-center">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onload = () => setFormData({ ...formData, teamALogo: reader.result as string });
+                                                reader.readAsDataURL(file);
+                                            }
+                                        }}
+                                    />
+                                    {formData.teamALogo ? 'Change Logo' : 'Upload Logo'}
+                                </label>
+                            </div>
                         </div>
                     </div>
 
@@ -473,14 +487,28 @@ export default function NewMatchPage() {
                             />
                         </div>
                         <div>
-                            <label className="block text-sm text-white/60 mb-2">Logo URL</label>
-                            <input
-                                type="url"
-                                value={formData.teamBLogo}
-                                onChange={(e) => setFormData({ ...formData, teamBLogo: e.target.value })}
-                                placeholder="https://..."
-                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50"
-                            />
+                            <label className="block text-sm text-white/60 mb-2">Team Logo (Optional)</label>
+                            <div className="flex items-center gap-3">
+                                {formData.teamBLogo && (
+                                    <img src={formData.teamBLogo} alt="Team B" className="w-12 h-12 rounded-lg object-cover bg-white/10" />
+                                )}
+                                <label className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white/50 cursor-pointer hover:bg-white/10 transition-colors text-center">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onload = () => setFormData({ ...formData, teamBLogo: reader.result as string });
+                                                reader.readAsDataURL(file);
+                                            }
+                                        }}
+                                    />
+                                    {formData.teamBLogo ? 'Change Logo' : 'Upload Logo'}
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -489,29 +517,17 @@ export default function NewMatchPage() {
                 <div className="border-t border-white/10 pt-6 space-y-4">
                     <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">Match Settings</h3>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-sm text-white/60 mb-2">Format *</label>
-                            <select
-                                value={formData.format}
-                                onChange={(e) => setFormData({ ...formData, format: e.target.value as 'bo1' | 'bo3' | 'bo5' })}
-                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500/50"
-                            >
-                                <option value="bo1">Best of 1</option>
-                                <option value="bo3">Best of 3 (Default)</option>
-                                <option value="bo5">Best of 5</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm text-white/60 mb-2">Scheduled Time</label>
-                            <input
-                                type="datetime-local"
-                                value={formData.scheduledAt}
-                                onChange={(e) => setFormData({ ...formData, scheduledAt: e.target.value })}
-                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500/50"
-                            />
-                        </div>
+                    <div>
+                        <label className="block text-sm text-white/60 mb-2">Format *</label>
+                        <select
+                            value={formData.format}
+                            onChange={(e) => setFormData({ ...formData, format: e.target.value as 'bo1' | 'bo3' | 'bo5' })}
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500/50"
+                        >
+                            <option value="bo1">Best of 1</option>
+                            <option value="bo3">Best of 3 (Default)</option>
+                            <option value="bo5">Best of 5</option>
+                        </select>
                     </div>
 
                     {/* Event Selection */}
@@ -684,8 +700,8 @@ export default function NewMatchPage() {
                                 type="button"
                                 onClick={() => setFormData({ ...formData, isCustomSequence: !formData.isCustomSequence })}
                                 className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${formData.isCustomSequence
-                                        ? 'bg-purple-500 text-white'
-                                        : 'bg-white/5 text-white/60 hover:bg-white/10'
+                                    ? 'bg-purple-500 text-white'
+                                    : 'bg-white/5 text-white/60 hover:bg-white/10'
                                     }`}
                             >
                                 {formData.isCustomSequence ? '✓ Custom Mode' : 'Customize Order'}
