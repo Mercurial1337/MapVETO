@@ -429,6 +429,12 @@ export default function MatchesPage() {
                     </div>
                 )}
             </div>
+
+            {/* Export Modal */}
+            <ExportModal
+                isOpen={isExportModalOpen}
+                onClose={() => setIsExportModalOpen(false)}
+            />
         </div>
     );
 }
