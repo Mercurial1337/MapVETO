@@ -7,6 +7,7 @@ import { X, FileSpreadsheet, Calendar, Image as ImageIcon, Check, AlertCircle } 
 interface Event {
     id: string;
     name: string;
+    google_sheet_id: string | null;
 }
 
 interface ExportModalProps {
@@ -144,7 +145,16 @@ export function ExportModal({ isOpen, onClose }: ExportModalProps) {
                             <label className="text-sm text-white/60">Event Filter</label>
                             <select
                                 value={formData.event_id}
-                                onChange={(e) => setFormData({ ...formData, event_id: e.target.value })}
+                                onChange={(e) => {
+                                    const selectedEventId = e.target.value;
+                                    const selectedEvent = events.find(ev => ev.id === selectedEventId);
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        event_id: selectedEventId,
+                                        // Auto-populate sheet_id from event if available
+                                        sheet_id: selectedEvent?.google_sheet_id || prev.sheet_id,
+                                    }));
+                                }}
                                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-500/50 text-sm"
                             >
                                 <option value="all">All Events</option>

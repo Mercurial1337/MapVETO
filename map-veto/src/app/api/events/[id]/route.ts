@@ -9,6 +9,7 @@ const UpdateEventSchema = z.object({
     coin_image_url: z.string().url().optional().nullable(),
     custom_font_url: z.string().url().optional().nullable(),
     custom_font_name: z.string().max(100).optional().nullable(),
+    google_sheet_id: z.string().max(100).optional().nullable(),
     is_active: z.boolean().optional(),
 });
 
@@ -107,6 +108,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
                 ...(data.coin_image_url !== undefined && { coin_image_url: data.coin_image_url }),
                 ...(data.custom_font_url !== undefined && { custom_font_url: data.custom_font_url }),
                 ...(data.custom_font_name !== undefined && { custom_font_name: data.custom_font_name }),
+                ...(data.google_sheet_id !== undefined && { google_sheet_id: data.google_sheet_id }),
                 ...(data.is_active !== undefined && { is_active: data.is_active }),
             })
             .eq('id', id)

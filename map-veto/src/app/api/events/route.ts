@@ -9,6 +9,7 @@ const CreateEventSchema = z.object({
     coin_image_url: z.string().url().optional().nullable(),
     custom_font_url: z.string().url().optional().nullable(),
     custom_font_name: z.string().max(100).optional().nullable(),
+    google_sheet_id: z.string().max(100).optional().nullable(),
 });
 
 // GET: List events for current user
@@ -89,6 +90,7 @@ export async function POST(request: NextRequest) {
                 coin_image_url: data.coin_image_url || null,
                 custom_font_url: data.custom_font_url || null,
                 custom_font_name: data.custom_font_name || null,
+                google_sheet_id: data.google_sheet_id || null,
                 created_by: user.id,
             })
             .select()
