@@ -168,18 +168,19 @@ export default function EventsPage() {
                             <div className="flex gap-2">
                                 <Link
                                     href={`/admin/matches?event=${event.id}`}
-                                    className="px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-sm text-purple-400 flex items-center gap-1 transition-colors"
+                                    className="px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-sm text-purple-400 flex items-center gap-1.5 transition-colors"
                                     title="View matches in this event"
                                 >
                                     <Eye size={14} />
-                                    {event.matches?.[0]?.count || 0}
+                                    Matches
                                 </Link>
                                 <button
                                     onClick={() => openExportModal(event.id)}
-                                    className="px-3 py-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg text-sm text-green-400 flex items-center gap-1 transition-colors"
+                                    className="px-3 py-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg text-sm text-green-400 flex items-center gap-1.5 transition-colors"
                                     title="Export matches to Google Sheets"
                                 >
                                     <FileSpreadsheet size={14} />
+                                    Export
                                 </button>
                                 <Link
                                     href={`/admin/events/${event.id}/edit`}

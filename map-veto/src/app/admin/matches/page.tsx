@@ -434,6 +434,7 @@ export default function MatchesPage() {
             <ExportModal
                 isOpen={isExportModalOpen}
                 onClose={() => setIsExportModalOpen(false)}
+                preselectedEventId={eventFilter}
             />
         </div>
     );

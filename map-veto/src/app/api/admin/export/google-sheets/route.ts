@@ -2,14 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { createServiceClient } from '@/lib/supabase/server';
 
-interface MatchLog {
-    action_type: string;
-    actor: string;
-    map_id: string | null;
-    side_choice: string | null;
-    step_number: number;
-}
-
 interface MatchData {
     id: string;
     team_a_name: string;
@@ -17,11 +9,6 @@ interface MatchData {
     completed_at: string;
     event_id: string | null;
     events: { name: string; google_sheet_id: string | null }[] | null;
-}
-
-interface MapInfo {
-    id: string;
-    name: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -71,33 +58,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Google Sheet ID is required. Either provide one or set a default in the event settings.' }, { status: 400 });
         }
 
-        // 3. Fetch all maps to get names
-        const { data: allMaps } = await supabase
-            .from('maps')
-            .select('id, name');
-
-        const mapNames: Record<string, string> = {};
-        allMaps?.forEach((map: MapInfo) => {
-            mapNames[map.id] = map.name;
-        });
-
-        // 4. Fetch activity logs for all matches
-        const matchIds = matches.map((m: MatchData) => m.id);
-        const { data: allLogs } = await supabase
-            .from('match_logs')
-            .select('match_id, action_type, actor, map_id, side_choice, step_number')
-            .in('match_id', matchIds)
-            .order('step_number', { ascending: true });
-
-        const matchLogsMap: Record<string, MatchLog[]> = {};
-        allLogs?.forEach((log: MatchLog & { match_id: string }) => {
-            if (!matchLogsMap[log.match_id]) {
-                matchLogsMap[log.match_id] = [];
-            }
-            matchLogsMap[log.match_id].push(log);
-        });
-
-        // 5. Prepare Google Sheets Auth
+        // 3. Prepare Google Sheets Auth
         const rawEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
         const rawKey = process.env.GOOGLE_PRIVATE_KEY;
 
@@ -125,7 +86,7 @@ export async function POST(req: NextRequest) {
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mapveto-nine.vercel.app';
 
-        // 6. Check if sheet already has data (to skip header)
+        // 4. Check if sheet already has data (to skip header)
         const existingData = await sheets.spreadsheets.values.get({
             spreadsheetId: targetSheetId,
             range: 'Sheet1!A1:A1',
@@ -133,7 +94,13 @@ export async function POST(req: NextRequest) {
 
         const hasExistingData = existingData.data.values && existingData.data.values.length > 0;
 
-        // 7. Format rows
+        // 5. Get sheet metadata to find first sheet ID for formatting
+        const spreadsheet = await sheets.spreadsheets.get({
+            spreadsheetId: targetSheetId,
+        });
+        const firstSheetId = spreadsheet.data.sheets?.[0]?.properties?.sheetId || 0;
+
+        // 6. Format rows (3 columns: Date, Match, Observer Link)
         const rows = (matches as MatchData[]).map(match => {
             // Format date
             const date = new Date(match.completed_at).toISOString().split('T')[0];
@@ -145,19 +112,16 @@ export async function POST(req: NextRequest) {
             const observerUrl = `${baseUrl}/match/${match.id}?token=observer`;
             const observerLink = `=HYPERLINK("${observerUrl}", "View Match")`;
 
-            // Format activity log from match_logs with proper map names
-            const logs = matchLogsMap[match.id] || [];
-            const activityLog = formatActivityLog(logs, match.team_a_name, match.team_b_name, mapNames);
-
-            return [date, matchName, observerLink, activityLog];
+            return [date, matchName, observerLink];
         });
 
-        // 8. Prepare values to write
+        // 7. Prepare values to write
+        const header = ['Date', 'Match', 'Observer Link'];
         const valuesToWrite = hasExistingData
             ? rows  // No header if data exists
-            : [['Date', 'Match', 'Observer Link', 'Activity Log'], ...rows];  // Include header
+            : [header, ...rows];  // Include header
 
-        // 9. Append to the first sheet (Sheet1)
+        // 8. Append to the first sheet (Sheet1)
         await sheets.spreadsheets.values.append({
             spreadsheetId: targetSheetId,
             range: 'Sheet1!A1',
@@ -167,6 +131,124 @@ export async function POST(req: NextRequest) {
             },
         });
 
+        // 9. Apply formatting only on first export (when we added header)
+        if (!hasExistingData) {
+            await sheets.spreadsheets.batchUpdate({
+                spreadsheetId: targetSheetId,
+                requestBody: {
+                    requests: [
+                        // Format header row - bold white text on dark background
+                        {
+                            repeatCell: {
+                                range: {
+                                    sheetId: firstSheetId,
+                                    startRowIndex: 0,
+                                    endRowIndex: 1,
+                                    startColumnIndex: 0,
+                                    endColumnIndex: 3,
+                                },
+                                cell: {
+                                    userEnteredFormat: {
+                                        backgroundColor: { red: 0.2, green: 0.2, blue: 0.25 },
+                                        textFormat: {
+                                            bold: true,
+                                            foregroundColor: { red: 1, green: 1, blue: 1 },
+                                            fontSize: 11,
+                                        },
+                                        horizontalAlignment: 'CENTER',
+                                        verticalAlignment: 'MIDDLE',
+                                        padding: { top: 8, bottom: 8, left: 8, right: 8 },
+                                    },
+                                },
+                                fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,padding)',
+                            },
+                        },
+                        // Set column widths
+                        {
+                            updateDimensionProperties: {
+                                range: {
+                                    sheetId: firstSheetId,
+                                    dimension: 'COLUMNS',
+                                    startIndex: 0,
+                                    endIndex: 1,
+                                },
+                                properties: { pixelSize: 120 }, // Date column
+                                fields: 'pixelSize',
+                            },
+                        },
+                        {
+                            updateDimensionProperties: {
+                                range: {
+                                    sheetId: firstSheetId,
+                                    dimension: 'COLUMNS',
+                                    startIndex: 1,
+                                    endIndex: 2,
+                                },
+                                properties: { pixelSize: 250 }, // Match column
+                                fields: 'pixelSize',
+                            },
+                        },
+                        {
+                            updateDimensionProperties: {
+                                range: {
+                                    sheetId: firstSheetId,
+                                    dimension: 'COLUMNS',
+                                    startIndex: 2,
+                                    endIndex: 3,
+                                },
+                                properties: { pixelSize: 150 }, // Observer Link column
+                                fields: 'pixelSize',
+                            },
+                        },
+                        // Freeze header row
+                        {
+                            updateSheetProperties: {
+                                properties: {
+                                    sheetId: firstSheetId,
+                                    gridProperties: { frozenRowCount: 1 },
+                                },
+                                fields: 'gridProperties.frozenRowCount',
+                            },
+                        },
+                        // Center align Date column for all data
+                        {
+                            repeatCell: {
+                                range: {
+                                    sheetId: firstSheetId,
+                                    startRowIndex: 1,
+                                    startColumnIndex: 0,
+                                    endColumnIndex: 1,
+                                },
+                                cell: {
+                                    userEnteredFormat: {
+                                        horizontalAlignment: 'CENTER',
+                                    },
+                                },
+                                fields: 'userEnteredFormat.horizontalAlignment',
+                            },
+                        },
+                        // Center align Observer Link column
+                        {
+                            repeatCell: {
+                                range: {
+                                    sheetId: firstSheetId,
+                                    startRowIndex: 1,
+                                    startColumnIndex: 2,
+                                    endColumnIndex: 3,
+                                },
+                                cell: {
+                                    userEnteredFormat: {
+                                        horizontalAlignment: 'CENTER',
+                                    },
+                                },
+                                fields: 'userEnteredFormat.horizontalAlignment',
+                            },
+                        },
+                    ],
+                },
+            });
+        }
+
         return NextResponse.json({ success: true, count: matches.length });
     } catch (error: unknown) {
         console.error('Export Error:', error);
@@ -175,9 +257,8 @@ export async function POST(req: NextRequest) {
     }
 }
 
-/**
- * Format activity logs into a readable string matching the UI format
- */
+// Activity log formatting - commented out for now, will fix later
+/*
 function formatActivityLog(
     logs: MatchLog[],
     teamAName: string,
@@ -216,3 +297,4 @@ function formatActivityLog(
         }
     }).join(' | ');
 }
+*/
