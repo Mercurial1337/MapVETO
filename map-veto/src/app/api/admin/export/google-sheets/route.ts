@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createServiceClient, createClient } from '@/lib/supabase/server';
 
 interface MatchData {
     id: string;
@@ -15,13 +15,21 @@ export async function POST(req: NextRequest) {
     try {
         const { date_from, date_to, event_id, sheet_id } = await req.json();
 
-        const supabase = createServiceClient();
+        const supabase = await createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const serviceClient = createServiceClient();
 
         // 1. Fetch matches based on criteria - use created_at to match website display
-        let query = supabase
+        let query = serviceClient
             .from('matches')
             .select('id, team_a_name, team_b_name, created_at, event_id, events(name, google_sheet_id)')
             .eq('status', 'completed')
+            .eq('created_by', user.id)
             .order('created_at', { ascending: true });
 
         // Date filtering - adjust for timezone difference (UTC vs local display)
