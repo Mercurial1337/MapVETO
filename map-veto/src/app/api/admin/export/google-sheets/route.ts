@@ -187,6 +187,7 @@ function formatActivityLog(
     if (logs.length === 0) return 'No activity recorded';
 
     let pickCounter = 0;
+    let lastPickedMap = '';
 
     return logs.map(log => {
         const actor = log.actor === 'team_a' ? teamAName :
@@ -199,12 +200,14 @@ function formatActivityLog(
             return `${actor} bans ${mapName}`;
         } else if (log.action_type === 'pick') {
             pickCounter++;
+            lastPickedMap = mapName;
             return `${actor} picks ${mapName} (Map ${pickCounter})`;
         } else if (log.action_type === 'side') {
             const side = log.side_choice === 'attack' ? 'Attack' : 'Defense';
-            return `${actor} picks ${side}`;
+            return `${actor} picks ${side} for ${lastPickedMap}`;
         } else if (log.action_type === 'decider') {
             pickCounter++;
+            lastPickedMap = mapName;
             return `${mapName} (Map ${pickCounter}) is decider`;
         } else if (log.action_type === 'coin_toss') {
             return `${actor} wins coin toss`;
