@@ -43,7 +43,10 @@ export async function POST(req: NextRequest) {
         if (date_to) {
             query = query.lte('completed_at', `${date_to}T23:59:59.999Z`);
         }
-        if (event_id && event_id !== 'all') {
+        // Filter by event - 'standalone' means matches with no event
+        if (event_id === 'standalone') {
+            query = query.is('event_id', null);
+        } else if (event_id && event_id !== 'all') {
             query = query.eq('event_id', event_id);
         }
 

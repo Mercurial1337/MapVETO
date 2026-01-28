@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
-import { Plus, Pencil, Trash2, Image as ImageIcon, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, Image as ImageIcon, Eye, FileSpreadsheet } from 'lucide-react';
+import { ExportModal } from '@/components/admin/ExportModal';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,8 @@ export default function EventsPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [user, setUser] = useState<User | null>(null);
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [exportEventId, setExportEventId] = useState<string | null>(null);
 
     const supabase = createClient();
 
@@ -66,6 +69,16 @@ export default function EventsPage() {
         } catch (error) {
             console.error('Error deleting event:', error);
         }
+    };
+
+    const openExportModal = (eventId: string) => {
+        setExportEventId(eventId);
+        setIsExportModalOpen(true);
+    };
+
+    const closeExportModal = () => {
+        setIsExportModalOpen(false);
+        setExportEventId(null);
     };
 
     if (isLoading) {
@@ -161,6 +174,13 @@ export default function EventsPage() {
                                     <Eye size={14} />
                                     {event.matches?.[0]?.count || 0}
                                 </Link>
+                                <button
+                                    onClick={() => openExportModal(event.id)}
+                                    className="px-3 py-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg text-sm text-green-400 flex items-center gap-1 transition-colors"
+                                    title="Export matches to Google Sheets"
+                                >
+                                    <FileSpreadsheet size={14} />
+                                </button>
                                 <Link
                                     href={`/admin/events/${event.id}/edit`}
                                     className="flex-1 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-white flex items-center justify-center gap-2 transition-colors"
@@ -196,6 +216,13 @@ export default function EventsPage() {
                     ))}
                 </div>
             )}
+
+            {/* Export Modal */}
+            <ExportModal
+                isOpen={isExportModalOpen}
+                onClose={closeExportModal}
+                preselectedEventId={exportEventId}
+            />
         </div>
     );
 }

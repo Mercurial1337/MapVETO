@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, FileSpreadsheet, Calendar, Image as ImageIcon, Check, AlertCircle } from 'lucide-react';
+import { X, FileSpreadsheet, Check, AlertCircle } from 'lucide-react';
 
 interface Event {
     id: string;
@@ -13,9 +13,10 @@ interface Event {
 interface ExportModalProps {
     isOpen: boolean;
     onClose: () => void;
+    preselectedEventId?: string | null;
 }
 
-export function ExportModal({ isOpen, onClose }: ExportModalProps) {
+export function ExportModal({ isOpen, onClose, preselectedEventId }: ExportModalProps) {
     const [events, setEvents] = useState<Event[]>([]);
     const [isLoadingEvents, setIsLoadingEvents] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
@@ -24,7 +25,7 @@ export function ExportModal({ isOpen, onClose }: ExportModalProps) {
     const [formData, setFormData] = useState({
         date_from: '',
         date_to: '',
-        event_id: 'all',
+        event_id: '',
         sheet_id: '',
     });
 
@@ -33,11 +34,23 @@ export function ExportModal({ isOpen, onClose }: ExportModalProps) {
             fetchEvents();
             // Try to load last used sheet ID from localStorage
             const savedSheetId = localStorage.getItem('last_google_sheet_id');
-            if (savedSheetId) {
+            if (savedSheetId && !preselectedEventId) {
                 setFormData(prev => ({ ...prev, sheet_id: savedSheetId }));
             }
         }
-    }, [isOpen]);
+    }, [isOpen, preselectedEventId]);
+
+    // Effect to handle preselected event
+    useEffect(() => {
+        if (isOpen && events.length > 0 && preselectedEventId) {
+            const selectedEvent = events.find(ev => ev.id === preselectedEventId);
+            setFormData(prev => ({
+                ...prev,
+                event_id: preselectedEventId,
+                sheet_id: selectedEvent?.google_sheet_id || prev.sheet_id,
+            }));
+        }
+    }, [isOpen, events, preselectedEventId]);
 
     const fetchEvents = async () => {
         setIsLoadingEvents(true);
@@ -144,6 +157,7 @@ export function ExportModal({ isOpen, onClose }: ExportModalProps) {
                         <div className="space-y-2">
                             <label className="text-sm text-white/60">Event Filter</label>
                             <select
+                                required
                                 value={formData.event_id}
                                 onChange={(e) => {
                                     const selectedEventId = e.target.value;
@@ -157,7 +171,8 @@ export function ExportModal({ isOpen, onClose }: ExportModalProps) {
                                 }}
                                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-500/50 text-sm"
                             >
-                                <option value="all">All Events</option>
+                                <option value="">Select an event...</option>
+                                <option value="standalone">Standalone Matches</option>
                                 {events.map(event => (
                                     <option key={event.id} value={event.id}>{event.name}</option>
                                 ))}
@@ -212,7 +227,7 @@ export function ExportModal({ isOpen, onClose }: ExportModalProps) {
                             </button>
                             <button
                                 type="submit"
-                                disabled={isExporting || !formData.sheet_id}
+                                disabled={isExporting || !formData.sheet_id || !formData.event_id}
                                 className="flex-[2] px-4 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {isExporting ? (
