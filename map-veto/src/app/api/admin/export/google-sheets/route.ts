@@ -105,8 +105,12 @@ export async function POST(req: NextRequest) {
 
         // 6. Format rows (3 columns: Date, Match, Observer Link)
         const rows = (matches as MatchData[]).map(match => {
-            // Format date
-            const date = new Date(match.completed_at).toISOString().split('T')[0];
+            // Format date - convert UTC to local time (add 2 hours for UTC+2)
+            // This ensures the date shown matches what users see on the website
+            const utcDate = new Date(match.completed_at);
+            // Add timezone offset (using a general approach - adjust hours to local time)
+            const localDate = new Date(utcDate.getTime() + (2 * 60 * 60 * 1000)); // UTC+2
+            const date = localDate.toISOString().split('T')[0];
 
             // Format match name
             const matchName = `${match.team_a_name} vs ${match.team_b_name}`;
