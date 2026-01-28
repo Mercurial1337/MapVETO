@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { google, sheets_v4 } from 'googleapis';
+import { google } from 'googleapis';
 import { createServiceClient } from '@/lib/supabase/server';
 
 interface MatchLog {
@@ -17,6 +17,11 @@ interface MatchData {
     completed_at: string;
     event_id: string | null;
     events: { name: string; google_sheet_id: string | null }[] | null;
+}
+
+interface MapInfo {
+    id: string;
+    name: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -52,7 +57,6 @@ export async function POST(req: NextRequest) {
         // 2. Determine sheet ID - use provided sheet_id, or event's default sheet_id
         let targetSheetId = sheet_id;
 
-        // If exporting for a specific event and no sheet_id provided, use event's default
         if (!targetSheetId && event_id && event_id !== 'all') {
             const firstMatchWithEvent = (matches as MatchData[]).find(m => m.events?.[0]?.google_sheet_id);
             if (firstMatchWithEvent?.events?.[0]?.google_sheet_id) {
@@ -64,20 +68,18 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Google Sheet ID is required. Either provide one or set a default in the event settings.' }, { status: 400 });
         }
 
-        // 3. Fetch observer links for all matches
-        const matchIds = matches.map((m: MatchData) => m.id);
-        const { data: allLinks } = await supabase
-            .from('match_links')
-            .select('match_id, token')
-            .in('match_id', matchIds)
-            .eq('link_type', 'observer');
+        // 3. Fetch all maps to get names
+        const { data: allMaps } = await supabase
+            .from('maps')
+            .select('id, name');
 
-        const observerTokens: Record<string, string> = {};
-        allLinks?.forEach((link: { match_id: string; token: string }) => {
-            observerTokens[link.match_id] = link.token;
+        const mapNames: Record<string, string> = {};
+        allMaps?.forEach((map: MapInfo) => {
+            mapNames[map.id] = map.name;
         });
 
         // 4. Fetch activity logs for all matches
+        const matchIds = matches.map((m: MatchData) => m.id);
         const { data: allLogs } = await supabase
             .from('match_logs')
             .select('match_id, action_type, actor, map_id, side_choice, step_number')
@@ -118,81 +120,49 @@ export async function POST(req: NextRequest) {
 
         const sheets = google.sheets({ version: 'v4', auth });
 
-        // 6. Group matches by event for per-event sheet tabs
-        const matchesByEvent: Record<string, MatchData[]> = {};
-        (matches as MatchData[]).forEach(match => {
-            const eventName = match.events?.[0]?.name || 'Standalone Matches';
-            if (!matchesByEvent[eventName]) {
-                matchesByEvent[eventName] = [];
-            }
-            matchesByEvent[eventName].push(match);
-        });
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mapveto-nine.vercel.app';
 
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://your-app.vercel.app';
-
-        // 7. Get existing sheet tabs
-        const spreadsheet = await sheets.spreadsheets.get({
+        // 6. Check if sheet already has data (to skip header)
+        const existingData = await sheets.spreadsheets.values.get({
             spreadsheetId: targetSheetId,
+            range: 'Sheet1!A1:A1',
         });
-        const existingSheets = spreadsheet.data.sheets?.map(s => s.properties?.title) || [];
 
-        // 8. Process each event group
-        for (const [eventName, eventMatches] of Object.entries(matchesByEvent)) {
-            // Sanitize sheet name (max 100 chars, no special chars)
-            const sheetName = eventName.replace(/[\\/*?[\]:]/g, '_').substring(0, 100);
+        const hasExistingData = existingData.data.values && existingData.data.values.length > 0;
 
-            // Create sheet tab if it doesn't exist
-            if (!existingSheets.includes(sheetName)) {
-                try {
-                    await sheets.spreadsheets.batchUpdate({
-                        spreadsheetId: targetSheetId,
-                        requestBody: {
-                            requests: [{
-                                addSheet: {
-                                    properties: { title: sheetName }
-                                }
-                            }]
-                        }
-                    });
-                    existingSheets.push(sheetName);
-                } catch (err) {
-                    console.error(`Failed to create sheet tab "${sheetName}":`, err);
-                    // Continue with default Sheet1 if creation fails
-                }
-            }
+        // 7. Format rows
+        const rows = (matches as MatchData[]).map(match => {
+            // Format date
+            const date = new Date(match.completed_at).toISOString().split('T')[0];
 
-            // Format rows for this event
-            const header = ['Date', 'Match', 'Observer Link', 'Activity Log'];
+            // Format match name
+            const matchName = `${match.team_a_name} vs ${match.team_b_name}`;
 
-            const rows = eventMatches.map(match => {
-                // Format date
-                const date = new Date(match.completed_at).toISOString().split('T')[0];
+            // Format observer link - use simple ?token=observer format
+            const observerUrl = `${baseUrl}/match/${match.id}?token=observer`;
+            const observerLink = `=HYPERLINK("${observerUrl}", "View Match")`;
 
-                // Format match name
-                const matchName = `${match.team_a_name} vs ${match.team_b_name}`;
+            // Format activity log from match_logs with proper map names
+            const logs = matchLogsMap[match.id] || [];
+            const activityLog = formatActivityLog(logs, match.team_a_name, match.team_b_name, mapNames);
 
-                // Format observer link as hyperlink formula
-                const token = observerTokens[match.id];
-                const observerUrl = token ? `${baseUrl}/match/${match.id}?token=${token}` : '';
-                const observerLink = token ? `=HYPERLINK("${observerUrl}", "View Match")` : 'No link';
+            return [date, matchName, observerLink, activityLog];
+        });
 
-                // Format activity log from match_logs
-                const logs = matchLogsMap[match.id] || [];
-                const activityLog = formatActivityLog(logs, match.team_a_name, match.team_b_name);
+        // 8. Prepare values to write
+        const valuesToWrite = hasExistingData
+            ? rows  // No header if data exists
+            : [['Date', 'Match', 'Observer Link', 'Activity Log'], ...rows];  // Include header
 
-                return [date, matchName, observerLink, activityLog];
-            });
-
-            // Append to the sheet
-            await sheets.spreadsheets.values.append({
-                spreadsheetId: targetSheetId,
-                range: `${sheetName}!A1`,
-                valueInputOption: 'USER_ENTERED', // Allows formulas like HYPERLINK to work
-                requestBody: {
-                    values: [header, ...rows],
-                },
-            });
-        }
+        // 9. Append to the first sheet (Sheet1)
+        await sheets.spreadsheets.values.append({
+            spreadsheetId: targetSheetId,
+            range: 'Sheet1!A1',
+            valueInputOption: 'USER_ENTERED',
+            requestBody: {
+                values: valuesToWrite,
+            },
+        });
 
         return NextResponse.json({ success: true, count: matches.length });
     } catch (error: unknown) {
@@ -203,28 +173,40 @@ export async function POST(req: NextRequest) {
 }
 
 /**
- * Format activity logs into a readable string
+ * Format activity logs into a readable string matching the UI format
  */
-function formatActivityLog(logs: MatchLog[], teamAName: string, teamBName: string): string {
+function formatActivityLog(
+    logs: MatchLog[],
+    teamAName: string,
+    teamBName: string,
+    mapNames: Record<string, string>
+): string {
     if (logs.length === 0) return 'No activity recorded';
+
+    let pickCounter = 0;
 
     return logs.map(log => {
         const actor = log.actor === 'team_a' ? teamAName :
             log.actor === 'team_b' ? teamBName :
                 log.actor === 'system' ? 'System' : log.actor;
 
-        const action = log.action_type.toUpperCase();
+        const mapName = log.map_id ? (mapNames[log.map_id] || log.map_id) : 'unknown';
 
         if (log.action_type === 'ban') {
-            return `${actor} BANNED ${log.map_id || 'unknown'}`;
+            return `${actor} bans ${mapName}`;
         } else if (log.action_type === 'pick') {
-            return `${actor} PICKED ${log.map_id || 'unknown'}`;
+            pickCounter++;
+            return `${actor} picks ${mapName} (Map ${pickCounter})`;
         } else if (log.action_type === 'side') {
-            return `${actor} picked ${log.side_choice?.toUpperCase() || 'SIDE'}`;
+            const side = log.side_choice === 'attack' ? 'Attack' : 'Defense';
+            return `${actor} picks ${side}`;
         } else if (log.action_type === 'decider') {
-            return `DECIDER: ${log.map_id || 'unknown'}`;
+            pickCounter++;
+            return `${mapName} (Map ${pickCounter}) is decider`;
+        } else if (log.action_type === 'coin_toss') {
+            return `${actor} wins coin toss`;
         } else {
-            return `${actor} ${action}`;
+            return `${actor} ${log.action_type}`;
         }
     }).join(' | ');
 }
