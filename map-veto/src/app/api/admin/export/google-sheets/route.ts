@@ -24,11 +24,16 @@ export async function POST(req: NextRequest) {
             .eq('status', 'completed')
             .order('created_at', { ascending: true });
 
-        // Date filtering - filter by created_at to match what users see on the website
+        // Date filtering - adjust for timezone difference (UTC vs local display)
+        // Matches stored as UTC but displayed in local time on website
+        // Subtract 1 day from from_date to capture matches that appear on that date in local time
         if (date_from) {
-            query = query.gte('created_at', `${date_from}`);
+            const fromDate = new Date(date_from);
+            fromDate.setDate(fromDate.getDate() - 1);
+            query = query.gte('created_at', fromDate.toISOString().split('T')[0]);
         }
         if (date_to) {
+            // Add buffer to end of day
             query = query.lte('created_at', `${date_to}T23:59:59.999`);
         }
         // Filter by event - 'standalone' means matches with no event
