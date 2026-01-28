@@ -86,13 +86,14 @@ export async function POST(req: NextRequest) {
 
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://mapveto-nine.vercel.app';
 
-        // 4. Check if sheet already has data (to skip header)
+        // 4. Get current sheet data to determine where to start
         const existingData = await sheets.spreadsheets.values.get({
             spreadsheetId: targetSheetId,
-            range: 'Sheet1!A1:A1',
+            range: 'Sheet1!A:A',
         });
 
-        const hasExistingData = existingData.data.values && existingData.data.values.length > 0;
+        const existingRowCount = existingData.data.values?.length || 0;
+        const hasExistingData = existingRowCount > 0;
 
         // 5. Get sheet metadata to find first sheet ID for formatting
         const spreadsheet = await sheets.spreadsheets.get({
@@ -131,120 +132,190 @@ export async function POST(req: NextRequest) {
             },
         });
 
-        // 9. Apply formatting only on first export (when we added header)
+        // 9. Calculate the row indices for the newly added data
+        const newDataStartRow = hasExistingData ? existingRowCount : 1; // 0-indexed, skip header if first export
+        const newDataEndRow = newDataStartRow + rows.length;
+        const totalRows = hasExistingData ? existingRowCount + rows.length : 1 + rows.length;
+
+        // 10. Build formatting requests
+        const formatRequests: object[] = [];
+
+        // Only add header and column formatting on first export
         if (!hasExistingData) {
+            formatRequests.push(
+                // Format header row - bold white text on dark purple background
+                {
+                    repeatCell: {
+                        range: {
+                            sheetId: firstSheetId,
+                            startRowIndex: 0,
+                            endRowIndex: 1,
+                            startColumnIndex: 0,
+                            endColumnIndex: 3,
+                        },
+                        cell: {
+                            userEnteredFormat: {
+                                backgroundColor: { red: 0.25, green: 0.15, blue: 0.35 },
+                                textFormat: {
+                                    bold: true,
+                                    foregroundColor: { red: 1, green: 1, blue: 1 },
+                                    fontSize: 11,
+                                },
+                                horizontalAlignment: 'CENTER',
+                                verticalAlignment: 'MIDDLE',
+                            },
+                        },
+                        fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment)',
+                    },
+                },
+                // Set column widths
+                {
+                    updateDimensionProperties: {
+                        range: {
+                            sheetId: firstSheetId,
+                            dimension: 'COLUMNS',
+                            startIndex: 0,
+                            endIndex: 1,
+                        },
+                        properties: { pixelSize: 120 },
+                        fields: 'pixelSize',
+                    },
+                },
+                {
+                    updateDimensionProperties: {
+                        range: {
+                            sheetId: firstSheetId,
+                            dimension: 'COLUMNS',
+                            startIndex: 1,
+                            endIndex: 2,
+                        },
+                        properties: { pixelSize: 280 },
+                        fields: 'pixelSize',
+                    },
+                },
+                {
+                    updateDimensionProperties: {
+                        range: {
+                            sheetId: firstSheetId,
+                            dimension: 'COLUMNS',
+                            startIndex: 2,
+                            endIndex: 3,
+                        },
+                        properties: { pixelSize: 150 },
+                        fields: 'pixelSize',
+                    },
+                },
+                // Freeze header row
+                {
+                    updateSheetProperties: {
+                        properties: {
+                            sheetId: firstSheetId,
+                            gridProperties: { frozenRowCount: 1 },
+                        },
+                        fields: 'gridProperties.frozenRowCount',
+                    },
+                }
+            );
+        }
+
+        // Add alternating row colors for ALL data rows
+        for (let i = 1; i < totalRows; i++) {
+            const isEvenRow = i % 2 === 0;
+            formatRequests.push({
+                repeatCell: {
+                    range: {
+                        sheetId: firstSheetId,
+                        startRowIndex: i,
+                        endRowIndex: i + 1,
+                        startColumnIndex: 0,
+                        endColumnIndex: 3,
+                    },
+                    cell: {
+                        userEnteredFormat: {
+                            backgroundColor: isEvenRow
+                                ? { red: 0.95, green: 0.95, blue: 0.98 }  // Light lavender
+                                : { red: 1, green: 1, blue: 1 },          // White
+                            verticalAlignment: 'MIDDLE',
+                        },
+                    },
+                    fields: 'userEnteredFormat(backgroundColor,verticalAlignment)',
+                },
+            });
+        }
+
+        // Add borders around all data
+        formatRequests.push({
+            updateBorders: {
+                range: {
+                    sheetId: firstSheetId,
+                    startRowIndex: 0,
+                    endRowIndex: totalRows,
+                    startColumnIndex: 0,
+                    endColumnIndex: 3,
+                },
+                top: { style: 'SOLID', color: { red: 0.8, green: 0.8, blue: 0.8 } },
+                bottom: { style: 'SOLID', color: { red: 0.8, green: 0.8, blue: 0.8 } },
+                left: { style: 'SOLID', color: { red: 0.8, green: 0.8, blue: 0.8 } },
+                right: { style: 'SOLID', color: { red: 0.8, green: 0.8, blue: 0.8 } },
+                innerHorizontal: { style: 'SOLID', color: { red: 0.9, green: 0.9, blue: 0.9 } },
+                innerVertical: { style: 'SOLID', color: { red: 0.9, green: 0.9, blue: 0.9 } },
+            },
+        });
+
+        // Center align Date and Observer Link columns for all rows
+        formatRequests.push(
+            {
+                repeatCell: {
+                    range: {
+                        sheetId: firstSheetId,
+                        startRowIndex: 1,
+                        endRowIndex: totalRows,
+                        startColumnIndex: 0,
+                        endColumnIndex: 1,
+                    },
+                    cell: {
+                        userEnteredFormat: { horizontalAlignment: 'CENTER' },
+                    },
+                    fields: 'userEnteredFormat.horizontalAlignment',
+                },
+            },
+            {
+                repeatCell: {
+                    range: {
+                        sheetId: firstSheetId,
+                        startRowIndex: 1,
+                        endRowIndex: totalRows,
+                        startColumnIndex: 2,
+                        endColumnIndex: 3,
+                    },
+                    cell: {
+                        userEnteredFormat: { horizontalAlignment: 'CENTER' },
+                    },
+                    fields: 'userEnteredFormat.horizontalAlignment',
+                },
+            }
+        );
+
+        // Set row heights for data rows
+        formatRequests.push({
+            updateDimensionProperties: {
+                range: {
+                    sheetId: firstSheetId,
+                    dimension: 'ROWS',
+                    startIndex: 1,
+                    endIndex: totalRows,
+                },
+                properties: { pixelSize: 32 },
+                fields: 'pixelSize',
+            },
+        });
+
+        // Apply all formatting
+        if (formatRequests.length > 0) {
             await sheets.spreadsheets.batchUpdate({
                 spreadsheetId: targetSheetId,
                 requestBody: {
-                    requests: [
-                        // Format header row - bold white text on dark background
-                        {
-                            repeatCell: {
-                                range: {
-                                    sheetId: firstSheetId,
-                                    startRowIndex: 0,
-                                    endRowIndex: 1,
-                                    startColumnIndex: 0,
-                                    endColumnIndex: 3,
-                                },
-                                cell: {
-                                    userEnteredFormat: {
-                                        backgroundColor: { red: 0.2, green: 0.2, blue: 0.25 },
-                                        textFormat: {
-                                            bold: true,
-                                            foregroundColor: { red: 1, green: 1, blue: 1 },
-                                            fontSize: 11,
-                                        },
-                                        horizontalAlignment: 'CENTER',
-                                        verticalAlignment: 'MIDDLE',
-                                        padding: { top: 8, bottom: 8, left: 8, right: 8 },
-                                    },
-                                },
-                                fields: 'userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,padding)',
-                            },
-                        },
-                        // Set column widths
-                        {
-                            updateDimensionProperties: {
-                                range: {
-                                    sheetId: firstSheetId,
-                                    dimension: 'COLUMNS',
-                                    startIndex: 0,
-                                    endIndex: 1,
-                                },
-                                properties: { pixelSize: 120 }, // Date column
-                                fields: 'pixelSize',
-                            },
-                        },
-                        {
-                            updateDimensionProperties: {
-                                range: {
-                                    sheetId: firstSheetId,
-                                    dimension: 'COLUMNS',
-                                    startIndex: 1,
-                                    endIndex: 2,
-                                },
-                                properties: { pixelSize: 250 }, // Match column
-                                fields: 'pixelSize',
-                            },
-                        },
-                        {
-                            updateDimensionProperties: {
-                                range: {
-                                    sheetId: firstSheetId,
-                                    dimension: 'COLUMNS',
-                                    startIndex: 2,
-                                    endIndex: 3,
-                                },
-                                properties: { pixelSize: 150 }, // Observer Link column
-                                fields: 'pixelSize',
-                            },
-                        },
-                        // Freeze header row
-                        {
-                            updateSheetProperties: {
-                                properties: {
-                                    sheetId: firstSheetId,
-                                    gridProperties: { frozenRowCount: 1 },
-                                },
-                                fields: 'gridProperties.frozenRowCount',
-                            },
-                        },
-                        // Center align Date column for all data
-                        {
-                            repeatCell: {
-                                range: {
-                                    sheetId: firstSheetId,
-                                    startRowIndex: 1,
-                                    startColumnIndex: 0,
-                                    endColumnIndex: 1,
-                                },
-                                cell: {
-                                    userEnteredFormat: {
-                                        horizontalAlignment: 'CENTER',
-                                    },
-                                },
-                                fields: 'userEnteredFormat.horizontalAlignment',
-                            },
-                        },
-                        // Center align Observer Link column
-                        {
-                            repeatCell: {
-                                range: {
-                                    sheetId: firstSheetId,
-                                    startRowIndex: 1,
-                                    startColumnIndex: 2,
-                                    endColumnIndex: 3,
-                                },
-                                cell: {
-                                    userEnteredFormat: {
-                                        horizontalAlignment: 'CENTER',
-                                    },
-                                },
-                                fields: 'userEnteredFormat.horizontalAlignment',
-                            },
-                        },
-                    ],
+                    requests: formatRequests,
                 },
             });
         }
@@ -256,45 +327,3 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }
-
-// Activity log formatting - commented out for now, will fix later
-/*
-function formatActivityLog(
-    logs: MatchLog[],
-    teamAName: string,
-    teamBName: string,
-    mapNames: Record<string, string>
-): string {
-    if (logs.length === 0) return 'No activity recorded';
-
-    let pickCounter = 0;
-    let lastPickedMap = '';
-
-    return logs.map(log => {
-        const actor = log.actor === 'team_a' ? teamAName :
-            log.actor === 'team_b' ? teamBName :
-                log.actor === 'system' ? 'System' : log.actor;
-
-        const mapName = log.map_id ? (mapNames[log.map_id] || log.map_id) : 'unknown';
-
-        if (log.action_type === 'ban') {
-            return `${actor} bans ${mapName}`;
-        } else if (log.action_type === 'pick') {
-            pickCounter++;
-            lastPickedMap = mapName;
-            return `${actor} picks ${mapName} (Map ${pickCounter})`;
-        } else if (log.action_type === 'side') {
-            const side = log.side_choice === 'attack' ? 'Attack' : 'Defense';
-            return `${actor} picks ${side} for ${lastPickedMap}`;
-        } else if (log.action_type === 'decider') {
-            pickCounter++;
-            lastPickedMap = mapName;
-            return `${mapName} (Map ${pickCounter}) is decider`;
-        } else if (log.action_type === 'coin_toss') {
-            return `${actor} wins coin toss`;
-        } else {
-            return `${actor} ${log.action_type}`;
-        }
-    }).join(' | ');
-}
-*/
