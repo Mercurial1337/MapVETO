@@ -105,11 +105,11 @@ export async function POST(req: NextRequest) {
 
         // 6. Format rows (3 columns: Date, Match, Observer Link)
         const rows = (matches as MatchData[]).map(match => {
-            // Format date - convert UTC to local time (add 2 hours for UTC+2)
+            // Format date - convert UTC to KSA local time (GMT+3)
             // This ensures the date shown matches what users see on the website
             const utcDate = new Date(match.completed_at);
-            // Add timezone offset (using a general approach - adjust hours to local time)
-            const localDate = new Date(utcDate.getTime() + (2 * 60 * 60 * 1000)); // UTC+2
+            // Add timezone offset for KSA (UTC+3 = 3 hours)
+            const localDate = new Date(utcDate.getTime() + (3 * 60 * 60 * 1000));
             const date = localDate.toISOString().split('T')[0];
 
             // Format match name
