@@ -24,11 +24,13 @@ export async function POST(req: NextRequest) {
             .eq('status', 'completed')
             .order('completed_at', { ascending: true });
 
+        // Date filtering - don't use Z suffix to avoid timezone issues
+        // Use local date boundaries
         if (date_from) {
-            query = query.gte('completed_at', `${date_from}T00:00:00Z`);
+            query = query.gte('completed_at', `${date_from}T00:00:00`);
         }
         if (date_to) {
-            query = query.lte('completed_at', `${date_to}T23:59:59.999Z`);
+            query = query.lte('completed_at', `${date_to}T23:59:59.999`);
         }
         // Filter by event - 'standalone' means matches with no event
         if (event_id === 'standalone') {
