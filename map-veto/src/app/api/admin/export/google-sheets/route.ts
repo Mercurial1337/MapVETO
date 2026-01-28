@@ -6,7 +6,7 @@ interface MatchData {
     id: string;
     team_a_name: string;
     team_b_name: string;
-    completed_at: string;
+    created_at: string;
     event_id: string | null;
     events: { name: string; google_sheet_id: string | null }[] | null;
 }
@@ -17,20 +17,19 @@ export async function POST(req: NextRequest) {
 
         const supabase = createServiceClient();
 
-        // 1. Fetch matches based on criteria
+        // 1. Fetch matches based on criteria - use created_at to match website display
         let query = supabase
             .from('matches')
-            .select('id, team_a_name, team_b_name, completed_at, event_id, events(name, google_sheet_id)')
+            .select('id, team_a_name, team_b_name, created_at, event_id, events(name, google_sheet_id)')
             .eq('status', 'completed')
-            .order('completed_at', { ascending: true });
+            .order('created_at', { ascending: true });
 
-        // Date filtering - don't use Z suffix to avoid timezone issues
-        // Use local date boundaries
+        // Date filtering - filter by created_at to match what users see on the website
         if (date_from) {
-            query = query.gte('completed_at', `${date_from}T00:00:00`);
+            query = query.gte('created_at', `${date_from}`);
         }
         if (date_to) {
-            query = query.lte('completed_at', `${date_to}T23:59:59.999`);
+            query = query.lte('created_at', `${date_to}T23:59:59.999`);
         }
         // Filter by event - 'standalone' means matches with no event
         if (event_id === 'standalone') {
@@ -107,7 +106,7 @@ export async function POST(req: NextRequest) {
         const rows = (matches as MatchData[]).map(match => {
             // Format date - convert UTC to KSA local time (GMT+3)
             // This ensures the date shown matches what users see on the website
-            const utcDate = new Date(match.completed_at);
+            const utcDate = new Date(match.created_at);
             // Add timezone offset for KSA (UTC+3 = 3 hours)
             const localDate = new Date(utcDate.getTime() + (3 * 60 * 60 * 1000));
             const date = localDate.toISOString().split('T')[0];
