@@ -8,8 +8,12 @@ import { Ban, Check, Swords, Shield, Dices, Copy } from 'lucide-react';
 interface ActionLogProps {
     bannedMaps: BannedMap[];
     pickedMaps: PickedMap[];
-    teamAName: string;
-    teamBName: string;
+    // Database team names (for resolving picked_by/banned_by)
+    dbTeamAName: string;
+    dbTeamBName: string;
+    // Displayed team names (Team 1 = red, Team 2 = blue)
+    displayTeam1Name: string;
+    displayTeam2Name: string;
     mapNames: Record<string, string>; // map_id -> name
     vetoSteps?: VetoStep[];
     currentStep?: number;
@@ -18,30 +22,33 @@ interface ActionLogProps {
 export function ActionLog({
     bannedMaps,
     pickedMaps,
-    teamAName,
-    teamBName,
+    dbTeamAName,
+    dbTeamBName,
+    displayTeam1Name,
+    displayTeam2Name,
     mapNames,
     vetoSteps = [],
     currentStep = 0,
 }: ActionLogProps) {
     const [copied, setCopied] = useState(false);
 
+    // Get the actual team name from database team identifier
     const getTeamName = (actor: VetoActor) => {
         switch (actor) {
-            case 'team_a': return teamAName;
-            case 'team_b': return teamBName;
+            case 'team_a': return dbTeamAName;
+            case 'team_b': return dbTeamBName;
             case 'system': return 'System';
             default: return actor;
         }
     };
 
+    // Get color based on displayed position (Team 1 = red, Team 2 = blue)
     const getTeamColor = (actor: VetoActor) => {
-        switch (actor) {
-            case 'team_a': return 'text-red-400';
-            case 'team_b': return 'text-blue-400';
-            case 'system': return 'text-purple-400';
-            default: return 'text-white';
-        }
+        const teamName = getTeamName(actor);
+        if (teamName === displayTeam1Name) return 'text-red-400';
+        if (teamName === displayTeam2Name) return 'text-blue-400';
+        if (actor === 'system') return 'text-purple-400';
+        return 'text-white';
     };
 
     // Build log entries in chronological order based on veto steps

@@ -391,7 +391,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                                     side={mapState.side}
                                     pickedBy={mapState.pickedBy}
                                     mapNumber={mapState.mapNumber}
-                                    teamColor={mapState.pickedBy === match.team_a_name ? '#ef4444' : mapState.pickedBy === match.team_b_name ? '#3b82f6' : '#8b5cf6'}
+                                    teamColor={mapState.pickedBy === displayedTeams.teamA ? '#ef4444' : mapState.pickedBy === displayedTeams.teamB ? '#3b82f6' : '#8b5cf6'}
                                     canInteract={canInteract}
                                     onSelect={() => handleMapSelect(map.id)}
                                     action={currentStepDef?.action}
@@ -407,8 +407,10 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     <ActionLog
                         bannedMaps={state?.banned_maps || []}
                         pickedMaps={state?.picked_maps || []}
-                        teamAName={match.team_a_name}
-                        teamBName={match.team_b_name}
+                        dbTeamAName={match.team_a_name}
+                        dbTeamBName={match.team_b_name}
+                        displayTeam1Name={displayedTeams.teamA}
+                        displayTeam2Name={displayedTeams.teamB}
                         mapNames={mapNames}
                         vetoSteps={templateSteps}
                         currentStep={state?.current_step || 0}
