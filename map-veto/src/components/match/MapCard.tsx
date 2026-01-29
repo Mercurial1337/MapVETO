@@ -83,14 +83,10 @@ export function MapCard({
             className={cn(
                 'relative aspect-[16/9] rounded-xl overflow-hidden transition-all duration-300',
                 'w-[96px] sm:w-[120px] md:w-[160px] lg:w-[180px] xl:w-[200px]',
-                'shadow-xl',
                 isInteractive && 'cursor-pointer',
                 state === 'banned' && 'cursor-not-allowed',
                 state === 'active' && 'ring-2 ring-yellow-400 animate-pulse'
             )}
-            style={{
-                boxShadow: state === 'picked' ? `0 0 40px ${teamColor}60, 0 0 80px ${teamColor}30` : undefined,
-            }}
         >
             {/* Map Image */}
             <Image
@@ -115,7 +111,6 @@ export function MapCard({
                     className="absolute inset-0 rounded-2xl"
                     style={{
                         border: `4px solid ${teamColor}`,
-                        boxShadow: `inset 0 0 30px ${teamColor}40`,
                     }}
                 />
             )}
@@ -200,19 +195,9 @@ export function MapCard({
                 </motion.div>
             )}
 
-            {/* Active/Current Selection Glow */}
+            {/* Active/Current Selection Indicator */}
             {state === 'active' && (
-                <motion.div
-                    animate={{
-                        boxShadow: [
-                            '0 0 20px rgba(255,255,255,0.2), inset 0 0 20px rgba(255,255,255,0.1)',
-                            '0 0 60px rgba(255,255,255,0.4), inset 0 0 40px rgba(255,255,255,0.2)',
-                            '0 0 20px rgba(255,255,255,0.2), inset 0 0 20px rgba(255,255,255,0.1)',
-                        ],
-                    }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                    className="absolute inset-0 rounded-2xl pointer-events-none"
-                />
+                <div className="absolute inset-0 rounded-2xl border-2 border-white/40 pointer-events-none" />
             )}
 
             {/* Hover Overlay for Interactive Cards */}

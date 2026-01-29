@@ -149,7 +149,7 @@ export function CoinTossModal({
                                 {/* Coin Face A */}
                                 {customCoinImage ? (
                                     <div
-                                        className="absolute inset-0 rounded-full overflow-hidden shadow-2xl border-4 border-yellow-400/50"
+                                        className="absolute inset-0 rounded-full overflow-hidden border-4 border-yellow-400/50"
                                         style={{ backfaceVisibility: 'hidden' }}
                                     >
                                         <img
@@ -163,7 +163,6 @@ export function CoinTossModal({
                                         className={cn(
                                             'absolute inset-0 rounded-full flex items-center justify-center text-6xl font-bold',
                                             'bg-yellow-500',
-                                            'shadow-2xl shadow-yellow-500/50',
                                             'border-4 border-yellow-300/50'
                                         )}
                                         style={{ backfaceVisibility: 'hidden' }}
@@ -177,7 +176,7 @@ export function CoinTossModal({
                                 {/* Coin Face B */}
                                 {customCoinImage ? (
                                     <div
-                                        className="absolute inset-0 rounded-full overflow-hidden shadow-2xl border-4 border-yellow-400/50"
+                                        className="absolute inset-0 rounded-full overflow-hidden border-4 border-yellow-400/50"
                                         style={{
                                             backfaceVisibility: 'hidden',
                                             transform: 'rotateY(180deg)',
@@ -194,7 +193,6 @@ export function CoinTossModal({
                                         className={cn(
                                             'absolute inset-0 rounded-full flex items-center justify-center text-6xl font-bold',
                                             'bg-slate-400',
-                                            'shadow-2xl shadow-slate-500/50',
                                             'border-4 border-slate-300/50'
                                         )}
                                         style={{
@@ -208,20 +206,6 @@ export function CoinTossModal({
                                     </div>
                                 )}
                             </motion.div>
-
-                            {/* Glow effect */}
-                            <motion.div
-                                animate={
-                                    isFlipping
-                                        ? {
-                                            opacity: [0.3, 0.8, 0.3],
-                                            scale: [1, 1.2, 1],
-                                        }
-                                        : {}
-                                }
-                                transition={{ duration: 0.5, repeat: 5 }}
-                                className="absolute inset-0 rounded-full bg-yellow-400/30 blur-xl -z-10"
-                            />
                         </div>
 
                         {/* Result / Button / Waiting */}
@@ -283,8 +267,8 @@ export function CoinTossModal({
                                         className={cn(
                                             'px-10 py-4 rounded-2xl font-bold text-lg',
                                             'bg-purple-600',
-                                            'text-white shadow-xl shadow-purple-500/30',
-                                            'hover:bg-purple-500 hover:shadow-2xl hover:shadow-purple-500/50',
+                                            'text-white',
+                                            'hover:bg-purple-500',
                                             'transition-all duration-300',
                                             'border border-white/20'
                                         )}
