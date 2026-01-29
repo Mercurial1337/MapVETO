@@ -167,7 +167,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     const mapStates = useMemo(() => {
         if (!state) return {};
 
-        const states: Record<string, { state: MapCardState; side?: 'attack' | 'defense'; pickedBy?: string; mapNumber?: number }> = {};
+        const states: Record<string, { state: MapCardState; side?: 'attack' | 'defense'; pickedBy?: string; sidePickedBy?: string; mapNumber?: number }> = {};
 
         state.banned_maps.forEach(ban => {
             states[ban.map_id] = { state: 'banned' };
@@ -183,10 +183,18 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     ? match?.team_b_name
                     : 'Decider';
 
+            // Get who picked the side
+            const sidePickedByName = pick.side_picked_by === 'team_a'
+                ? match?.team_a_name
+                : pick.side_picked_by === 'team_b'
+                    ? match?.team_b_name
+                    : undefined;
+
             states[pick.map_id] = {
                 state: 'picked',
                 side: pick.side || undefined,
                 pickedBy: pickedByName,
+                sidePickedBy: sidePickedByName,
                 mapNumber: pick.map_number
             };
         });
@@ -389,6 +397,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                                     map={map}
                                     state={mapState.state}
                                     side={mapState.side}
+                                    sidePickedBy={mapState.sidePickedBy}
                                     pickedBy={mapState.pickedBy}
                                     mapNumber={mapState.mapNumber}
                                     teamColor={mapState.pickedBy === displayedTeams.teamA ? '#ef4444' : mapState.pickedBy === displayedTeams.teamB ? '#3b82f6' : '#8b5cf6'}

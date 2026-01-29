@@ -29,6 +29,7 @@ interface MapCardProps {
     };
     state: MapCardState;
     side?: SideChoice | null;
+    sidePickedBy?: string; // Team name who picked the side
     pickedBy?: string;
     teamColor?: string;
     canInteract: boolean;
@@ -45,6 +46,7 @@ export function MapCard({
     map,
     state,
     side,
+    sidePickedBy,
     pickedBy,
     teamColor = '#ffffff',
     canInteract,
@@ -183,13 +185,18 @@ export function MapCard({
                     transition={{ delay: 0.3 }}
                     className={cn(
                         'absolute top-2 right-2 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
-                        'shadow-lg backdrop-blur-sm',
+                        'shadow-lg backdrop-blur-sm flex items-center gap-1',
                         side === 'attack'
                             ? 'bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-red-500/30'
                             : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-cyan-500/30'
                     )}
                 >
                     {side === 'attack' ? 'ATK' : 'DEF'}
+                    {sidePickedBy && (
+                        <span className="text-[8px] font-medium opacity-90 normal-case">
+                            · {sidePickedBy}
+                        </span>
+                    )}
                 </motion.div>
             )}
 
