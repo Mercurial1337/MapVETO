@@ -32,17 +32,19 @@ export async function POST(req: NextRequest) {
             .eq('created_by', user.id)
             .order('created_at', { ascending: true });
 
-        // Date filtering - adjust for timezone difference (UTC vs local display)
-        // Matches stored as UTC but displayed in local time on website
-        // Subtract 1 day from from_date to capture matches that appear on that date in local time
+        // Date filtering - convert local KSA dates to UTC for database query
+        // User selects dates in KSA (GMT+3), database stores in UTC
+        // A match shown as "Jan 29" in KSA could be stored as "Jan 28 21:00:00 UTC"
+        // So we need to query from the previous day at 21:00 UTC (midnight KSA)
         if (date_from) {
-            const fromDate = new Date(date_from);
-            fromDate.setDate(fromDate.getDate() - 1);
-            query = query.gte('created_at', fromDate.toISOString().split('T')[0]);
+            // Midnight KSA = 21:00 UTC previous day
+            const fromDateUTC = new Date(`${date_from}T00:00:00+03:00`);
+            query = query.gte('created_at', fromDateUTC.toISOString());
         }
         if (date_to) {
-            // Add buffer to end of day
-            query = query.lte('created_at', `${date_to}T23:59:59.999`);
+            // End of day KSA (23:59:59) = 20:59:59 UTC same day
+            const toDateUTC = new Date(`${date_to}T23:59:59+03:00`);
+            query = query.lte('created_at', toDateUTC.toISOString());
         }
         // Filter by event - 'standalone' means matches with no event
         if (event_id === 'standalone') {
