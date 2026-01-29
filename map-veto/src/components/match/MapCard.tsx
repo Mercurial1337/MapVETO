@@ -85,7 +85,7 @@ export function MapCard({
                 'w-[96px] sm:w-[120px] md:w-[160px] lg:w-[180px] xl:w-[200px]',
                 isInteractive && 'cursor-pointer',
                 state === 'banned' && 'cursor-not-allowed',
-                state === 'active' && 'ring-2 ring-yellow-400 animate-pulse'
+                state === 'active' && 'border-2 border-yellow-400'
             )}
         >
             {/* Map Image */}

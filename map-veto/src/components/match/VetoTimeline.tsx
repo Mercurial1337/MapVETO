@@ -76,33 +76,13 @@ export function VetoTimeline({ steps, currentStep, teamAName, teamBName }: VetoT
                                             : isCurrent
                                                 ? 'rgb(234 179 8)'
                                                 : 'rgb(55 65 81)',
-                                        boxShadow: isCurrent
-                                            ? '0 0 20px rgba(234, 179, 8, 0.5)'
-                                            : isCompleted
-                                                ? '0 0 10px rgba(34, 197, 94, 0.3)'
-                                                : 'none',
                                     }}
                                     className={cn(
                                         'w-12 h-12 rounded-full flex items-center justify-center text-xl',
                                         'relative z-10',
-                                        isCurrent && 'ring-4 ring-yellow-400/30'
+                                        isCurrent && 'border-2 border-yellow-400'
                                     )}
                                 >
-                                    {/* Pulse animation for current step */}
-                                    {isCurrent && (
-                                        <motion.div
-                                            animate={{
-                                                scale: [1, 1.5, 1],
-                                                opacity: [0.5, 0, 0.5],
-                                            }}
-                                            transition={{
-                                                duration: 2,
-                                                repeat: Infinity,
-                                                ease: 'easeInOut',
-                                            }}
-                                            className="absolute inset-0 rounded-full bg-yellow-400"
-                                        />
-                                    )}
                                     <span className="relative z-10">{getStepIcon(step.action)}</span>
                                 </motion.div>
 
@@ -214,7 +194,7 @@ export function TurnIndicator({
             className={cn(
                 'flex items-center gap-4 px-8 py-4 rounded-2xl',
                 'bg-black/80 backdrop-blur-xl border-2',
-                isMyTurn ? 'border-yellow-400 shadow-lg shadow-yellow-400/20' : 'border-white/20'
+                isMyTurn ? 'border-yellow-400' : 'border-white/20'
             )}
         >
             {/* Indicator dot */}
