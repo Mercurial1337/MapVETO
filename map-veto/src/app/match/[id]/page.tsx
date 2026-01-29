@@ -174,14 +174,19 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
         });
 
         state.picked_maps.forEach(pick => {
+            // picked_by is the actual team (link holder) who picked the map
+            // We use the original match team names (not swapped displayedTeams)
+            // because picked_by stores the real team identity
+            const pickedByName = pick.picked_by === 'team_a'
+                ? match?.team_a_name
+                : pick.picked_by === 'team_b'
+                    ? match?.team_b_name
+                    : 'Decider';
+
             states[pick.map_id] = {
                 state: 'picked',
                 side: pick.side || undefined,
-                pickedBy: pick.picked_by === 'team_a'
-                    ? match?.team_a_name
-                    : pick.picked_by === 'team_b'
-                        ? match?.team_b_name
-                        : 'Decider',
+                pickedBy: pickedByName,
                 mapNumber: pick.map_number
             };
         });
@@ -402,8 +407,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     <ActionLog
                         bannedMaps={state?.banned_maps || []}
                         pickedMaps={state?.picked_maps || []}
-                        teamAName={displayedTeams.teamA}
-                        teamBName={displayedTeams.teamB}
+                        teamAName={match.team_a_name}
+                        teamBName={match.team_b_name}
                         mapNames={mapNames}
                         vetoSteps={templateSteps}
                         currentStep={state?.current_step || 0}
