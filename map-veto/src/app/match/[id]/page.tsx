@@ -301,7 +301,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                             <img
                                 src={eventBranding.logo_url}
                                 alt="Event Logo"
-                                className="h-8 md:h-10 object-contain"
+                                className="h-12 md:h-16 object-contain max-w-[200px] md:max-w-[280px]"
                             />
                         ) : (
                             <h1 className="text-purple-500 text-lg md:text-2xl font-bold">MAP VETO</h1>
