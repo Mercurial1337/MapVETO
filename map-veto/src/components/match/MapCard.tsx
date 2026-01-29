@@ -103,9 +103,9 @@ export function MapCard({
                 onError={() => setImgError(true)}
             />
 
-            {/* Gradient Overlays */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
+            {/* Dark Overlays */}
+            <div className="absolute inset-0 bg-black/50" />
+            <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-black/40" />
 
             {/* Picked Highlight Border */}
             {state === 'picked' && (
@@ -187,8 +187,8 @@ export function MapCard({
                         'absolute top-2 right-2 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
                         'shadow-lg backdrop-blur-sm flex items-center gap-1',
                         side === 'attack'
-                            ? 'bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-red-500/30'
-                            : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white shadow-cyan-500/30'
+                            ? 'bg-red-600 text-white shadow-red-500/30'
+                            : 'bg-blue-600 text-white shadow-blue-500/30'
                     )}
                 >
                     {side === 'attack' ? 'ATK' : 'DEF'}

@@ -162,13 +162,13 @@ export function CoinTossModal({
                                     <div
                                         className={cn(
                                             'absolute inset-0 rounded-full flex items-center justify-center text-6xl font-bold',
-                                            'bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-600',
+                                            'bg-yellow-500',
                                             'shadow-2xl shadow-yellow-500/50',
-                                            'border-4 border-yellow-200/50'
+                                            'border-4 border-yellow-300/50'
                                         )}
                                         style={{ backfaceVisibility: 'hidden' }}
                                     >
-                                        <span className="bg-gradient-to-b from-yellow-800 to-yellow-950 bg-clip-text text-transparent drop-shadow-sm">
+                                        <span className="text-yellow-900 drop-shadow-sm">
                                             A
                                         </span>
                                     </div>
@@ -193,16 +193,16 @@ export function CoinTossModal({
                                     <div
                                         className={cn(
                                             'absolute inset-0 rounded-full flex items-center justify-center text-6xl font-bold',
-                                            'bg-gradient-to-br from-slate-300 via-slate-400 to-slate-600',
+                                            'bg-slate-400',
                                             'shadow-2xl shadow-slate-500/50',
-                                            'border-4 border-slate-200/50'
+                                            'border-4 border-slate-300/50'
                                         )}
                                         style={{
                                             backfaceVisibility: 'hidden',
                                             transform: 'rotateY(180deg)',
                                         }}
                                     >
-                                        <span className="bg-gradient-to-b from-slate-700 to-slate-900 bg-clip-text text-transparent drop-shadow-sm">
+                                        <span className="text-slate-800 drop-shadow-sm">
                                             B
                                         </span>
                                     </div>
@@ -282,9 +282,9 @@ export function CoinTossModal({
                                         onClick={() => handleFlip()}
                                         className={cn(
                                             'px-10 py-4 rounded-2xl font-bold text-lg',
-                                            'bg-gradient-to-r from-purple-600 via-pink-600 to-red-500',
+                                            'bg-purple-600',
                                             'text-white shadow-xl shadow-purple-500/30',
-                                            'hover:shadow-2xl hover:shadow-purple-500/50',
+                                            'hover:bg-purple-500 hover:shadow-2xl hover:shadow-purple-500/50',
                                             'transition-all duration-300',
                                             'border border-white/20'
                                         )}

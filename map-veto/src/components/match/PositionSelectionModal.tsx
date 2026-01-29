@@ -124,8 +124,8 @@ export function PositionSelectionModal({
                                     disabled={isSubmitting}
                                     className={cn(
                                         'p-6 rounded-2xl border-2 text-left transition-all',
-                                        'bg-gradient-to-r from-green-500/10 to-emerald-500/10',
-                                        'border-green-500/30 hover:border-green-400',
+                                        'bg-green-500/10',
+                                        'border-green-500/30 hover:border-green-400 hover:bg-green-500/20',
                                         'disabled:opacity-50 disabled:cursor-not-allowed'
                                     )}
                                 >
@@ -142,8 +142,8 @@ export function PositionSelectionModal({
                                     disabled={isSubmitting}
                                     className={cn(
                                         'p-6 rounded-2xl border-2 text-left transition-all',
-                                        'bg-gradient-to-r from-blue-500/10 to-cyan-500/10',
-                                        'border-blue-500/30 hover:border-blue-400',
+                                        'bg-blue-500/10',
+                                        'border-blue-500/30 hover:border-blue-400 hover:bg-blue-500/20',
                                         'disabled:opacity-50 disabled:cursor-not-allowed'
                                     )}
                                 >
