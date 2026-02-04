@@ -129,7 +129,7 @@ export function CoinTossModal({
                         </div>
 
                         {/* Coin */}
-                        <div className="relative w-40 h-40 md:w-48 md:h-48 mb-10 perspective-1000">
+                        <div className="relative w-80 h-80 md:w-96 md:h-96 mb-10 perspective-1000">
                             <motion.div
                                 animate={
                                     isFlipping
