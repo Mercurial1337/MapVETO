@@ -150,12 +150,16 @@ export function CoinTossModal({
                                 {customCoinImage ? (
                                     <div
                                         className="absolute inset-0 flex items-center justify-center"
-                                        style={{ backfaceVisibility: 'hidden' }}
+                                        style={{
+                                            backfaceVisibility: 'hidden',
+                                            isolation: 'isolate',
+                                        }}
                                     >
                                         <img
                                             src={customCoinImage}
                                             alt="Coin"
                                             className="w-full h-full object-contain"
+                                            style={{ backgroundColor: 'transparent' }}
                                         />
                                     </div>
                                 ) : (
@@ -180,12 +184,14 @@ export function CoinTossModal({
                                         style={{
                                             backfaceVisibility: 'hidden',
                                             transform: 'rotateY(180deg)',
+                                            isolation: 'isolate',
                                         }}
                                     >
                                         <img
                                             src={customCoinImage}
                                             alt="Coin"
                                             className="w-full h-full object-contain"
+                                            style={{ backgroundColor: 'transparent' }}
                                         />
                                     </div>
                                 ) : (
