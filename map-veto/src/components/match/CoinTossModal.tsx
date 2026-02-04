@@ -149,13 +149,13 @@ export function CoinTossModal({
                                 {/* Coin Face A */}
                                 {customCoinImage ? (
                                     <div
-                                        className="absolute inset-0 rounded-full overflow-hidden border-4 border-yellow-400/50"
+                                        className="absolute inset-0 flex items-center justify-center"
                                         style={{ backfaceVisibility: 'hidden' }}
                                     >
                                         <img
                                             src={customCoinImage}
                                             alt="Coin"
-                                            className="w-full h-full object-cover"
+                                            className="w-full h-full object-contain"
                                         />
                                     </div>
                                 ) : (
@@ -176,7 +176,7 @@ export function CoinTossModal({
                                 {/* Coin Face B */}
                                 {customCoinImage ? (
                                     <div
-                                        className="absolute inset-0 rounded-full overflow-hidden border-4 border-yellow-400/50"
+                                        className="absolute inset-0 flex items-center justify-center"
                                         style={{
                                             backfaceVisibility: 'hidden',
                                             transform: 'rotateY(180deg)',
@@ -185,7 +185,7 @@ export function CoinTossModal({
                                         <img
                                             src={customCoinImage}
                                             alt="Coin"
-                                            className="w-full h-full object-cover"
+                                            className="w-full h-full object-contain"
                                         />
                                     </div>
                                 ) : (
