@@ -1,8 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import type { VetoActor } from '@/types';
+
+// Default coin images (custom design with A and B sides)
+const COIN_SIDE_A = '/coin/side-a.png';
+const COIN_SIDE_B = '/coin/side-b.png';
 
 interface CoinTossModalProps {
     isOpen: boolean;
@@ -11,7 +15,8 @@ interface CoinTossModalProps {
     isAdmin?: boolean;
     winner?: VetoActor | null;
     onFlip?: (forcedWinner?: VetoActor) => Promise<VetoActor | null>;
-    customCoinImage?: string | null;
+    coinImageA?: string | null;
+    coinImageB?: string | null;
 }
 
 function cn(...classes: (string | boolean | undefined)[]) {
@@ -25,20 +30,30 @@ export function CoinTossModal({
     isAdmin = false,
     winner: externalWinner,
     onFlip,
-    customCoinImage,
+    coinImageA,
+    coinImageB,
 }: CoinTossModalProps) {
     const [isFlipping, setIsFlipping] = useState(false);
     const [result, setResult] = useState<VetoActor | null>(null);
     const [showResult, setShowResult] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const coinControls = useAnimation();
+    const pendingResult = useRef<VetoActor | null>(null);
+
+    // Use custom images or fall back to default coin images
+    const sideAImage = coinImageA || COIN_SIDE_A;
+    const sideBImage = coinImageB || COIN_SIDE_B;
 
     // If external winner is passed, show the result
     useEffect(() => {
         if (externalWinner) {
             setResult(externalWinner);
             setShowResult(true);
+            // Set the coin to show the correct side
+            const finalRotation = externalWinner === 'team_a' ? 0 : 180;
+            coinControls.set({ rotateY: finalRotation });
         }
-    }, [externalWinner]);
+    }, [externalWinner, coinControls]);
 
     const handleFlip = async (forcedWinner?: VetoActor) => {
         if (isFlipping || !onFlip) return;
@@ -47,11 +62,41 @@ export function CoinTossModal({
         setShowResult(false);
         setError(null);
 
-        // Start the animation (shorter for forced winner)
-        await new Promise((resolve) => setTimeout(resolve, forcedWinner ? 1000 : 2500));
+        // Start the flip animation while we wait for the server response
+        // We'll do multiple full rotations and land on the result
+        const flipPromise = new Promise<void>((resolve) => {
+            // Animate multiple rotations
+            coinControls.start({
+                rotateY: [0, 360, 720, 1080, 1440, 1800],
+                y: [0, -120, -180, -120, -60, 0],
+                transition: {
+                    duration: forcedWinner ? 1.0 : 2.5,
+                    ease: [0.25, 0.1, 0.25, 1],
+                },
+            }).then(() => {
+                // After main animation, land on the correct side
+                const winner = pendingResult.current;
+                if (winner) {
+                    // Team A = 0 degrees (side A visible), Team B = 180 degrees (side B visible)
+                    const finalRotation = winner === 'team_a' ? 1800 : 1980;
+                    coinControls.start({
+                        rotateY: finalRotation,
+                        transition: { duration: 0.3, ease: 'easeOut' },
+                    });
+                }
+                resolve();
+            });
+        });
 
         // Call the server to get the actual result
         const winner = await onFlip(forcedWinner);
+        pendingResult.current = winner;
+
+        // Wait for animation to complete
+        await flipPromise;
+
+        // Small delay for the landing animation
+        await new Promise((resolve) => setTimeout(resolve, 400));
 
         if (winner) {
             setResult(winner);
@@ -128,89 +173,54 @@ export function CoinTossModal({
                             </motion.div>
                         </div>
 
-                        {/* Coin */}
-                        <div className="relative w-80 h-80 md:w-96 md:h-96 mb-10 perspective-1000">
+                        {/* Coin - 3D Flip Animation */}
+                        <div
+                            className="relative w-64 h-64 md:w-80 md:h-80 mb-10"
+                            style={{ perspective: '1000px' }}
+                        >
                             <motion.div
-                                animate={
-                                    isFlipping
-                                        ? {
-                                            rotateY: [0, 1800],
-                                            y: [0, -150, 0],
-                                        }
-                                        : {}
-                                }
-                                transition={{
-                                    duration: 2.5,
-                                    ease: [0.25, 0.1, 0.25, 1],
-                                }}
+                                animate={coinControls}
                                 className="relative w-full h-full"
-                                style={{ transformStyle: 'preserve-3d' }}
+                                style={{
+                                    transformStyle: 'preserve-3d',
+                                }}
                             >
-                                {/* Coin Face A */}
-                                {customCoinImage ? (
-                                    <div
-                                        className="absolute inset-0 flex items-center justify-center"
+                                {/* Coin Face A (Front - Cyan) */}
+                                <div
+                                    className="absolute inset-0 flex items-center justify-center"
+                                    style={{
+                                        backfaceVisibility: 'hidden',
+                                        WebkitBackfaceVisibility: 'hidden',
+                                    }}
+                                >
+                                    <img
+                                        src={sideAImage}
+                                        alt="Side A"
+                                        className="w-full h-full object-contain drop-shadow-2xl"
                                         style={{
-                                            backfaceVisibility: 'hidden',
-                                            isolation: 'isolate',
+                                            filter: 'drop-shadow(0 20px 40px rgba(0, 255, 255, 0.3))',
                                         }}
-                                    >
-                                        <img
-                                            src={customCoinImage}
-                                            alt="Coin"
-                                            className="w-full h-full object-contain"
-                                            style={{ backgroundColor: 'transparent' }}
-                                        />
-                                    </div>
-                                ) : (
-                                    <div
-                                        className={cn(
-                                            'absolute inset-0 rounded-full flex items-center justify-center text-6xl font-bold',
-                                            'bg-yellow-500',
-                                            'border-4 border-yellow-300/50'
-                                        )}
-                                        style={{ backfaceVisibility: 'hidden' }}
-                                    >
-                                        <span className="text-yellow-900 drop-shadow-sm">
-                                            A
-                                        </span>
-                                    </div>
-                                )}
+                                    />
+                                </div>
 
-                                {/* Coin Face B */}
-                                {customCoinImage ? (
-                                    <div
-                                        className="absolute inset-0 flex items-center justify-center"
+                                {/* Coin Face B (Back - Yellow/Green) */}
+                                <div
+                                    className="absolute inset-0 flex items-center justify-center"
+                                    style={{
+                                        backfaceVisibility: 'hidden',
+                                        WebkitBackfaceVisibility: 'hidden',
+                                        transform: 'rotateY(180deg)',
+                                    }}
+                                >
+                                    <img
+                                        src={sideBImage}
+                                        alt="Side B"
+                                        className="w-full h-full object-contain drop-shadow-2xl"
                                         style={{
-                                            backfaceVisibility: 'hidden',
-                                            transform: 'rotateY(180deg)',
-                                            isolation: 'isolate',
+                                            filter: 'drop-shadow(0 20px 40px rgba(200, 255, 0, 0.3))',
                                         }}
-                                    >
-                                        <img
-                                            src={customCoinImage}
-                                            alt="Coin"
-                                            className="w-full h-full object-contain"
-                                            style={{ backgroundColor: 'transparent' }}
-                                        />
-                                    </div>
-                                ) : (
-                                    <div
-                                        className={cn(
-                                            'absolute inset-0 rounded-full flex items-center justify-center text-6xl font-bold',
-                                            'bg-slate-400',
-                                            'border-4 border-slate-300/50'
-                                        )}
-                                        style={{
-                                            backfaceVisibility: 'hidden',
-                                            transform: 'rotateY(180deg)',
-                                        }}
-                                    >
-                                        <span className="text-slate-800 drop-shadow-sm">
-                                            B
-                                        </span>
-                                    </div>
-                                )}
+                                    />
+                                </div>
                             </motion.div>
                         </div>
 

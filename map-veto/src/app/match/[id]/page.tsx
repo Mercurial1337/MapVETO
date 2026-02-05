@@ -454,7 +454,6 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 isAdmin={isAdmin}
                 winner={coinTossWinner}
                 onFlip={coinToss}
-                customCoinImage={eventBranding?.coin_image_url}
             />
 
             {/* Position Selection Modal */}
