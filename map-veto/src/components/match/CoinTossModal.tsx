@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useAnimation } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { VetoActor } from '@/types';
 
 // Default coin images (custom design with A and B sides)
@@ -37,8 +37,7 @@ export function CoinTossModal({
     const [result, setResult] = useState<VetoActor | null>(null);
     const [showResult, setShowResult] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const coinControls = useAnimation();
-    const pendingResult = useRef<VetoActor | null>(null);
+    const [flipRotation, setFlipRotation] = useState(0);
 
     // Use custom images or fall back to default coin images
     const sideAImage = coinImageA || COIN_SIDE_A;
@@ -49,11 +48,10 @@ export function CoinTossModal({
         if (externalWinner) {
             setResult(externalWinner);
             setShowResult(true);
-            // Set the coin to show the correct side
-            const finalRotation = externalWinner === 'team_a' ? 0 : 180;
-            coinControls.set({ rotateY: finalRotation });
+            // Set the coin to show the correct side (0 = Side A, 180 = Side B)
+            setFlipRotation(externalWinner === 'team_a' ? 0 : 180);
         }
-    }, [externalWinner, coinControls]);
+    }, [externalWinner]);
 
     const handleFlip = async (forcedWinner?: VetoActor) => {
         if (isFlipping || !onFlip) return;
@@ -62,43 +60,24 @@ export function CoinTossModal({
         setShowResult(false);
         setError(null);
 
-        // Start the flip animation while we wait for the server response
-        // We'll do multiple full rotations and land on the result
-        const flipPromise = new Promise<void>((resolve) => {
-            // Animate multiple rotations
-            coinControls.start({
-                rotateY: [0, 360, 720, 1080, 1440, 1800],
-                y: [0, -120, -180, -120, -60, 0],
-                transition: {
-                    duration: forcedWinner ? 1.0 : 2.5,
-                    ease: [0.25, 0.1, 0.25, 1],
-                },
-            }).then(() => {
-                // After main animation, land on the correct side
-                const winner = pendingResult.current;
-                if (winner) {
-                    // Team A = 0 degrees (side A visible), Team B = 180 degrees (side B visible)
-                    const finalRotation = winner === 'team_a' ? 1800 : 1980;
-                    coinControls.start({
-                        rotateY: finalRotation,
-                        transition: { duration: 0.3, ease: 'easeOut' },
-                    });
-                }
-                resolve();
-            });
-        });
-
-        // Call the server to get the actual result
+        // Call the server to get the actual result first
         const winner = await onFlip(forcedWinner);
-        pendingResult.current = winner;
-
-        // Wait for animation to complete
-        await flipPromise;
-
-        // Small delay for the landing animation
-        await new Promise((resolve) => setTimeout(resolve, 400));
 
         if (winner) {
+            // Calculate final rotation based on winner
+            // Team A = land on 0° (or multiple of 360), Team B = land on 180° (or 180 + multiple of 360)
+            // Add extra rotations for dramatic effect
+            const baseRotations = forcedWinner ? 3 : 5; // fewer rotations for forced
+            const finalRotation = winner === 'team_a'
+                ? baseRotations * 360 // Ends at 0° equivalent (Side A visible)
+                : baseRotations * 360 + 180; // Ends at 180° equivalent (Side B visible)
+
+            setFlipRotation(finalRotation);
+
+            // Wait for animation to complete
+            const animDuration = forcedWinner ? 1000 : 2500;
+            await new Promise((resolve) => setTimeout(resolve, animDuration + 300));
+
             setResult(winner);
             setShowResult(true);
         } else {
@@ -173,51 +152,129 @@ export function CoinTossModal({
                             </motion.div>
                         </div>
 
-                        {/* Coin - 3D Flip Animation */}
+                        {/* 3D Coin */}
                         <div
-                            className="relative w-64 h-64 md:w-80 md:h-80 mb-10"
-                            style={{ perspective: '1000px' }}
+                            className="relative mb-10"
+                            style={{
+                                perspective: '1000px',
+                                perspectiveOrigin: 'center center',
+                            }}
                         >
+                            {/* Coin Container */}
                             <motion.div
-                                animate={coinControls}
-                                className="relative w-full h-full"
+                                animate={{
+                                    rotateX: flipRotation,
+                                    y: isFlipping ? [0, -120, -160, -120, -40, 0] : 0,
+                                }}
+                                transition={{
+                                    rotateX: {
+                                        duration: isFlipping ? 2.5 : 0.3,
+                                        ease: isFlipping ? [0.25, 0.1, 0.25, 1] : 'easeOut',
+                                    },
+                                    y: {
+                                        duration: isFlipping ? 2.5 : 0,
+                                        ease: [0.25, 0.1, 0.25, 1],
+                                    },
+                                }}
+                                className="relative w-52 h-52 md:w-64 md:h-64"
                                 style={{
                                     transformStyle: 'preserve-3d',
                                 }}
                             >
                                 {/* Coin Face A (Front - Cyan) */}
                                 <div
-                                    className="absolute inset-0 flex items-center justify-center"
+                                    className="absolute inset-0 rounded-full overflow-hidden"
                                     style={{
                                         backfaceVisibility: 'hidden',
                                         WebkitBackfaceVisibility: 'hidden',
+                                        transform: 'rotateX(0deg)',
+                                        // Metallic border that works with both colors
+                                        boxShadow: `
+                                            inset 0 0 0 6px rgba(100, 116, 139, 0.8),
+                                            inset 0 0 0 8px rgba(71, 85, 105, 0.9),
+                                            0 0 40px rgba(0, 255, 255, 0.3),
+                                            0 10px 30px rgba(0, 0, 0, 0.5)
+                                        `,
                                     }}
                                 >
-                                    <img
-                                        src={sideAImage}
-                                        alt="Side A"
-                                        className="w-full h-full object-contain drop-shadow-2xl"
+                                    {/* Inner border ring */}
+                                    <div
+                                        className="absolute inset-2 rounded-full"
                                         style={{
-                                            filter: 'drop-shadow(0 20px 40px rgba(0, 255, 255, 0.3))',
+                                            background: 'linear-gradient(145deg, #1e293b, #334155)',
+                                            boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.1), inset 0 -2px 4px rgba(0,0,0,0.3)',
+                                        }}
+                                    />
+                                    {/* Coin design */}
+                                    <div className="absolute inset-3 rounded-full overflow-hidden flex items-center justify-center bg-slate-900">
+                                        <img
+                                            src={sideAImage}
+                                            alt="Side A"
+                                            className="w-full h-full object-cover"
+                                            style={{
+                                                transform: 'rotate(45deg) scale(1.3)',
+                                            }}
+                                        />
+                                    </div>
+                                    {/* Shine effect */}
+                                    <div
+                                        className="absolute inset-0 rounded-full pointer-events-none"
+                                        style={{
+                                            background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
                                         }}
                                     />
                                 </div>
 
+                                {/* Coin Edge (for 3D depth) */}
+                                <div
+                                    className="absolute inset-0 rounded-full"
+                                    style={{
+                                        transform: 'translateZ(-4px)',
+                                        background: 'linear-gradient(to bottom, #475569, #334155, #1e293b)',
+                                        boxShadow: '0 0 10px rgba(0,0,0,0.5)',
+                                    }}
+                                />
+
                                 {/* Coin Face B (Back - Yellow/Green) */}
                                 <div
-                                    className="absolute inset-0 flex items-center justify-center"
+                                    className="absolute inset-0 rounded-full overflow-hidden"
                                     style={{
                                         backfaceVisibility: 'hidden',
                                         WebkitBackfaceVisibility: 'hidden',
-                                        transform: 'rotateY(180deg)',
+                                        transform: 'rotateX(180deg)',
+                                        // Metallic border that works with both colors
+                                        boxShadow: `
+                                            inset 0 0 0 6px rgba(100, 116, 139, 0.8),
+                                            inset 0 0 0 8px rgba(71, 85, 105, 0.9),
+                                            0 0 40px rgba(200, 255, 0, 0.3),
+                                            0 10px 30px rgba(0, 0, 0, 0.5)
+                                        `,
                                     }}
                                 >
-                                    <img
-                                        src={sideBImage}
-                                        alt="Side B"
-                                        className="w-full h-full object-contain drop-shadow-2xl"
+                                    {/* Inner border ring */}
+                                    <div
+                                        className="absolute inset-2 rounded-full"
                                         style={{
-                                            filter: 'drop-shadow(0 20px 40px rgba(200, 255, 0, 0.3))',
+                                            background: 'linear-gradient(145deg, #1e293b, #334155)',
+                                            boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.1), inset 0 -2px 4px rgba(0,0,0,0.3)',
+                                        }}
+                                    />
+                                    {/* Coin design */}
+                                    <div className="absolute inset-3 rounded-full overflow-hidden flex items-center justify-center bg-slate-900">
+                                        <img
+                                            src={sideBImage}
+                                            alt="Side B"
+                                            className="w-full h-full object-cover"
+                                            style={{
+                                                transform: 'rotate(45deg) scale(1.3)',
+                                            }}
+                                        />
+                                    </div>
+                                    {/* Shine effect */}
+                                    <div
+                                        className="absolute inset-0 rounded-full pointer-events-none"
+                                        style={{
+                                            background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(0,0,0,0.1) 100%)',
                                         }}
                                     />
                                 </div>
@@ -282,11 +339,12 @@ export function CoinTossModal({
                                         onClick={() => handleFlip()}
                                         className={cn(
                                             'px-10 py-4 rounded-2xl font-bold text-lg',
-                                            'bg-purple-600',
+                                            'bg-gradient-to-r from-purple-600 to-indigo-600',
                                             'text-white',
-                                            'hover:bg-purple-500',
+                                            'hover:from-purple-500 hover:to-indigo-500',
                                             'transition-all duration-300',
-                                            'border border-white/20'
+                                            'shadow-lg shadow-purple-500/30',
+                                            'border border-white/10'
                                         )}
                                     >
                                         🎲 Flip Coin
@@ -307,8 +365,8 @@ export function CoinTossModal({
                                             onClick={() => handleForceWinner('team_a')}
                                             className={cn(
                                                 'px-6 py-3 rounded-xl font-semibold',
-                                                'bg-red-500/20 hover:bg-red-500/30',
-                                                'text-red-400 border border-red-500/30',
+                                                'bg-cyan-500/20 hover:bg-cyan-500/30',
+                                                'text-cyan-400 border border-cyan-500/30',
                                                 'transition-all duration-200'
                                             )}
                                         >
@@ -320,8 +378,8 @@ export function CoinTossModal({
                                             onClick={() => handleForceWinner('team_b')}
                                             className={cn(
                                                 'px-6 py-3 rounded-xl font-semibold',
-                                                'bg-blue-500/20 hover:bg-blue-500/30',
-                                                'text-blue-400 border border-blue-500/30',
+                                                'bg-lime-500/20 hover:bg-lime-500/30',
+                                                'text-lime-400 border border-lime-500/30',
                                                 'transition-all duration-200'
                                             )}
                                         >
