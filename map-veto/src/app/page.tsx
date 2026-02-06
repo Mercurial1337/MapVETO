@@ -41,9 +41,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-5xl font-bold mb-2">
-            <span className="gradient-text">MAP VETO</span>
-          </h1>
+          <img
+            src="/429px-VALORANT_EMEA_Clash_allmode.png"
+            alt="EMEA Clash"
+            className="h-20 mx-auto mb-4"
+          />
           <p className="text-white/50">Admin Portal</p>
         </div>
 
@@ -105,9 +107,8 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Footer */}
         <p className="text-center text-white/30 text-sm mt-8">
-          Map VETO Management System
+          EMEA Clash Map Veto System
         </p>
       </div>
     </div>

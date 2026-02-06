@@ -317,7 +317,11 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                                 className="h-12 md:h-16 object-contain max-w-[200px] md:max-w-[280px]"
                             />
                         ) : (
-                            <h1 className="text-purple-500 text-lg md:text-2xl font-bold">MAP VETO</h1>
+                            <img
+                                src="/CLASH26 PLATFORM HEADER.png"
+                                alt="EMEA Clash"
+                                className="h-12 md:h-16 object-contain max-w-[200px] md:max-w-[280px]"
+                            />
                         )}
                         <div className={`px-2 md:px-3 py-1 rounded-full text-xs font-medium ${isConnected ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'
                             }`}>

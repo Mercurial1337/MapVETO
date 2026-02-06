@@ -13,9 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Map VETO | Esports Map Veto System",
-  description: "Real-time map veto system for competitive esports tournaments. Built for Valorant, extensible to CS2 and more.",
-  keywords: ["esports", "valorant", "veto", "map veto", "tournament"],
+  title: "EMEA Clash | Map Veto System",
+  description: "Real-time map veto system for VALORANT EMEA Clash tournaments.",
+  keywords: ["esports", "valorant", "veto", "map veto", "tournament", "emea clash"],
+  icons: {
+    icon: "/429px-VALORANT_EMEA_Clash_allmode.png",
+  },
 };
 
 export default function RootLayout({
