@@ -84,8 +84,8 @@ export default function MapUploadPage() {
                             key={game}
                             onClick={() => setSelectedGame(game)}
                             className={`px-6 py-3 rounded-xl text-sm font-medium uppercase transition-colors ${selectedGame === game
-                                    ? 'bg-purple-500 text-white'
-                                    : 'bg-white/10 text-white/60 hover:bg-white/20'
+                                ? 'bg-purple-500 text-white'
+                                : 'bg-white/10 text-white/60 hover:bg-white/20'
                                 }`}
                         >
                             {game}
@@ -145,8 +145,8 @@ export default function MapUploadPage() {
                                 key={map.id}
                                 layout
                                 className={`p-4 rounded-xl border ${map.status === 'success'
-                                        ? 'bg-green-500/10 border-green-500/20'
-                                        : 'bg-white/5 border-white/10'
+                                    ? 'bg-green-500/10 border-green-500/20'
+                                    : 'bg-white/5 border-white/10'
                                     }`}
                             >
                                 <div className="flex items-center gap-4">
@@ -220,7 +220,7 @@ export default function MapUploadPage() {
             <div className="glass rounded-2xl p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Current {selectedGame.toUpperCase()} Maps</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {['Abyss', 'Bind', 'Haven', 'Pearl', 'Corrode', 'Split', 'Sunset'].map((mapName) => (
+                    {['Abyss', 'Bind', 'Breeze', 'Corrode', 'Haven', 'Pearl', 'Split'].map((mapName) => (
                         <div key={mapName} className="aspect-video rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
                             <span className="text-white/40 text-sm">{mapName}</span>
                         </div>

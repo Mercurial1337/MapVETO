@@ -15,7 +15,7 @@ interface Event {
 
 type MapPoolType = 'competitive' | 'all' | 'custom';
 
-const COMPETITIVE_MAPS = ['Abyss', 'Bind', 'Corrode', 'Haven', 'Pearl', 'Split', 'Sunset'];
+const COMPETITIVE_MAPS = ['Abyss', 'Bind', 'Breeze', 'Corrode', 'Haven', 'Pearl', 'Split'];
 const ALL_MAPS = ['Abyss', 'Ascent', 'Bind', 'Breeze', 'Corrode', 'Fracture', 'Haven', 'Icebox', 'Lotus', 'Pearl', 'Split', 'Sunset'];
 
 interface MatchFormData {

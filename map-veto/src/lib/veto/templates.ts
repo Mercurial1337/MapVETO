@@ -108,9 +108,9 @@ export function getDefaultTemplate(format: 'bo1' | 'bo3' | 'bo5'): VetoSequence 
 export const VALORANT_DEFAULT_MAPS = [
     { name: 'Abyss', slug: 'abyss' },
     { name: 'Bind', slug: 'bind' },
+    { name: 'Breeze', slug: 'breeze' },
+    { name: 'Corrode', slug: 'corrode' },
     { name: 'Haven', slug: 'haven' },
     { name: 'Pearl', slug: 'pearl' },
-    { name: 'Corrode', slug: 'corrode' },
     { name: 'Split', slug: 'split' },
-    { name: 'Sunset', slug: 'sunset' },
 ];

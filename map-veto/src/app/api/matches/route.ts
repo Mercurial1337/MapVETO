@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 
         // Update match_state with the correct maps based on pool type
         // The trigger created match_state with default pool, now we override if needed
-        const COMPETITIVE_MAPS = ['Abyss', 'Bind', 'Corrode', 'Haven', 'Pearl', 'Split', 'Sunset'];
+        const COMPETITIVE_MAPS = ['Abyss', 'Bind', 'Breeze', 'Corrode', 'Haven', 'Pearl', 'Split'];
         const ALL_MAPS = ['Abyss', 'Ascent', 'Bind', 'Breeze', 'Corrode', 'Fracture', 'Haven', 'Icebox', 'Lotus', 'Pearl', 'Split', 'Sunset'];
 
         let selectedMaps: string[];
