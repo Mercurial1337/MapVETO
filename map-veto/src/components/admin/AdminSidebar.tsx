@@ -49,9 +49,12 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
         <div className="min-h-screen flex flex-col md:flex-row">
             {/* Mobile Header */}
             <header className="md:hidden flex items-center justify-between px-4 py-3 bg-black/40 border-b border-white/10">
-                <Link href="/admin" className="flex items-center gap-2">
-                    <span className="text-xl font-bold text-purple-500">VETO</span>
-                    <span className="text-xs text-white/40 uppercase">Admin</span>
+                <Link href="/admin" className="flex items-center">
+                    <img
+                        src="/CLASH26 PLATFORM HEADER.png"
+                        alt="EMEA Clash"
+                        className="h-8 object-contain"
+                    />
                 </Link>
                 <button
                     onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -76,11 +79,13 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
                 transform transition-transform duration-300 ease-in-out
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             `}>
-                {/* Logo (desktop) */}
                 <div className="hidden md:block p-6 border-b border-white/10">
-                    <Link href="/admin" className="flex items-center gap-2">
-                        <span className="text-2xl font-bold text-purple-500">VETO</span>
-                        <span className="text-xs text-white/40 uppercase">Admin</span>
+                    <Link href="/admin" className="flex items-center">
+                        <img
+                            src="/CLASH26 PLATFORM HEADER.png"
+                            alt="EMEA Clash"
+                            className="h-10 object-contain"
+                        />
                     </Link>
                 </div>
 
