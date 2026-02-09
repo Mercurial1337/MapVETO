@@ -8,21 +8,6 @@ import type { VetoActor } from '@/types';
 const COIN_SIDE_A = '/coin/side-a.png';
 const COIN_SIDE_B = '/coin/side-b.png';
 
-// Inject CSS keyframes globally
-const coinStyles = `
-@keyframes coinFlipRotate {
-    0% { transform: rotateX(0deg); }
-    100% { transform: rotateX(1800deg); }
-}
-
-@keyframes coinBounce {
-    0%, 100% { transform: translateY(0px); }
-    25% { transform: translateY(-100px); }
-    50% { transform: translateY(-140px); }
-    75% { transform: translateY(-60px); }
-}
-`;
-
 interface CoinTossModalProps {
     isOpen: boolean;
     teamAName: string;
@@ -52,78 +37,44 @@ export function CoinTossModal({
     const [result, setResult] = useState<VetoActor | null>(null);
     const [showResult, setShowResult] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [animationKey, setAnimationKey] = useState(0);
-    const [finalRotation, setFinalRotation] = useState(0);
-
-    // Use custom images or fall back to default coin images
-    const sideAImage = coinImageA || COIN_SIDE_A;
-    const sideBImage = coinImageB || COIN_SIDE_B;
-
-    // Inject styles on mount
-    useEffect(() => {
-        const styleId = 'coin-flip-styles';
-        if (!document.getElementById(styleId)) {
-            const styleEl = document.createElement('style');
-            styleEl.id = styleId;
-            styleEl.textContent = coinStyles;
-            document.head.appendChild(styleEl);
-        }
-        return () => {
-            const el = document.getElementById(styleId);
-            if (el) el.remove();
-        };
-    }, []);
+    const [currentGif, setCurrentGif] = useState<string | null>(null);
 
     // If external winner is passed, show the result
     useEffect(() => {
         if (externalWinner) {
             setResult(externalWinner);
             setShowResult(true);
-            setFinalRotation(externalWinner === 'team_a' ? 0 : 180);
         }
     }, [externalWinner]);
 
     const handleFlip = useCallback(async (forcedWinner?: VetoActor) => {
         if (isFlipping || !onFlip) return;
 
-        // 1. Start animation FIRST
         setIsFlipping(true);
         setShowResult(false);
         setError(null);
-        setAnimationKey(prev => prev + 1);
+        setCurrentGif(null);
 
-        // 2. Call API in background (don't await yet)
-        const apiPromise = onFlip(forcedWinner);
-
-        // 3. Fixed animation duration - MUST wait this long
-        const ANIMATION_DURATION = forcedWinner ? 1500 : 2500;
-
-        // 4. Wait for BOTH animation time and API response
-        const startTime = Date.now();
-        const winner = await apiPromise;
-
-        // Calculate remaining time to wait
-        const elapsed = Date.now() - startTime;
-        const remainingTime = Math.max(0, ANIMATION_DURATION - elapsed);
-
-        if (remainingTime > 0) {
-            await new Promise(resolve => setTimeout(resolve, remainingTime));
-        }
-
-        // 5. Animation done, now show result
-        setIsFlipping(false);
+        // 1. Call API to get result
+        const winner = await onFlip(forcedWinner);
 
         if (winner) {
-            // Set final rotation based on winner
-            setFinalRotation(winner === 'team_a' ? 0 : 180);
             setResult(winner);
+            // 2. Set the correct GIF based on winner
+            // Team A wins = GIF with 'A' (coin-flip-a.gif)
+            // Team B wins = GIF with 'B' (coin-flip-b.gif)
+            setCurrentGif(winner === 'team_a' ? '/coin/coin-flip-a.gif' : '/coin/coin-flip-b.gif');
 
-            // Brief pause before showing winner text
-            await new Promise(resolve => setTimeout(resolve, 200));
+            // 3. Wait for GIF duration (approx 2.5s)
+            await new Promise(resolve => setTimeout(resolve, 2600));
+
+            // 4. Show result text
             setShowResult(true);
         } else {
             setError('Failed to complete coin toss. Only admins can flip the coin.');
         }
+
+        setIsFlipping(false);
     }, [isFlipping, onFlip]);
 
     const handleForceWinner = (team: VetoActor) => {
@@ -153,7 +104,7 @@ export function CoinTossModal({
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.8, opacity: 0, y: 50 }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className="relative z-10 flex flex-col items-center p-8 md:p-12"
+                        className="relative z-10 flex flex-col items-center p-8 md:p-12 w-full max-w-lg"
                     >
                         {/* Title */}
                         <motion.h2
@@ -165,16 +116,16 @@ export function CoinTossModal({
                         </motion.h2>
 
                         {/* Team Names */}
-                        <div className="flex items-center gap-8 mb-10">
+                        <div className="flex items-center gap-8 mb-10 w-full justify-center">
                             <motion.div
                                 animate={result === 'team_a' && showResult ? { scale: 1.1 } : { scale: 1 }}
                                 className={cn(
                                     'text-center transition-all duration-300',
-                                    result === 'team_a' && showResult ? 'text-yellow-400' : 'text-white/70'
+                                    result === 'team_a' && showResult ? 'text-cyan-400' : 'text-white/70'
                                 )}
                             >
-                                <div className="text-xl md:text-2xl font-bold">{teamAName}</div>
-                                <div className="text-sm text-white/50 mt-1">Team 1</div>
+                                <div className="text-xl md:text-2xl font-bold truncate max-w-[150px]">{teamAName}</div>
+                                <div className="text-sm mt-1 font-semibold uppercase tracking-widest text-cyan-500/80">Team A</div>
                             </motion.div>
 
                             <div className="text-3xl text-white/30 font-light">vs</div>
@@ -183,95 +134,35 @@ export function CoinTossModal({
                                 animate={result === 'team_b' && showResult ? { scale: 1.1 } : { scale: 1 }}
                                 className={cn(
                                     'text-center transition-all duration-300',
-                                    result === 'team_b' && showResult ? 'text-yellow-400' : 'text-white/70'
+                                    result === 'team_b' && showResult ? 'text-lime-400' : 'text-white/70'
                                 )}
                             >
-                                <div className="text-xl md:text-2xl font-bold">{teamBName}</div>
-                                <div className="text-sm text-white/50 mt-1">Team 2</div>
+                                <div className="text-xl md:text-2xl font-bold truncate max-w-[150px]">{teamBName}</div>
+                                <div className="text-sm mt-1 font-semibold uppercase tracking-widest text-lime-500/80">Team B</div>
                             </motion.div>
                         </div>
 
-                        {/* 3D Coin */}
-                        <div
-                            className="relative mb-10"
-                            style={{
-                                perspective: '800px',
-                                perspectiveOrigin: 'center center',
-                            }}
-                        >
-                            {/* Bounce container */}
-                            <div
-                                key={`bounce-${animationKey}`}
-                                style={{
-                                    animation: isFlipping ? 'coinBounce 2.5s ease-in-out' : 'none',
-                                }}
-                            >
-                                {/* Rotation container */}
-                                <div
-                                    key={`rotate-${animationKey}`}
-                                    className="relative w-48 h-48 md:w-56 md:h-56"
-                                    style={{
-                                        transformStyle: 'preserve-3d',
-                                        animation: isFlipping ? 'coinFlipRotate 2.5s ease-in-out' : 'none',
-                                        transform: !isFlipping ? `rotateX(${finalRotation}deg)` : undefined,
-                                    }}
-                                >
-                                    {/* Coin Face A (Front - Cyan) */}
-                                    <div
-                                        className="absolute inset-0 rounded-full flex items-center justify-center"
-                                        style={{
-                                            backfaceVisibility: 'hidden',
-                                            WebkitBackfaceVisibility: 'hidden',
-                                            background: 'linear-gradient(145deg, #374151, #1f2937)',
-                                            padding: '8px',
-                                            boxShadow: `
-                                                0 0 30px rgba(0, 255, 255, 0.25),
-                                                0 8px 32px rgba(0, 0, 0, 0.4),
-                                                inset 0 1px 0 rgba(255,255,255,0.1)
-                                            `,
-                                        }}
-                                    >
-                                        <div
-                                            className="w-full h-full rounded-full overflow-hidden flex items-center justify-center"
-                                            style={{ background: '#0f172a' }}
-                                        >
-                                            <img
-                                                src={sideAImage}
-                                                alt="Side A"
-                                                className="w-[85%] h-[85%] object-contain"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* Coin Face B (Back - Yellow/Green) */}
-                                    <div
-                                        className="absolute inset-0 rounded-full flex items-center justify-center"
-                                        style={{
-                                            backfaceVisibility: 'hidden',
-                                            WebkitBackfaceVisibility: 'hidden',
-                                            transform: 'rotateX(180deg)',
-                                            background: 'linear-gradient(145deg, #374151, #1f2937)',
-                                            padding: '8px',
-                                            boxShadow: `
-                                                0 0 30px rgba(200, 255, 0, 0.25),
-                                                0 8px 32px rgba(0, 0, 0, 0.4),
-                                                inset 0 1px 0 rgba(255,255,255,0.1)
-                                            `,
-                                        }}
-                                    >
-                                        <div
-                                            className="w-full h-full rounded-full overflow-hidden flex items-center justify-center"
-                                            style={{ background: '#0f172a' }}
-                                        >
-                                            <img
-                                                src={sideBImage}
-                                                alt="Side B"
-                                                className="w-[85%] h-[85%] object-contain"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                        {/* GIF Coin Container */}
+                        <div className="relative w-64 h-64 mb-10 flex items-center justify-center">
+                            {isFlipping && currentGif ? (
+                                <img
+                                    src={`${currentGif}?t=${Date.now()}`}
+                                    alt="Coin flipping"
+                                    className="w-full h-full object-contain"
+                                />
+                            ) : showResult && result ? (
+                                <img
+                                    src={result === 'team_a' ? '/coin/side-a.png' : '/coin/side-b.png'}
+                                    alt="Winner Side"
+                                    className="w-48 h-48 object-contain"
+                                />
+                            ) : (
+                                <img
+                                    src="/coin/side-a.png"
+                                    alt="Coin Idle"
+                                    className="w-48 h-48 object-contain opacity-50 grayscale"
+                                />
+                            )}
                         </div>
 
                         {/* Result / Button / Waiting */}
@@ -297,7 +188,10 @@ export function CoinTossModal({
                                     <motion.div
                                         animate={{ scale: [1, 1.05, 1] }}
                                         transition={{ duration: 0.5, repeat: 2 }}
-                                        className="text-4xl md:text-5xl font-bold text-yellow-400 mb-2"
+                                        className={cn(
+                                            "text-4xl md:text-5xl font-bold mb-2",
+                                            result === 'team_a' ? "text-cyan-400" : "text-lime-400"
+                                        )}
                                     >
                                         {result === 'team_a' ? teamAName : teamBName}
                                     </motion.div>
@@ -361,7 +255,7 @@ export function CoinTossModal({
                                                 'transition-all duration-200'
                                             )}
                                         >
-                                            {teamAName}
+                                            {teamAName} (A)
                                         </motion.button>
                                         <motion.button
                                             whileHover={{ scale: 1.05 }}
@@ -374,13 +268,9 @@ export function CoinTossModal({
                                                 'transition-all duration-200'
                                             )}
                                         >
-                                            {teamBName}
+                                            {teamBName} (B)
                                         </motion.button>
                                     </div>
-
-                                    <p className="text-xs text-white/30 text-center max-w-xs">
-                                        Use manual selection for seeded matchups where higher seed picks first
-                                    </p>
                                 </motion.div>
                             ) : (
                                 <motion.div
@@ -392,9 +282,6 @@ export function CoinTossModal({
                                 >
                                     <div className="text-xl text-white/60 mb-2">
                                         ⏳ Waiting for admin to flip the coin...
-                                    </div>
-                                    <div className="text-sm text-white/40">
-                                        The match will start once the coin toss is complete
                                     </div>
                                 </motion.div>
                             )}

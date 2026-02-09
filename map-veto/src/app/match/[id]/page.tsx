@@ -120,8 +120,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
         if (!actorMapping || !match) {
             // No mapping, use original names and logos
             return {
-                teamA: match?.team_a_name || 'Team 1',
-                teamB: match?.team_b_name || 'Team 2',
+                teamA: match?.team_a_name || 'Team A',
+                teamB: match?.team_b_name || 'Team B',
                 logoA: match?.team_a_logo || null,
                 logoB: match?.team_b_logo || null,
             };
@@ -347,14 +347,14 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                         )}
                         <div>
                             <h2 className="text-base md:text-2xl font-bold text-white truncate">{displayedTeams.teamA}</h2>
-                            <span className="text-xs text-red-400 uppercase tracking-wider">Team 1</span>
+                            <span className="text-xs text-[#00FFFF] uppercase tracking-wider font-semibold">Team A</span>
                         </div>
                     </div>
                     <div className="text-2xl md:text-4xl font-light text-white/30">VS</div>
                     <div className="text-center flex-1 md:flex-none flex items-center justify-start gap-3">
                         <div>
                             <h2 className="text-base md:text-2xl font-bold text-white truncate">{displayedTeams.teamB}</h2>
-                            <span className="text-xs text-blue-400 uppercase tracking-wider">Team 2</span>
+                            <span className="text-xs text-[#CCFF00] uppercase tracking-wider font-semibold">Team B</span>
                         </div>
                         {displayedTeams.logoB && (
                             <img
