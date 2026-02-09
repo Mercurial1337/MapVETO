@@ -67,6 +67,17 @@ export function CoinTossModal({
         }
     }, [externalWinner]);
 
+    // Auto-close: whenever we enter 'result' phase, close the modal after a delay.
+    // This works for ALL viewers (admin who clicked flip + non-admin observers).
+    useEffect(() => {
+        if (phase === 'result') {
+            const timer = setTimeout(() => {
+                onAnimationComplete?.();
+            }, RESULT_DISPLAY_DURATION);
+            return () => clearTimeout(timer);
+        }
+    }, [phase, onAnimationComplete]);
+
     // Reset states when modal closes
     useEffect(() => {
         if (!isOpen) {
@@ -106,21 +117,15 @@ export function CoinTossModal({
             // Step 3: Wait for GIF to finish playing
             await new Promise(resolve => setTimeout(resolve, GIF_PLAY_DURATION));
 
-            // Step 4: Show the winner text
+            // Step 4: Show the winner text (auto-close is handled by the useEffect)
             setPhase('result');
-
-            // Step 5: Let the user see the result, then signal parent to close
-            await new Promise(resolve => setTimeout(resolve, RESULT_DISPLAY_DURATION));
-
-            // Step 6: Tell parent we're done
-            onAnimationComplete?.();
         } catch {
             setError('An unexpected error occurred.');
             setPhase('idle');
         } finally {
             flipLock.current = false;
         }
-    }, [onFlip, onAnimationComplete]);
+    }, [onFlip]);
 
     return (
         <AnimatePresence>
