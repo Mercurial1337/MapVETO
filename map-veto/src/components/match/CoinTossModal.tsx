@@ -154,7 +154,7 @@ export function CoinTossModal({
                         <div className="relative w-64 h-64 mb-10 flex items-center justify-center">
                             {isFlipping && currentGif ? (
                                 <img
-                                    src={`${currentGif}?t=${Date.now()}`}
+                                    src={currentGif}
                                     alt="Coin flipping"
                                     className="w-full h-full object-contain"
                                 />
