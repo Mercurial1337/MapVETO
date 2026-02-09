@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   description: "Real-time map veto system for VALORANT EMEA Clash tournaments.",
   keywords: ["esports", "valorant", "veto", "map veto", "tournament", "emea clash"],
   icons: {
-    icon: "/429px-VALORANT_EMEA_Clash_allmode.png",
+    icon: "/clash-favicon.png",
   },
 };
 
