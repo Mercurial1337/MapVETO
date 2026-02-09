@@ -8,12 +8,14 @@ import type { VetoActor } from '@/types';
 const COIN_FLIP_A_GIF = '/coin/coin-flip-a.gif';
 const COIN_FLIP_B_GIF = '/coin/coin-flip-b.gif';
 
-// Static coin images (shown after GIF finishes)
+// Static coin images
 const COIN_SIDE_A = '/coin/side-a.png';
 const COIN_SIDE_B = '/coin/side-b.png';
 
-// How long to display the GIF before showing result (in ms)
-const GIF_DURATION = 2600;
+// How long to display the GIF before showing result (ms)
+const GIF_PLAY_DURATION = 2600;
+// How long to show the winner text before calling onComplete (ms)
+const RESULT_DISPLAY_DURATION = 1500;
 
 interface CoinTossModalProps {
     isOpen: boolean;
@@ -21,7 +23,16 @@ interface CoinTossModalProps {
     teamBName: string;
     isAdmin?: boolean;
     winner?: VetoActor | null;
+    /**
+     * Called when admin clicks flip. Should call the API and return the winner.
+     * Must return quickly (no artificial delays).
+     */
     onFlip?: (forcedWinner?: VetoActor) => Promise<VetoActor | null>;
+    /**
+     * Called when the entire animation sequence has finished.
+     * The parent should close the modal in response.
+     */
+    onAnimationComplete?: () => void;
     coinImageA?: string | null;
     coinImageB?: string | null;
 }
@@ -30,7 +41,6 @@ function cn(...classes: (string | boolean | undefined)[]) {
     return classes.filter(Boolean).join(' ');
 }
 
-// Phase of the coin toss UI
 type CoinPhase = 'idle' | 'flipping' | 'result';
 
 export function CoinTossModal({
@@ -40,64 +50,77 @@ export function CoinTossModal({
     isAdmin = false,
     winner: externalWinner,
     onFlip,
+    onAnimationComplete,
 }: CoinTossModalProps) {
     const [phase, setPhase] = useState<CoinPhase>('idle');
     const [winner, setWinner] = useState<VetoActor | null>(null);
     const [gifSrc, setGifSrc] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const flipLock = useRef(false);
 
-    // Track whether this component initiated the flip
-    // This prevents the external winner effect from overriding mid-animation
-    const isFlipInProgress = useRef(false);
-
-    // If external winner arrives (e.g. page reload, non-admin viewer),
-    // show result directly — but only if we're not mid-flip
+    // When the modal opens with an external winner already set
+    // (e.g. page reload, or a non-admin viewer), skip animation and show result
     useEffect(() => {
-        if (externalWinner && !isFlipInProgress.current) {
+        if (externalWinner && !flipLock.current) {
             setWinner(externalWinner);
             setPhase('result');
         }
     }, [externalWinner]);
 
-    const handleFlip = useCallback(async (forcedWinner?: VetoActor) => {
-        if (isFlipInProgress.current || !onFlip) return;
+    // Reset states when modal closes
+    useEffect(() => {
+        if (!isOpen) {
+            setPhase('idle');
+            setWinner(null);
+            setGifSrc(null);
+            setError(null);
+            flipLock.current = false;
+        }
+    }, [isOpen]);
 
-        // Lock
-        isFlipInProgress.current = true;
+    const handleFlip = useCallback(async (forcedWinner?: VetoActor) => {
+        if (flipLock.current || !onFlip) return;
+
+        flipLock.current = true;
         setPhase('flipping');
         setError(null);
-        setGifSrc(null);
         setWinner(null);
+        setGifSrc(null);
 
         try {
-            // 1. Call the API to determine the winner
+            // Step 1: Call API — this returns the winner immediately
             const result = await onFlip(forcedWinner);
 
             if (!result) {
                 setError('Failed to complete coin toss. Only admins can flip the coin.');
                 setPhase('idle');
-                isFlipInProgress.current = false;
+                flipLock.current = false;
                 return;
             }
 
-            // 2. We have a winner — show the corresponding GIF
+            // Step 2: Start the GIF animation
             setWinner(result);
             const gif = result === 'team_a' ? COIN_FLIP_A_GIF : COIN_FLIP_B_GIF;
-            // Append cache-buster so the browser re-fetches and replays from frame 0
             setGifSrc(`${gif}?t=${Date.now()}`);
 
-            // 3. Wait for the GIF to finish playing
-            await new Promise(resolve => setTimeout(resolve, GIF_DURATION));
+            // Step 3: Wait for GIF to finish playing
+            await new Promise(resolve => setTimeout(resolve, GIF_PLAY_DURATION));
 
-            // 4. Transition to result phase
+            // Step 4: Show the winner text
             setPhase('result');
+
+            // Step 5: Let the user see the result, then signal parent to close
+            await new Promise(resolve => setTimeout(resolve, RESULT_DISPLAY_DURATION));
+
+            // Step 6: Tell parent we're done
+            onAnimationComplete?.();
         } catch {
             setError('An unexpected error occurred.');
             setPhase('idle');
         } finally {
-            isFlipInProgress.current = false;
+            flipLock.current = false;
         }
-    }, [onFlip]);
+    }, [onFlip, onAnimationComplete]);
 
     return (
         <AnimatePresence>
@@ -163,21 +186,18 @@ export function CoinTossModal({
                         {/* Coin Display */}
                         <div className="relative w-64 h-64 mb-10 flex items-center justify-center">
                             {phase === 'flipping' && gifSrc ? (
-                                /* Playing the flip GIF */
                                 <img
                                     src={gifSrc}
                                     alt="Coin flipping"
                                     className="w-full h-full object-contain"
                                 />
                             ) : phase === 'result' && winner ? (
-                                /* Show the winning side as static image */
                                 <img
                                     src={winner === 'team_a' ? COIN_SIDE_A : COIN_SIDE_B}
                                     alt="Winner Side"
                                     className="w-48 h-48 object-contain"
                                 />
                             ) : (
-                                /* Idle: greyed out coin */
                                 <img
                                     src={COIN_SIDE_A}
                                     alt="Coin"
@@ -186,7 +206,7 @@ export function CoinTossModal({
                             )}
                         </div>
 
-                        {/* Bottom Section: error / result text / flipping text / controls */}
+                        {/* Bottom Section */}
                         <AnimatePresence mode="wait">
                             {error ? (
                                 <motion.div
@@ -238,7 +258,6 @@ export function CoinTossModal({
                                     exit={{ opacity: 0 }}
                                     className="flex flex-col items-center gap-4"
                                 >
-                                    {/* Random Coin Flip */}
                                     <motion.button
                                         whileHover={{ scale: 1.05 }}
                                         whileTap={{ scale: 0.95 }}
@@ -256,14 +275,12 @@ export function CoinTossModal({
                                         🎲 Flip Coin
                                     </motion.button>
 
-                                    {/* Divider */}
                                     <div className="flex items-center gap-3 w-full max-w-xs">
                                         <div className="flex-1 h-px bg-white/20" />
                                         <span className="text-white/40 text-sm">or select winner</span>
                                         <div className="flex-1 h-px bg-white/20" />
                                     </div>
 
-                                    {/* Manual Selection Buttons */}
                                     <div className="flex gap-3">
                                         <motion.button
                                             whileHover={{ scale: 1.05 }}

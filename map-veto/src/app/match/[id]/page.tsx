@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams, useParams } from 'next/navigation';
-import { Suspense, useMemo, useEffect, useState, useCallback, useRef } from 'react';
+import { Suspense, useMemo, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapCard } from '@/components/match/MapCard';
 import { VetoTimeline, TurnIndicator } from '@/components/match/VetoTimeline';
@@ -224,42 +224,25 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     };
 
     // === Coin Toss Modal Visibility ===
-    // We keep the modal open with local state so that the GIF animation
-    // can finish even after Supabase realtime updates `match.status`.
+    // Managed by local state. Opens when match status is 'coin_toss'.
+    // Stays open until CoinTossModal signals that the animation is complete.
     const [coinTossModalOpen, setCoinTossModalOpen] = useState(false);
-    const coinTossAnimating = useRef(false);
 
-    // Open the modal when match status becomes 'coin_toss'
+    // Open modal when match status is 'coin_toss'
     useEffect(() => {
         if (match?.status === 'coin_toss') {
             setCoinTossModalOpen(true);
         }
     }, [match?.status]);
 
-    // Wrapped coinToss that keeps the modal open during the GIF
-    const handleCoinToss = useCallback(async (forcedWinner?: VetoActor) => {
-        coinTossAnimating.current = true;
-        const result = await coinToss(forcedWinner);
-        // The API has returned and realtime may have already changed match.status.
-        // Wait for the GIF animation to finish (2.6s) + a little buffer for the result text
-        await new Promise(resolve => setTimeout(resolve, 3500));
-        // Now close the coin toss modal
+    // Called by CoinTossModal after the full animation sequence finishes
+    const handleCoinTossAnimationComplete = useCallback(() => {
         setCoinTossModalOpen(false);
-        coinTossAnimating.current = false;
-        return result;
-    }, [coinToss]);
-
-    // Close the modal if match status moves past coin_toss AND we're not animating
-    useEffect(() => {
-        if (match?.status !== 'coin_toss' && !coinTossAnimating.current) {
-            setCoinTossModalOpen(false);
-        }
-    }, [match?.status]);
+    }, []);
 
     const showCoinToss = coinTossModalOpen;
 
-    // Show position selection modal (after coin toss, winner chooses)
-    // Only show it if the coin toss modal is NOT open (so both don't overlap)
+    // Position selection modal: only show after coin toss modal has closed
     const showPositionSelection = match?.status === 'side_selection' && !coinTossModalOpen;
 
     // Get maps with fallback images and filter based on the current pool
@@ -490,7 +473,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 teamBName={match.team_b_name}
                 isAdmin={isAdmin}
                 winner={coinTossWinner}
-                onFlip={handleCoinToss}
+                onFlip={coinToss}
+                onAnimationComplete={handleCoinTossAnimationComplete}
             />
 
             {/* Position Selection Modal */}
