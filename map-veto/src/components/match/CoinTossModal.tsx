@@ -13,7 +13,8 @@ const COIN_SIDE_A = '/coin/side-a.png';
 const COIN_SIDE_B = '/coin/side-b.png';
 
 // How long to display the GIF before showing result (ms)
-const GIF_PLAY_DURATION = 2600;
+// The actual GIFs are 358 frames × 20ms = 7160ms
+const GIF_PLAY_DURATION = 7200;
 // How long to show the winner text before calling onComplete (ms)
 const RESULT_DISPLAY_DURATION = 1500;
 
