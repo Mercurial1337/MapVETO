@@ -1,12 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { VetoActor } from '@/types';
 
-// Default coin images (custom design with A and B sides)
+// GIF paths for each side
+const COIN_FLIP_A_GIF = '/coin/coin-flip-a.gif';
+const COIN_FLIP_B_GIF = '/coin/coin-flip-b.gif';
+
+// Static coin images (shown after GIF finishes)
 const COIN_SIDE_A = '/coin/side-a.png';
 const COIN_SIDE_B = '/coin/side-b.png';
+
+// How long to display the GIF before showing result (in ms)
+const GIF_DURATION = 2600;
 
 interface CoinTossModalProps {
     isOpen: boolean;
@@ -23,6 +30,9 @@ function cn(...classes: (string | boolean | undefined)[]) {
     return classes.filter(Boolean).join(' ');
 }
 
+// Phase of the coin toss UI
+type CoinPhase = 'idle' | 'flipping' | 'result';
+
 export function CoinTossModal({
     isOpen,
     teamAName,
@@ -30,64 +40,64 @@ export function CoinTossModal({
     isAdmin = false,
     winner: externalWinner,
     onFlip,
-    coinImageA,
-    coinImageB,
 }: CoinTossModalProps) {
-    const [isLocalFlipping, setIsLocalFlipping] = useState(false);
-    const [isFlipping, setIsFlipping] = useState(false);
-    const [result, setResult] = useState<VetoActor | null>(null);
-    const [showResult, setShowResult] = useState(false);
+    const [phase, setPhase] = useState<CoinPhase>('idle');
+    const [winner, setWinner] = useState<VetoActor | null>(null);
+    const [gifSrc, setGifSrc] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [currentGif, setCurrentGif] = useState<string | null>(null);
 
-    // If external winner is passed, show the result, but ONLY if we aren't already locally flipping
+    // Track whether this component initiated the flip
+    // This prevents the external winner effect from overriding mid-animation
+    const isFlipInProgress = useRef(false);
+
+    // If external winner arrives (e.g. page reload, non-admin viewer),
+    // show result directly — but only if we're not mid-flip
     useEffect(() => {
-        if (externalWinner && !isLocalFlipping) {
-            setResult(externalWinner);
-            setShowResult(true);
+        if (externalWinner && !isFlipInProgress.current) {
+            setWinner(externalWinner);
+            setPhase('result');
         }
-    }, [externalWinner, isLocalFlipping]);
+    }, [externalWinner]);
 
     const handleFlip = useCallback(async (forcedWinner?: VetoActor) => {
-        if (isLocalFlipping || !onFlip) return;
+        if (isFlipInProgress.current || !onFlip) return;
 
-        // Reset states for a new flip
-        setIsLocalFlipping(true);
-        setIsFlipping(true);
-        setShowResult(false);
+        // Lock
+        isFlipInProgress.current = true;
+        setPhase('flipping');
         setError(null);
-        setCurrentGif(null);
+        setGifSrc(null);
+        setWinner(null);
 
         try {
-            // 1. Call API to get result
-            const winner = await onFlip(forcedWinner);
+            // 1. Call the API to determine the winner
+            const result = await onFlip(forcedWinner);
 
-            if (winner) {
-                setResult(winner);
-                // 2. Set the correct GIF based on winner
-                const gifPath = winner === 'team_a' ? '/coin/coin-flip-a.gif' : '/coin/coin-flip-b.gif';
-                // Add timestamp to force GIF restart from frame 0
-                setCurrentGif(`${gifPath}?t=${Date.now()}`);
-
-                // 3. Wait for GIF duration (approx 2.5s)
-                await new Promise(resolve => setTimeout(resolve, 2600));
-
-                // 4. Show result text
-                setShowResult(true);
-            } else {
+            if (!result) {
                 setError('Failed to complete coin toss. Only admins can flip the coin.');
+                setPhase('idle');
+                isFlipInProgress.current = false;
+                return;
             }
-        } catch (err) {
-            setError('An unexpected error occurred during the coin toss.');
-        } finally {
-            setIsFlipping(false);
-            setIsLocalFlipping(false);
-        }
-    }, [isLocalFlipping, onFlip]);
 
-    const handleForceWinner = (team: VetoActor) => {
-        handleFlip(team);
-    };
+            // 2. We have a winner — show the corresponding GIF
+            setWinner(result);
+            const gif = result === 'team_a' ? COIN_FLIP_A_GIF : COIN_FLIP_B_GIF;
+            // Append cache-buster so the browser re-fetches and replays from frame 0
+            setGifSrc(`${gif}?t=${Date.now()}`);
+
+            // 3. Wait for the GIF to finish playing
+            await new Promise(resolve => setTimeout(resolve, GIF_DURATION));
+
+            // 4. Transition to result phase
+            setPhase('result');
+        } catch {
+            setError('An unexpected error occurred.');
+            setPhase('idle');
+        } finally {
+            isFlipInProgress.current = false;
+        }
+    }, [onFlip]);
 
     return (
         <AnimatePresence>
@@ -126,10 +136,10 @@ export function CoinTossModal({
                         {/* Team Names */}
                         <div className="flex items-center gap-8 mb-10 w-full justify-center">
                             <motion.div
-                                animate={result === 'team_a' && showResult ? { scale: 1.1 } : { scale: 1 }}
+                                animate={winner === 'team_a' && phase === 'result' ? { scale: 1.1 } : { scale: 1 }}
                                 className={cn(
                                     'text-center transition-all duration-300',
-                                    result === 'team_a' && showResult ? 'text-cyan-400' : 'text-white/70'
+                                    winner === 'team_a' && phase === 'result' ? 'text-cyan-400' : 'text-white/70'
                                 )}
                             >
                                 <div className="text-xl md:text-2xl font-bold truncate max-w-[150px]">{teamAName}</div>
@@ -139,10 +149,10 @@ export function CoinTossModal({
                             <div className="text-3xl text-white/30 font-light">vs</div>
 
                             <motion.div
-                                animate={result === 'team_b' && showResult ? { scale: 1.1 } : { scale: 1 }}
+                                animate={winner === 'team_b' && phase === 'result' ? { scale: 1.1 } : { scale: 1 }}
                                 className={cn(
                                     'text-center transition-all duration-300',
-                                    result === 'team_b' && showResult ? 'text-lime-400' : 'text-white/70'
+                                    winner === 'team_b' && phase === 'result' ? 'text-lime-400' : 'text-white/70'
                                 )}
                             >
                                 <div className="text-xl md:text-2xl font-bold truncate max-w-[150px]">{teamBName}</div>
@@ -150,30 +160,33 @@ export function CoinTossModal({
                             </motion.div>
                         </div>
 
-                        {/* GIF Coin Container */}
+                        {/* Coin Display */}
                         <div className="relative w-64 h-64 mb-10 flex items-center justify-center">
-                            {isFlipping && currentGif ? (
+                            {phase === 'flipping' && gifSrc ? (
+                                /* Playing the flip GIF */
                                 <img
-                                    src={currentGif}
+                                    src={gifSrc}
                                     alt="Coin flipping"
                                     className="w-full h-full object-contain"
                                 />
-                            ) : showResult && result ? (
+                            ) : phase === 'result' && winner ? (
+                                /* Show the winning side as static image */
                                 <img
-                                    src={result === 'team_a' ? '/coin/side-a.png' : '/coin/side-b.png'}
+                                    src={winner === 'team_a' ? COIN_SIDE_A : COIN_SIDE_B}
                                     alt="Winner Side"
                                     className="w-48 h-48 object-contain"
                                 />
                             ) : (
+                                /* Idle: greyed out coin */
                                 <img
-                                    src="/coin/side-a.png"
-                                    alt="Coin Idle"
+                                    src={COIN_SIDE_A}
+                                    alt="Coin"
                                     className="w-48 h-48 object-contain opacity-50 grayscale"
                                 />
                             )}
                         </div>
 
-                        {/* Result / Button / Waiting */}
+                        {/* Bottom Section: error / result text / flipping text / controls */}
                         <AnimatePresence mode="wait">
                             {error ? (
                                 <motion.div
@@ -185,7 +198,7 @@ export function CoinTossModal({
                                 >
                                     <div className="text-red-400 text-lg mb-4">{error}</div>
                                 </motion.div>
-                            ) : showResult && result ? (
+                            ) : phase === 'result' && winner ? (
                                 <motion.div
                                     key="result"
                                     initial={{ opacity: 0, scale: 0.5, y: 20 }}
@@ -198,16 +211,16 @@ export function CoinTossModal({
                                         transition={{ duration: 0.5, repeat: 2 }}
                                         className={cn(
                                             "text-4xl md:text-5xl font-bold mb-2",
-                                            result === 'team_a' ? "text-cyan-400" : "text-lime-400"
+                                            winner === 'team_a' ? "text-cyan-400" : "text-lime-400"
                                         )}
                                     >
-                                        {result === 'team_a' ? teamAName : teamBName}
+                                        {winner === 'team_a' ? teamAName : teamBName}
                                     </motion.div>
                                     <div className="text-lg text-green-400 font-semibold">
                                         🎉 Wins the Coin Toss!
                                     </div>
                                 </motion.div>
-                            ) : isFlipping ? (
+                            ) : phase === 'flipping' ? (
                                 <motion.div
                                     key="flipping"
                                     initial={{ opacity: 0 }}
@@ -255,7 +268,7 @@ export function CoinTossModal({
                                         <motion.button
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
-                                            onClick={() => handleForceWinner('team_a')}
+                                            onClick={() => handleFlip('team_a')}
                                             className={cn(
                                                 'px-6 py-3 rounded-xl font-semibold',
                                                 'bg-cyan-500/20 hover:bg-cyan-500/30',
@@ -268,7 +281,7 @@ export function CoinTossModal({
                                         <motion.button
                                             whileHover={{ scale: 1.05 }}
                                             whileTap={{ scale: 0.95 }}
-                                            onClick={() => handleForceWinner('team_b')}
+                                            onClick={() => handleFlip('team_b')}
                                             className={cn(
                                                 'px-6 py-3 rounded-xl font-semibold',
                                                 'bg-lime-500/20 hover:bg-lime-500/30',
