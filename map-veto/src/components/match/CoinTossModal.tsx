@@ -33,49 +33,57 @@ export function CoinTossModal({
     coinImageA,
     coinImageB,
 }: CoinTossModalProps) {
+    const [isLocalFlipping, setIsLocalFlipping] = useState(false);
     const [isFlipping, setIsFlipping] = useState(false);
     const [result, setResult] = useState<VetoActor | null>(null);
     const [showResult, setShowResult] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [currentGif, setCurrentGif] = useState<string | null>(null);
 
-    // If external winner is passed, show the result
+    // If external winner is passed, show the result, but ONLY if we aren't already locally flipping
     useEffect(() => {
-        if (externalWinner) {
+        if (externalWinner && !isLocalFlipping) {
             setResult(externalWinner);
             setShowResult(true);
         }
-    }, [externalWinner]);
+    }, [externalWinner, isLocalFlipping]);
 
     const handleFlip = useCallback(async (forcedWinner?: VetoActor) => {
-        if (isFlipping || !onFlip) return;
+        if (isLocalFlipping || !onFlip) return;
 
+        // Reset states for a new flip
+        setIsLocalFlipping(true);
         setIsFlipping(true);
         setShowResult(false);
         setError(null);
         setCurrentGif(null);
 
-        // 1. Call API to get result
-        const winner = await onFlip(forcedWinner);
+        try {
+            // 1. Call API to get result
+            const winner = await onFlip(forcedWinner);
 
-        if (winner) {
-            setResult(winner);
-            // 2. Set the correct GIF based on winner
-            // Team A wins = GIF with 'A' (coin-flip-a.gif)
-            // Team B wins = GIF with 'B' (coin-flip-b.gif)
-            setCurrentGif(winner === 'team_a' ? '/coin/coin-flip-a.gif' : '/coin/coin-flip-b.gif');
+            if (winner) {
+                setResult(winner);
+                // 2. Set the correct GIF based on winner
+                const gifPath = winner === 'team_a' ? '/coin/coin-flip-a.gif' : '/coin/coin-flip-b.gif';
+                // Add timestamp to force GIF restart from frame 0
+                setCurrentGif(`${gifPath}?t=${Date.now()}`);
 
-            // 3. Wait for GIF duration (approx 2.5s)
-            await new Promise(resolve => setTimeout(resolve, 2600));
+                // 3. Wait for GIF duration (approx 2.5s)
+                await new Promise(resolve => setTimeout(resolve, 2600));
 
-            // 4. Show result text
-            setShowResult(true);
-        } else {
-            setError('Failed to complete coin toss. Only admins can flip the coin.');
+                // 4. Show result text
+                setShowResult(true);
+            } else {
+                setError('Failed to complete coin toss. Only admins can flip the coin.');
+            }
+        } catch (err) {
+            setError('An unexpected error occurred during the coin toss.');
+        } finally {
+            setIsFlipping(false);
+            setIsLocalFlipping(false);
         }
-
-        setIsFlipping(false);
-    }, [isFlipping, onFlip]);
+    }, [isLocalFlipping, onFlip]);
 
     const handleForceWinner = (team: VetoActor) => {
         handleFlip(team);
