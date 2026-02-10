@@ -59,12 +59,23 @@ export function CoinTossModal({
     const [error, setError] = useState<string | null>(null);
     const flipLock = useRef(false);
 
-    // When the modal opens with an external winner already set
-    // (e.g. page reload, or a non-admin viewer), skip animation and show result
+    // When a non-admin viewer receives the coin toss result via real-time,
+    // play the GIF animation first before showing the result (same as admin).
     useEffect(() => {
         if (externalWinner && !flipLock.current) {
+            flipLock.current = true;
             setWinner(externalWinner);
-            setPhase('result');
+            setPhase('flipping');
+            const gif = externalWinner === 'team_a' ? COIN_FLIP_A_GIF : COIN_FLIP_B_GIF;
+            setGifSrc(`${gif}?t=${Date.now()}`);
+
+            // Wait for GIF to finish playing, then show the result
+            const timer = setTimeout(() => {
+                setPhase('result');
+                flipLock.current = false;
+            }, GIF_PLAY_DURATION);
+
+            return () => clearTimeout(timer);
         }
     }, [externalWinner]);
 
