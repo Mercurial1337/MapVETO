@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
                 .from('matches')
                 .update({
                     coin_toss_winner: winner,
+                    coin_toss_forced: true,
                     status: 'in_progress',
                     started_at: new Date().toISOString(),
                 })
@@ -125,6 +126,7 @@ export async function POST(request: NextRequest) {
             .from('matches')
             .update({
                 coin_toss_winner: winner,
+                coin_toss_forced: !!forced_winner,
                 status: 'side_selection',
             })
             .eq('id', match_id);

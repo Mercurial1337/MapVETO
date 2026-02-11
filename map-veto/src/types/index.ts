@@ -106,6 +106,7 @@ export interface Match {
   format: MatchFormat;
   status: MatchStatus;
   coin_toss_winner: VetoActor | null;
+  coin_toss_forced: boolean;
   scheduled_at: string | null;
   started_at: string | null;
   completed_at: string | null;

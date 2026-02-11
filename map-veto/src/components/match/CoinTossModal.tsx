@@ -25,6 +25,11 @@ interface CoinTossModalProps {
     isAdmin?: boolean;
     winner?: VetoActor | null;
     /**
+     * If true, the winner was forced by admin (seeded match).
+     * Skip animation and show the result immediately.
+     */
+    isSeeded?: boolean;
+    /**
      * Called when admin clicks flip. Should call the API and return the winner.
      * Must return quickly (no artificial delays).
      */
@@ -50,6 +55,7 @@ export function CoinTossModal({
     teamBName,
     isAdmin = false,
     winner: externalWinner,
+    isSeeded = false,
     onFlip,
     onAnimationComplete,
 }: CoinTossModalProps) {
@@ -61,10 +67,19 @@ export function CoinTossModal({
 
     // When a non-admin viewer receives the coin toss result via real-time,
     // play the GIF animation first before showing the result (same as admin).
+    // If the match is seeded (forced winner), skip animation and show result immediately.
     useEffect(() => {
         if (externalWinner && !flipLock.current) {
             flipLock.current = true;
             setWinner(externalWinner);
+
+            if (isSeeded) {
+                // Seeded match: skip animation, show result immediately
+                setPhase('result');
+                flipLock.current = false;
+                return;
+            }
+
             setPhase('flipping');
             const gif = externalWinner === 'team_a' ? COIN_FLIP_A_GIF : COIN_FLIP_B_GIF;
             setGifSrc(`${gif}?t=${Date.now()}`);
@@ -77,7 +92,7 @@ export function CoinTossModal({
 
             return () => clearTimeout(timer);
         }
-    }, [externalWinner]);
+    }, [externalWinner, isSeeded]);
 
     // Auto-close: whenever we enter 'result' phase, close the modal after a delay.
     // This works for ALL viewers (admin who clicked flip + non-admin observers).
@@ -105,7 +120,6 @@ export function CoinTossModal({
         if (flipLock.current || !onFlip) return;
 
         flipLock.current = true;
-        setPhase('flipping');
         setError(null);
         setWinner(null);
         setGifSrc(null);
@@ -121,16 +135,23 @@ export function CoinTossModal({
                 return;
             }
 
-            // Step 2: Start the GIF animation
             setWinner(result);
-            const gif = result === 'team_a' ? COIN_FLIP_A_GIF : COIN_FLIP_B_GIF;
-            setGifSrc(`${gif}?t=${Date.now()}`);
 
-            // Step 3: Wait for GIF to finish playing
-            await new Promise(resolve => setTimeout(resolve, GIF_PLAY_DURATION));
+            if (forcedWinner) {
+                // Forced/seeded winner: skip animation, show result immediately
+                setPhase('result');
+            } else {
+                // Random coin toss: play the full GIF animation
+                setPhase('flipping');
+                const gif = result === 'team_a' ? COIN_FLIP_A_GIF : COIN_FLIP_B_GIF;
+                setGifSrc(`${gif}?t=${Date.now()}`);
 
-            // Step 4: Show the winner text (auto-close is handled by the useEffect)
-            setPhase('result');
+                // Wait for GIF to finish playing
+                await new Promise(resolve => setTimeout(resolve, GIF_PLAY_DURATION));
+
+                // Show the winner text (auto-close is handled by the useEffect)
+                setPhase('result');
+            }
         } catch {
             setError('An unexpected error occurred.');
             setPhase('idle');

@@ -185,6 +185,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                 .update({
                     status: 'coin_toss',
                     coin_toss_winner: null,
+                    coin_toss_forced: false,
                     started_at: null,
                     completed_at: null,
                 })

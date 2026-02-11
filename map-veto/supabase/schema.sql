@@ -130,6 +130,7 @@ CREATE TABLE matches (
     custom_maps JSONB DEFAULT NULL,  -- Array of map names for custom pool
     status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'coin_toss', 'side_selection', 'in_progress', 'completed', 'cancelled')),
     coin_toss_winner VARCHAR(10) CHECK (coin_toss_winner IN ('team_a', 'team_b')),
+    coin_toss_forced BOOLEAN NOT NULL DEFAULT false,
     created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     scheduled_at TIMESTAMPTZ,
     started_at TIMESTAMPTZ,

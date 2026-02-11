@@ -473,6 +473,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 teamBName={match.team_b_name}
                 isAdmin={isAdmin}
                 winner={coinTossWinner}
+                isSeeded={!!match.coin_toss_forced}
                 onFlip={coinToss}
                 onAnimationComplete={handleCoinTossAnimationComplete}
             />
