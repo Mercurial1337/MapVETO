@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
-import { PlusCircle, ClipboardList, Gamepad2, RefreshCw, FileSpreadsheet } from 'lucide-react';
+import { PlusCircle, ClipboardList, RefreshCw, FileSpreadsheet } from 'lucide-react';
 import { ExportModal } from '@/components/admin/ExportModal';
 
 interface Match {
@@ -202,7 +202,7 @@ export default function AdminDashboard() {
             {/* Quick Actions */}
             <div className="glass rounded-2xl p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <Link
                         href="/admin/matches/new"
                         className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition-colors text-center flex flex-col items-center gap-2"
@@ -217,13 +217,7 @@ export default function AdminDashboard() {
                         <ClipboardList size={24} className="text-blue-400" />
                         <span className="text-sm text-white">All Matches</span>
                     </Link>
-                    <Link
-                        href="/admin/matches/new"
-                        className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 hover:bg-green-500/20 transition-colors text-center flex flex-col items-center gap-2"
-                    >
-                        <Gamepad2 size={24} className="text-green-400" />
-                        <span className="text-sm text-white">Quick Veto</span>
-                    </Link>
+
                     <button
                         onClick={handleRefresh}
                         className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 transition-colors text-center flex flex-col items-center gap-2"
