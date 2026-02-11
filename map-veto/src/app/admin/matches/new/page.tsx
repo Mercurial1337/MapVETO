@@ -138,7 +138,7 @@ function NewMatchContent() {
                     custom_maps: formData.mapPoolType === 'custom' ? formData.customMaps : null,
                     scheduled_at: formData.scheduledAt ? new Date(formData.scheduledAt).toISOString() : null,
                     event_id: formData.eventId || null,
-                    template_id: formData.templateId,
+                    template_id: formData.templateId || undefined,
                     custom_veto_sequence: formData.isCustomSequence ? formData.customSequence : null,
                 }),
             });
@@ -392,20 +392,20 @@ function NewMatchContent() {
                             onClick={() => {
                                 setCreatedMatch(null);
                                 setCoinFlipResult(null);
-                                setFormData({
+                                setFormData(prev => ({
                                     teamAName: '',
                                     teamBName: '',
                                     teamALogo: '',
                                     teamBLogo: '',
-                                    format: 'bo3',
-                                    mapPoolType: 'competitive',
-                                    customMaps: [],
+                                    format: prev.format,
+                                    mapPoolType: prev.mapPoolType,
+                                    customMaps: prev.mapPoolType === 'custom' ? prev.customMaps : [],
                                     scheduledAt: '',
-                                    eventId: '',
-                                    templateId: '',
-                                    isCustomSequence: false,
-                                    customSequence: null,
-                                });
+                                    eventId: prev.eventId,
+                                    templateId: prev.templateId,
+                                    isCustomSequence: prev.isCustomSequence,
+                                    customSequence: prev.customSequence,
+                                }));
                             }}
                             className="flex-1 px-6 py-3 border border-white/20 rounded-xl text-white hover:bg-white/5 transition-colors"
                         >
