@@ -181,29 +181,82 @@ CREATE TABLE match_logs (
 -- Row Level Security
 -- =============================================
 
+-- Core reference tables
+ALTER TABLE games ENABLE ROW LEVEL SECURITY;
+ALTER TABLE maps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE map_pools ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pool_maps ENABLE ROW LEVEL SECURITY;
+ALTER TABLE veto_templates ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tournaments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE events ENABLE ROW LEVEL SECURITY;
+
+-- Match tables
 ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE event_admins ENABLE ROW LEVEL SECURITY;
 
--- Public read access for matches (needed for observer view)
+-- Public read access for reference/config tables
+CREATE POLICY "Games are publicly readable" ON games
+    FOR SELECT USING (true);
+
+CREATE POLICY "Maps are publicly readable" ON maps
+    FOR SELECT USING (true);
+
+CREATE POLICY "Map pools are publicly readable" ON map_pools
+    FOR SELECT USING (true);
+
+CREATE POLICY "Pool maps are publicly readable" ON pool_maps
+    FOR SELECT USING (true);
+
+CREATE POLICY "Veto templates are publicly readable" ON veto_templates
+    FOR SELECT USING (true);
+
+CREATE POLICY "Tournaments are publicly readable" ON tournaments
+    FOR SELECT USING (true);
+
+CREATE POLICY "Events are publicly readable" ON events
+    FOR SELECT USING (true);
+
+-- Public read access for match tables (needed for observer/team views)
 CREATE POLICY "Matches are publicly readable" ON matches
     FOR SELECT USING (true);
 
--- Public read access for match state
 CREATE POLICY "Match state is publicly readable" ON match_state
     FOR SELECT USING (true);
 
--- Match links readable for token validation
 CREATE POLICY "Match links readable for validation" ON match_links
     FOR SELECT USING (true);
 
--- Match logs are publicly readable
 CREATE POLICY "Match logs are publicly readable" ON match_logs
     FOR SELECT USING (true);
 
+CREATE POLICY "Event admins are publicly readable" ON event_admins
+    FOR SELECT USING (true);
+
 -- Service role has full access (for API routes)
+CREATE POLICY "Service role full access games" ON games
+    FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Service role full access maps" ON maps
+    FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Service role full access map_pools" ON map_pools
+    FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Service role full access pool_maps" ON pool_maps
+    FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Service role full access veto_templates" ON veto_templates
+    FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Service role full access tournaments" ON tournaments
+    FOR ALL USING (auth.role() = 'service_role');
+
+CREATE POLICY "Service role full access events" ON events
+    FOR ALL USING (auth.role() = 'service_role');
+
 CREATE POLICY "Service role full access matches" ON matches
     FOR ALL USING (auth.role() = 'service_role');
 
@@ -215,10 +268,6 @@ CREATE POLICY "Service role full access match_links" ON match_links
 
 CREATE POLICY "Service role full access match_logs" ON match_logs
     FOR ALL USING (auth.role() = 'service_role');
-
--- Event admins readable for access checks
-CREATE POLICY "Event admins are publicly readable" ON event_admins
-    FOR SELECT USING (true);
 
 CREATE POLICY "Service role full access event_admins" ON event_admins
     FOR ALL USING (auth.role() = 'service_role');
