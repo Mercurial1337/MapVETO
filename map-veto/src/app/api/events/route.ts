@@ -12,7 +12,7 @@ const CreateEventSchema = z.object({
     google_sheet_id: z.string().max(100).optional().nullable(),
 });
 
-// GET: List events for current user
+// GET: List events for current user (owned + admin)
 export async function GET() {
     try {
         const authClient = await createClient();
@@ -26,7 +26,9 @@ export async function GET() {
         }
 
         const supabase = createServiceClient();
-        const { data: events, error } = await supabase
+
+        // Fetch events the user owns
+        const { data: ownedEvents, error: ownedError } = await supabase
             .from('events')
             .select(`
                 *,
@@ -36,13 +38,46 @@ export async function GET() {
             .eq('is_active', true)
             .order('created_at', { ascending: false });
 
-        if (error) {
-            console.error('Error fetching events:', error);
+        if (ownedError) {
+            console.error('Error fetching owned events:', ownedError);
             return NextResponse.json(
                 { error: 'Failed to fetch events' },
                 { status: 500 }
             );
         }
+
+        // Fetch events the user is an admin of
+        const { data: adminEntries } = await supabase
+            .from('event_admins')
+            .select('event_id')
+            .eq('user_id', user.id);
+
+        const adminEventIds = (adminEntries || []).map(e => e.event_id);
+
+        let adminEvents: typeof ownedEvents = [];
+        if (adminEventIds.length > 0) {
+            const { data, error: adminError } = await supabase
+                .from('events')
+                .select(`
+                    *,
+                    matches:matches(count)
+                `)
+                .in('id', adminEventIds)
+                .eq('is_active', true)
+                .order('created_at', { ascending: false });
+
+            if (adminError) {
+                console.error('Error fetching admin events:', adminError);
+            } else {
+                adminEvents = data || [];
+            }
+        }
+
+        // Combine and tag with role
+        const events = [
+            ...(ownedEvents || []).map(e => ({ ...e, role: 'owner' as const })),
+            ...(adminEvents || []).map(e => ({ ...e, role: 'admin' as const })),
+        ];
 
         return NextResponse.json({ events });
     } catch (error) {

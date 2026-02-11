@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, createClient } from '@/lib/supabase/server';
+import { getEventRole } from '@/lib/auth/eventAuth';
 import { z } from 'zod';
 
 // Request validation schema for updating an event
@@ -17,7 +18,7 @@ interface RouteParams {
     params: Promise<{ id: string }>;
 }
 
-// GET: Get single event by ID
+// GET: Get single event by ID (owner or admin)
 export async function GET(request: NextRequest, { params }: RouteParams) {
     try {
         const { id } = await params;
@@ -31,12 +32,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             );
         }
 
+        const role = await getEventRole(user.id, id);
+        if (!role) {
+            return NextResponse.json(
+                { error: 'Event not found' },
+                { status: 404 }
+            );
+        }
+
         const supabase = createServiceClient();
         const { data: event, error } = await supabase
             .from('events')
             .select('*')
             .eq('id', id)
-            .eq('created_by', user.id)
             .single();
 
         if (error || !event) {
@@ -46,7 +54,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             );
         }
 
-        return NextResponse.json({ event });
+        return NextResponse.json({ event, role });
     } catch (error) {
         console.error('Event GET error:', error);
         return NextResponse.json(
@@ -56,7 +64,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 }
 
-// PUT: Update an event
+// PUT: Update an event (owner only - controls branding)
 export async function PUT(request: NextRequest, { params }: RouteParams) {
     try {
         const { id } = await params;

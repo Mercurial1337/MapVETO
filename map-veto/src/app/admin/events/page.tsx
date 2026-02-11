@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
-import { Plus, Pencil, Trash2, Image as ImageIcon, Eye, FileSpreadsheet } from 'lucide-react';
+import { Plus, Pencil, Trash2, Image as ImageIcon, Eye, FileSpreadsheet, Shield, Crown } from 'lucide-react';
 import { ExportModal } from '@/components/admin/ExportModal';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +20,7 @@ interface Event {
     is_active: boolean;
     created_at: string;
     matches: { count: number }[];
+    role: 'owner' | 'admin';
 }
 
 export default function EventsPage() {
@@ -143,26 +144,41 @@ export default function EventsPage() {
                                 )}
                             </div>
 
-                            {/* Event Name */}
-                            <h3 className="text-lg font-semibold text-white mb-1">{event.name}</h3>
+                            {/* Event Name & Role Badge */}
+                            <div className="flex items-center gap-2 mb-1">
+                                <h3 className="text-lg font-semibold text-white">{event.name}</h3>
+                                {event.role === 'owner' ? (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 flex items-center gap-1">
+                                        <Crown size={10} />
+                                        Owner
+                                    </span>
+                                ) : (
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 flex items-center gap-1">
+                                        <Shield size={10} />
+                                        Admin
+                                    </span>
+                                )}
+                            </div>
 
                             {/* Stats */}
                             <p className="text-sm text-white/50 mb-4">
                                 {event.matches?.[0]?.count || 0} matches
                             </p>
 
-                            {/* Branding Status */}
-                            <div className="flex gap-2 mb-4">
-                                <span className={`text-xs px-2 py-1 rounded ${event.logo_url ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
-                                    Logo
-                                </span>
-                                <span className={`text-xs px-2 py-1 rounded ${event.coin_image_url ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
-                                    Coin
-                                </span>
-                                <span className={`text-xs px-2 py-1 rounded ${event.custom_font_url ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
-                                    Font
-                                </span>
-                            </div>
+                            {/* Branding Status - only show for owner */}
+                            {event.role === 'owner' && (
+                                <div className="flex gap-2 mb-4">
+                                    <span className={`text-xs px-2 py-1 rounded ${event.logo_url ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
+                                        Logo
+                                    </span>
+                                    <span className={`text-xs px-2 py-1 rounded ${event.coin_image_url ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
+                                        Coin
+                                    </span>
+                                    <span className={`text-xs px-2 py-1 rounded ${event.custom_font_url ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
+                                        Font
+                                    </span>
+                                </div>
+                            )}
 
                             {/* Actions */}
                             <div className="flex gap-2">
@@ -182,35 +198,39 @@ export default function EventsPage() {
                                     <FileSpreadsheet size={14} />
                                     Export
                                 </button>
-                                <Link
-                                    href={`/admin/events/${event.id}/edit`}
-                                    className="flex-1 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-white flex items-center justify-center gap-2 transition-colors"
-                                >
-                                    <Pencil size={14} />
-                                    Edit
-                                </Link>
-                                {deleteConfirm === event.id ? (
-                                    <div className="flex gap-1">
-                                        <button
-                                            onClick={() => handleDelete(event.id)}
-                                            className="px-3 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-sm text-white transition-colors"
-                                        >
-                                            Confirm
-                                        </button>
-                                        <button
-                                            onClick={() => setDeleteConfirm(null)}
-                                            className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-white transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <button
-                                        onClick={() => setDeleteConfirm(event.id)}
-                                        className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
+                                {event.role === 'owner' && (
+                                    <Link
+                                        href={`/admin/events/${event.id}/edit`}
+                                        className="flex-1 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-white flex items-center justify-center gap-2 transition-colors"
                                     >
-                                        <Trash2 size={14} />
-                                    </button>
+                                        <Pencil size={14} />
+                                        Edit
+                                    </Link>
+                                )}
+                                {event.role === 'owner' && (
+                                    deleteConfirm === event.id ? (
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={() => handleDelete(event.id)}
+                                                className="px-3 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-sm text-white transition-colors"
+                                            >
+                                                Confirm
+                                            </button>
+                                            <button
+                                                onClick={() => setDeleteConfirm(null)}
+                                                className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-white transition-colors"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setDeleteConfirm(event.id)}
+                                            className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )
                                 )}
                             </div>
                         </motion.div>

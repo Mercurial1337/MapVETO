@@ -8,6 +8,7 @@ DROP TABLE IF EXISTS match_logs CASCADE;
 DROP TABLE IF EXISTS match_links CASCADE;
 DROP TABLE IF EXISTS match_state CASCADE;
 DROP TABLE IF EXISTS matches CASCADE;
+DROP TABLE IF EXISTS event_admins CASCADE;
 DROP TABLE IF EXISTS tournaments CASCADE;
 DROP TABLE IF EXISTS veto_templates CASCADE;
 DROP TABLE IF EXISTS pool_maps CASCADE;
@@ -103,6 +104,17 @@ CREATE TABLE events (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Event Admins table (shared admin access to events)
+CREATE TABLE event_admins (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    event_id UUID NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    role VARCHAR(20) NOT NULL DEFAULT 'admin' CHECK (role IN ('admin')),
+    added_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(event_id, user_id)
+);
+
 -- Matches table
 CREATE TABLE matches (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -172,6 +184,7 @@ ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_links ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event_admins ENABLE ROW LEVEL SECURITY;
 
 -- Public read access for matches (needed for observer view)
 CREATE POLICY "Matches are publicly readable" ON matches
@@ -202,6 +215,13 @@ CREATE POLICY "Service role full access match_links" ON match_links
 CREATE POLICY "Service role full access match_logs" ON match_logs
     FOR ALL USING (auth.role() = 'service_role');
 
+-- Event admins readable for access checks
+CREATE POLICY "Event admins are publicly readable" ON event_admins
+    FOR SELECT USING (true);
+
+CREATE POLICY "Service role full access event_admins" ON event_admins
+    FOR ALL USING (auth.role() = 'service_role');
+
 -- =============================================
 -- Indexes for Performance
 -- =============================================
@@ -215,6 +235,8 @@ CREATE INDEX idx_match_state_match_id ON match_state(match_id);
 CREATE INDEX idx_match_links_token ON match_links(token);
 CREATE INDEX idx_match_links_match_id ON match_links(match_id);
 CREATE INDEX idx_match_logs_match_id ON match_logs(match_id);
+CREATE INDEX idx_event_admins_event_id ON event_admins(event_id);
+CREATE INDEX idx_event_admins_user_id ON event_admins(user_id);
 
 -- =============================================
 -- Functions for Triggers

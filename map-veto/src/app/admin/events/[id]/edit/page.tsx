@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Upload, Image as ImageIcon, Type, Check, ArrowLeft, X } from 'lucide-react';
+import { Upload, Image as ImageIcon, Type, Check, ArrowLeft, X, UserPlus, Trash2, Crown, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
@@ -16,6 +16,14 @@ interface EventFormData {
     custom_font_url: string;
     custom_font_name: string;
     google_sheet_id: string;
+}
+
+interface EventAdmin {
+    id: string;
+    user_id: string;
+    email: string;
+    role: string;
+    created_at: string;
 }
 
 interface PageProps {
@@ -37,6 +45,15 @@ export default function EditEventPage({ params }: PageProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [uploading, setUploading] = useState<string | null>(null);
+    const [userRole, setUserRole] = useState<'owner' | 'admin' | null>(null);
+
+    // Admin management state
+    const [admins, setAdmins] = useState<EventAdmin[]>([]);
+    const [adminEmail, setAdminEmail] = useState('');
+    const [adminError, setAdminError] = useState('');
+    const [adminSuccess, setAdminSuccess] = useState('');
+    const [isAddingAdmin, setIsAddingAdmin] = useState(false);
+    const [removeConfirm, setRemoveConfirm] = useState<string | null>(null);
 
     // Fetch existing event data
     useEffect(() => {
@@ -45,6 +62,7 @@ export default function EditEventPage({ params }: PageProps) {
                 const response = await fetch(`/api/events/${id}`);
                 if (response.ok) {
                     const data = await response.json();
+                    setUserRole(data.role || 'owner');
                     setFormData({
                         name: data.event.name || '',
                         logo_url: data.event.logo_url || '',
@@ -63,6 +81,72 @@ export default function EditEventPage({ params }: PageProps) {
         };
         fetchEvent();
     }, [id]);
+
+    // Fetch admins (owner only)
+    const fetchAdmins = useCallback(async () => {
+        try {
+            const response = await fetch(`/api/events/${id}/admins`);
+            if (response.ok) {
+                const data = await response.json();
+                setAdmins(data.admins || []);
+            }
+        } catch (err) {
+            console.error('Error fetching admins:', err);
+        }
+    }, [id]);
+
+    useEffect(() => {
+        if (userRole === 'owner') {
+            fetchAdmins();
+        }
+    }, [userRole, fetchAdmins]);
+
+    const handleAddAdmin = async () => {
+        if (!adminEmail.trim()) return;
+
+        setIsAddingAdmin(true);
+        setAdminError('');
+        setAdminSuccess('');
+
+        try {
+            const response = await fetch(`/api/events/${id}/admins`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: adminEmail.trim() }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setAdminError(data.error || 'Failed to add admin');
+            } else {
+                setAdminSuccess(`${adminEmail.trim()} has been added as an admin`);
+                setAdminEmail('');
+                fetchAdmins();
+                // Clear success message after 3s
+                setTimeout(() => setAdminSuccess(''), 3000);
+            }
+        } catch {
+            setAdminError('Failed to add admin');
+        }
+
+        setIsAddingAdmin(false);
+    };
+
+    const handleRemoveAdmin = async (adminId: string) => {
+        try {
+            const response = await fetch(`/api/events/${id}/admins?adminId=${adminId}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                setAdmins(admins.filter(a => a.id !== adminId));
+                setRemoveConfirm(null);
+            }
+        } catch (err) {
+            console.error('Error removing admin:', err);
+        }
+    };
 
     const handleFileUpload = async (file: File, type: 'logo' | 'coin' | 'font') => {
         setUploading(type);
@@ -238,6 +322,30 @@ export default function EditEventPage({ params }: PageProps) {
         );
     }
 
+    // If user is an admin (not owner), they shouldn't be on this page
+    if (userRole === 'admin') {
+        return (
+            <div className="max-w-2xl mx-auto">
+                <div className="flex items-center gap-4 mb-6">
+                    <Link href="/admin/events" className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                        <ArrowLeft size={20} className="text-white/70" />
+                    </Link>
+                    <h1 className="text-2xl font-bold text-white">Event Details</h1>
+                </div>
+                <div className="glass rounded-xl p-6 text-center">
+                    <Shield size={48} className="text-blue-400 mx-auto mb-4" />
+                    <h2 className="text-lg font-semibold text-white mb-2">Admin Access Only</h2>
+                    <p className="text-white/50 mb-4">
+                        You are an admin for this event. You can manage matches and export data, but only the event owner can edit branding settings.
+                    </p>
+                    <Link href="/admin/events" className="btn-primary px-6 py-3 rounded-xl inline-block">
+                        Back to Events
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="max-w-2xl mx-auto">
             <div className="flex items-center gap-4 mb-6">
@@ -343,6 +451,116 @@ export default function EditEventPage({ params }: PageProps) {
                     </button>
                 </div>
             </form>
+
+            {/* Manage Admins Section (Owner Only) */}
+            {userRole === 'owner' && (
+                <div className="mt-8 space-y-4">
+                    <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <Shield size={20} className="text-blue-400" />
+                        Manage Event Admins
+                    </h2>
+                    <p className="text-sm text-white/50">
+                        Event admins can view this event, manage matches, and export data. They cannot edit branding or delete the event.
+                    </p>
+
+                    {/* Add Admin Form */}
+                    <div className="glass rounded-xl p-4">
+                        <div className="flex gap-2">
+                            <input
+                                type="email"
+                                value={adminEmail}
+                                onChange={(e) => {
+                                    setAdminEmail(e.target.value);
+                                    setAdminError('');
+                                }}
+                                placeholder="Enter user's email address"
+                                className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        handleAddAdmin();
+                                    }
+                                }}
+                            />
+                            <button
+                                type="button"
+                                onClick={handleAddAdmin}
+                                disabled={isAddingAdmin || !adminEmail.trim()}
+                                className="px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-xl text-blue-400 text-sm flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {isAddingAdmin ? (
+                                    <motion.div
+                                        animate={{ rotate: 360 }}
+                                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                        className="w-4 h-4 border-2 border-blue-400/30 border-t-blue-400 rounded-full"
+                                    />
+                                ) : (
+                                    <UserPlus size={16} />
+                                )}
+                                Add
+                            </button>
+                        </div>
+
+                        {adminError && (
+                            <p className="mt-2 text-sm text-red-400">{adminError}</p>
+                        )}
+                        {adminSuccess && (
+                            <p className="mt-2 text-sm text-green-400">{adminSuccess}</p>
+                        )}
+                    </div>
+
+                    {/* Admin List */}
+                    {admins.length > 0 && (
+                        <div className="glass rounded-xl divide-y divide-white/10">
+                            {admins.map((admin) => (
+                                <div key={admin.id} className="px-4 py-3 flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
+                                            <Shield size={14} className="text-blue-400" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-white">{admin.email}</p>
+                                            <p className="text-xs text-white/40">
+                                                Added {new Date(admin.created_at).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {removeConfirm === admin.id ? (
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={() => handleRemoveAdmin(admin.id)}
+                                                className="px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-xs text-white transition-colors"
+                                            >
+                                                Confirm
+                                            </button>
+                                            <button
+                                                onClick={() => setRemoveConfirm(null)}
+                                                className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs text-white transition-colors"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <button
+                                            onClick={() => setRemoveConfirm(admin.id)}
+                                            className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
+                                            title="Remove admin"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {admins.length === 0 && (
+                        <div className="glass rounded-xl p-6 text-center">
+                            <p className="text-white/40 text-sm">No admins added yet. Add admins by their email address above.</p>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

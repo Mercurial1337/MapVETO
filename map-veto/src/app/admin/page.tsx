@@ -42,13 +42,36 @@ export default function AdminDashboard() {
         setIsLoading(true);
 
         // Fetch matches created by the current user
-        const { data: matches, error } = await supabase
+        const { data: ownedMatches, error } = await supabase
             .from('matches')
             .select('*')
             .eq('created_by', userId)
             .order('created_at', { ascending: false });
 
-        if (!error && matches) {
+        // Fetch matches from events the user is admin of
+        const { data: adminEntries } = await supabase
+            .from('event_admins')
+            .select('event_id')
+            .eq('user_id', userId);
+
+        const adminEventIds = (adminEntries || []).map(e => e.event_id);
+
+        let adminMatches: typeof ownedMatches = [];
+        if (adminEventIds.length > 0) {
+            const { data } = await supabase
+                .from('matches')
+                .select('*')
+                .in('event_id', adminEventIds)
+                .neq('created_by', userId)
+                .order('created_at', { ascending: false });
+            adminMatches = data || [];
+        }
+
+        const matches = [...(ownedMatches || []), ...(adminMatches || [])];
+        // Sort by created_at descending
+        matches.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+        if (!error) {
             // Calculate stats
             const today = new Date();
             today.setHours(0, 0, 0, 0);

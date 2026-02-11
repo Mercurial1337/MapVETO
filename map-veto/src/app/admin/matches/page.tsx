@@ -53,31 +53,77 @@ export default function MatchesPage() {
     const supabase = createClient();
 
     const fetchEvents = useCallback(async (userId: string) => {
-        const { data } = await supabase
-            .from('events')
-            .select('id, name')
-            .eq('created_by', userId)
-            .order('name');
-        if (data) setEvents(data);
+        // Use the API which returns both owned and admin events
+        try {
+            const response = await fetch('/api/events');
+            if (response.ok) {
+                const data = await response.json();
+                const eventsList = (data.events || []).map((e: { id: string; name: string }) => ({ id: e.id, name: e.name }));
+                setEvents(eventsList);
+            }
+        } catch (error) {
+            console.error('Error fetching events:', error);
+            // Fallback to direct Supabase query for owned events
+            const { data } = await supabase
+                .from('events')
+                .select('id, name')
+                .eq('created_by', userId)
+                .order('name');
+            if (data) setEvents(data);
+        }
     }, [supabase]);
 
     const fetchMatches = useCallback(async (userId: string) => {
         setIsLoading(true);
-        let query = supabase
+
+        // 1. Fetch matches created by the user
+        let ownedQuery = supabase
             .from('matches')
             .select('*, events(name)')
             .eq('created_by', userId)
             .order('created_at', { ascending: sortOrder === 'oldest' });
 
-        // Filter by event if event param is present
         if (eventFilter) {
-            query = query.eq('event_id', eventFilter);
+            ownedQuery = ownedQuery.eq('event_id', eventFilter);
         }
 
-        const { data, error } = await query;
+        const { data: ownedMatches, error: ownedError } = await ownedQuery;
 
-        if (!error && data) {
-            setMatches(data);
+        // 2. Fetch event IDs where user is an admin
+        const { data: adminEntries } = await supabase
+            .from('event_admins')
+            .select('event_id')
+            .eq('user_id', userId);
+
+        const adminEventIds = (adminEntries || []).map(e => e.event_id);
+
+        let adminMatches: typeof ownedMatches = [];
+        if (adminEventIds.length > 0) {
+            let adminQuery = supabase
+                .from('matches')
+                .select('*, events(name)')
+                .in('event_id', adminEventIds)
+                .neq('created_by', userId) // Avoid duplicates
+                .order('created_at', { ascending: sortOrder === 'oldest' });
+
+            if (eventFilter) {
+                adminQuery = adminQuery.eq('event_id', eventFilter);
+            }
+
+            const { data } = await adminQuery;
+            adminMatches = data || [];
+        }
+
+        if (!ownedError) {
+            // Merge and deduplicate
+            const allMatches = [...(ownedMatches || []), ...(adminMatches || [])];
+            // Sort merged results
+            allMatches.sort((a, b) => {
+                const dateA = new Date(a.created_at).getTime();
+                const dateB = new Date(b.created_at).getTime();
+                return sortOrder === 'oldest' ? dateA - dateB : dateB - dateA;
+            });
+            setMatches(allMatches);
         }
         setIsLoading(false);
     }, [supabase, eventFilter, sortOrder]);
