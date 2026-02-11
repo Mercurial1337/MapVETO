@@ -44,6 +44,7 @@ export async function updateSession(request: NextRequest) {
     }
 
     // Redirect authenticated users away from login page
+    // Only on mapveto subdomain (not root domain landing page)
     if (request.nextUrl.pathname === '/' && user) {
         const url = request.nextUrl.clone();
         url.pathname = '/admin';
