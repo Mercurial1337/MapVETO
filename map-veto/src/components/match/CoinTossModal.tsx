@@ -30,6 +30,11 @@ interface CoinTossModalProps {
      */
     isSeeded?: boolean;
     /**
+     * The role of the current viewer: 'team_a', 'team_b', or 'observer'.
+     * Used to show the correct coin side in the idle state.
+     */
+    viewerRole?: 'team_a' | 'team_b' | 'observer';
+    /**
      * Called when admin clicks flip. Should call the API and return the winner.
      * Must return quickly (no artificial delays).
      */
@@ -56,6 +61,7 @@ export function CoinTossModal({
     isAdmin = false,
     winner: externalWinner,
     isSeeded = false,
+    viewerRole,
     onFlip,
     onAnimationComplete,
 }: CoinTossModalProps) {
@@ -222,25 +228,31 @@ export function CoinTossModal({
                         </div>
 
                         {/* Coin Display */}
-                        <div className="relative w-64 h-64 mb-10 flex items-center justify-center">
+                        <div className="relative mb-10 flex items-center justify-center">
                             {phase === 'flipping' && gifSrc ? (
-                                <img
-                                    src={gifSrc}
-                                    alt="Coin flipping"
-                                    className="w-full h-full object-contain"
-                                />
+                                <div className="w-64 h-64 flex items-center justify-center">
+                                    <img
+                                        src={gifSrc}
+                                        alt="Coin flipping"
+                                        className="w-full h-full object-contain"
+                                    />
+                                </div>
                             ) : phase === 'result' && winner ? (
-                                <img
-                                    src={winner === 'team_a' ? COIN_SIDE_A : COIN_SIDE_B}
-                                    alt="Winner Side"
-                                    className="w-48 h-48 object-contain"
-                                />
+                                <div className="w-64 h-64 flex items-center justify-center">
+                                    <img
+                                        src={winner === 'team_a' ? COIN_SIDE_A : COIN_SIDE_B}
+                                        alt="Winner Side"
+                                        className="w-48 h-48 object-contain"
+                                    />
+                                </div>
                             ) : (
-                                <img
-                                    src={COIN_SIDE_A}
-                                    alt="Coin"
-                                    className="w-48 h-48 object-contain opacity-50 grayscale"
-                                />
+                                <div className="w-64 h-64 flex items-center justify-center">
+                                    <img
+                                        src={viewerRole === 'team_b' ? COIN_SIDE_B : COIN_SIDE_A}
+                                        alt="Coin"
+                                        className="w-48 h-48 object-contain opacity-50 grayscale"
+                                    />
+                                </div>
                             )}
                         </div>
 

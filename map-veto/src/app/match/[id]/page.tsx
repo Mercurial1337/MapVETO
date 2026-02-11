@@ -474,6 +474,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 isAdmin={isAdmin}
                 winner={coinTossWinner}
                 isSeeded={!!match.coin_toss_forced}
+                viewerRole={userRole ?? undefined}
                 onFlip={coinToss}
                 onAnimationComplete={handleCoinTossAnimationComplete}
             />
