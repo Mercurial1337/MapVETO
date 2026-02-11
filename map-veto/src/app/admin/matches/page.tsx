@@ -97,26 +97,37 @@ export default function MatchesPage() {
 
         const adminEventIds = (adminEntries || []).map(e => e.event_id);
 
-        let adminMatches: typeof ownedMatches = [];
-        if (adminEventIds.length > 0) {
-            let adminQuery = supabase
+        // 3. Fetch event IDs where user is the owner
+        const { data: ownedEvents } = await supabase
+            .from('events')
+            .select('id')
+            .eq('created_by', userId);
+
+        const ownedEventIds = (ownedEvents || []).map(e => e.id);
+
+        // 4. Combine all event IDs where user has access (owner or admin)
+        const allAccessEventIds = [...new Set([...adminEventIds, ...ownedEventIds])];
+
+        let sharedMatches: typeof ownedMatches = [];
+        if (allAccessEventIds.length > 0) {
+            let sharedQuery = supabase
                 .from('matches')
                 .select('*, events(name)')
-                .in('event_id', adminEventIds)
-                .neq('created_by', userId) // Avoid duplicates
+                .in('event_id', allAccessEventIds)
+                .neq('created_by', userId) // Avoid duplicates with ownedMatches
                 .order('created_at', { ascending: sortOrder === 'oldest' });
 
             if (eventFilter) {
-                adminQuery = adminQuery.eq('event_id', eventFilter);
+                sharedQuery = sharedQuery.eq('event_id', eventFilter);
             }
 
-            const { data } = await adminQuery;
-            adminMatches = data || [];
+            const { data } = await sharedQuery;
+            sharedMatches = data || [];
         }
 
         if (!ownedError) {
             // Merge and deduplicate
-            const allMatches = [...(ownedMatches || []), ...(adminMatches || [])];
+            const allMatches = [...(ownedMatches || []), ...(sharedMatches || [])];
             // Sort merged results
             allMatches.sort((a, b) => {
                 const dateA = new Date(a.created_at).getTime();

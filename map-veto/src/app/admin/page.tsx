@@ -48,7 +48,7 @@ export default function AdminDashboard() {
             .eq('created_by', userId)
             .order('created_at', { ascending: false });
 
-        // Fetch matches from events the user is admin of
+        // Fetch event IDs where user is admin (via event_admins table)
         const { data: adminEntries } = await supabase
             .from('event_admins')
             .select('event_id')
@@ -56,18 +56,29 @@ export default function AdminDashboard() {
 
         const adminEventIds = (adminEntries || []).map(e => e.event_id);
 
-        let adminMatches: typeof ownedMatches = [];
-        if (adminEventIds.length > 0) {
+        // Fetch event IDs where user is the owner
+        const { data: ownedEvents } = await supabase
+            .from('events')
+            .select('id')
+            .eq('created_by', userId);
+
+        const ownedEventIds = (ownedEvents || []).map(e => e.id);
+
+        // Combine all event IDs where user has access (owner or admin)
+        const allAccessEventIds = [...new Set([...adminEventIds, ...ownedEventIds])];
+
+        let sharedMatches: typeof ownedMatches = [];
+        if (allAccessEventIds.length > 0) {
             const { data } = await supabase
                 .from('matches')
                 .select('*')
-                .in('event_id', adminEventIds)
-                .neq('created_by', userId)
+                .in('event_id', allAccessEventIds)
+                .neq('created_by', userId) // Avoid duplicates with ownedMatches
                 .order('created_at', { ascending: false });
-            adminMatches = data || [];
+            sharedMatches = data || [];
         }
 
-        const matches = [...(ownedMatches || []), ...(adminMatches || [])];
+        const matches = [...(ownedMatches || []), ...(sharedMatches || [])];
         // Sort by created_at descending
         matches.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
