@@ -275,7 +275,7 @@ export function CoinTossModal({
                                         {winner === 'team_a' ? teamAName : teamBName}
                                     </motion.div>
                                     <div className="text-lg text-green-400 font-semibold">
-                                        Wins the Coin Toss!
+                                        {isSeeded ? 'Assigned as first pick' : 'Wins the Coin Toss!'}
                                     </div>
                                 </motion.div>
                             ) : phase === 'flipping' ? (

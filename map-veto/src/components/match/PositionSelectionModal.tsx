@@ -12,6 +12,7 @@ interface PositionSelectionModalProps {
     userRole: 'team_a' | 'team_b' | 'observer' | null;
     token: string;
     matchId: string;
+    isSeeded?: boolean;
     onComplete?: () => void;
 }
 
@@ -27,6 +28,7 @@ export function PositionSelectionModal({
     userRole,
     token,
     matchId,
+    isSeeded,
     onComplete,
 }: PositionSelectionModalProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -98,9 +100,9 @@ export function PositionSelectionModal({
                             animate={{ scale: 1 }}
                             className="text-center mb-8"
                         >
-                            <div className="text-6xl mb-4">🏆</div>
+                            <div className="text-6xl mb-4"></div>
                             <h2 className="text-3xl font-bold text-yellow-400 mb-2">
-                                {winnerName} Won!
+                                {winnerName} {isSeeded ? 'Picks First' : 'Won!'}
                             </h2>
                             <p className="text-white/60">
                                 {isWinner ? 'Choose your position' : 'Waiting for position choice...'}

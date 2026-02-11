@@ -133,8 +133,8 @@ export default function GoogleSheetsSyncPage() {
                                 key={match.id}
                                 layout
                                 className={`p-4 rounded-xl border ${match.status === 'imported'
-                                        ? 'bg-green-500/10 border-green-500/20'
-                                        : 'bg-white/5 border-white/10'
+                                    ? 'bg-green-500/10 border-green-500/20'
+                                    : 'bg-white/5 border-white/10'
                                     }`}
                             >
                                 <div className="flex items-center justify-between">

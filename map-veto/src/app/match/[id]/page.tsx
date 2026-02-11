@@ -487,6 +487,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 userRole={userRole}
                 token={token}
                 matchId={matchId}
+                isSeeded={!!match.coin_toss_forced}
             />
 
             {/* Completed Banner */}
