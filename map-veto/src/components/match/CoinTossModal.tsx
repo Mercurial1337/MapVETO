@@ -275,7 +275,7 @@ export function CoinTossModal({
                                         {winner === 'team_a' ? teamAName : teamBName}
                                     </motion.div>
                                     <div className="text-lg text-green-400 font-semibold">
-                                        🎉 Wins the Coin Toss!
+                                        Wins the Coin Toss!
                                     </div>
                                 </motion.div>
                             ) : phase === 'flipping' ? (
@@ -310,7 +310,7 @@ export function CoinTossModal({
                                             'border border-white/10'
                                         )}
                                     >
-                                        🎲 Flip Coin
+                                        Flip Coin
                                     </motion.button>
 
                                     <div className="flex items-center gap-3 w-full max-w-xs">
@@ -357,7 +357,7 @@ export function CoinTossModal({
                                     className="text-center"
                                 >
                                     <div className="text-xl text-white/60 mb-2">
-                                        ⏳ Waiting for admin to flip the coin...
+                                        Waiting for admin to flip the coin...
                                     </div>
                                 </motion.div>
                             )}
