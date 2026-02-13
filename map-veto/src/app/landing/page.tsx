@@ -33,11 +33,11 @@ const services = [
         <line x1="12" y1="17" x2="12" y2="21" />
       </svg>
     ),
-    href: '#',
+    href: 'https://graphics.emeaclash.com',
     gradient: 'from-cyan-600 to-teal-600',
     glowColor: 'rgba(6, 182, 212, 0.4)',
     borderColor: 'rgba(6, 182, 212, 0.3)',
-    available: false,
+    available: true,
   },
   {
     id: 'timer',
