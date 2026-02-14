@@ -405,7 +405,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     {userRole === 'observer' && (
                         <TurnTimer
                             currentStep={currentStepDef}
-                            currentStepNumber={state?.current_step ?? 0}
+                            stateUpdatedAt={state?.updated_at ?? ''}
                             teamAName={displayedTeams.teamA}
                             teamBName={displayedTeams.teamB}
                             isInProgress={match.status === 'in_progress'}

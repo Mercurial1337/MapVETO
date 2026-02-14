@@ -7,8 +7,8 @@ import type { VetoStep } from '@/types';
 interface TurnTimerProps {
     /** The current veto step definition */
     currentStep: VetoStep | null;
-    /** Current step number from match state — resets the timer when it changes */
-    currentStepNumber: number;
+    /** Server timestamp (ISO string) of when the last action happened */
+    stateUpdatedAt: string;
     /** Displayed team A name */
     teamAName: string;
     /** Displayed team B name */
@@ -55,7 +55,7 @@ function getTeamColor(actor: string): string {
 
 export function TurnTimer({
     currentStep,
-    currentStepNumber,
+    stateUpdatedAt,
     teamAName,
     teamBName,
     isInProgress,
@@ -64,24 +64,29 @@ export function TurnTimer({
     const [elapsed, setElapsed] = useState(0);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    // Reset timer whenever step changes
+    // Calculate elapsed time from the server timestamp, and tick every second
     useEffect(() => {
-        setElapsed(0);
-    }, [currentStepNumber]);
-
-    // Run the ascending timer
-    useEffect(() => {
-        if (!isInProgress || isComplete || !currentStep) {
+        if (!isInProgress || isComplete || !currentStep || !stateUpdatedAt) {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
                 intervalRef.current = null;
             }
+            setElapsed(0);
             return;
         }
 
-        intervalRef.current = setInterval(() => {
-            setElapsed((prev) => prev + 1);
-        }, 1000);
+        // Calculate initial elapsed from the server timestamp
+        const updateTime = new Date(stateUpdatedAt).getTime();
+
+        const tick = () => {
+            const now = Date.now();
+            const diffSeconds = Math.max(0, Math.floor((now - updateTime) / 1000));
+            setElapsed(diffSeconds);
+        };
+
+        // Set immediately, then tick every second
+        tick();
+        intervalRef.current = setInterval(tick, 1000);
 
         return () => {
             if (intervalRef.current) {
@@ -89,7 +94,7 @@ export function TurnTimer({
                 intervalRef.current = null;
             }
         };
-    }, [isInProgress, isComplete, currentStep]);
+    }, [isInProgress, isComplete, currentStep, stateUpdatedAt]);
 
     if (!currentStep || !isInProgress || isComplete) {
         return null;
