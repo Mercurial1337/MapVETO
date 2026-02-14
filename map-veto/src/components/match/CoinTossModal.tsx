@@ -204,7 +204,7 @@ export function CoinTossModal({
                                 )}
                             >
                                 <div className="text-xl md:text-2xl font-bold truncate max-w-[150px]">{teamAName}</div>
-                                <div className="text-sm mt-1 font-semibold uppercase tracking-widest text-cyan-500/80">Team A</div>
+                                {/* Removed Team A label */}
                             </motion.div>
 
                             <div className="text-3xl text-white/30 font-light">vs</div>
@@ -217,7 +217,7 @@ export function CoinTossModal({
                                 )}
                             >
                                 <div className="text-xl md:text-2xl font-bold truncate max-w-[150px]">{teamBName}</div>
-                                <div className="text-sm mt-1 font-semibold uppercase tracking-widest text-lime-500/80">Team B</div>
+                                {/* Removed Team B label */}
                             </motion.div>
                         </div>
 
@@ -331,7 +331,7 @@ export function CoinTossModal({
                                                 'transition-all duration-200'
                                             )}
                                         >
-                                            {teamAName} (A)
+                                            {teamAName}
                                         </motion.button>
                                         <motion.button
                                             whileHover={{ scale: 1.05 }}
@@ -344,7 +344,7 @@ export function CoinTossModal({
                                                 'transition-all duration-200'
                                             )}
                                         >
-                                            {teamBName} (B)
+                                            {teamBName}
                                         </motion.button>
                                     </div>
                                 </motion.div>
