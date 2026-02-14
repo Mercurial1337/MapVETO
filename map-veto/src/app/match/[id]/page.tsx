@@ -5,6 +5,7 @@ import { Suspense, useMemo, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapCard } from '@/components/match/MapCard';
 import { VetoTimeline, TurnIndicator } from '@/components/match/VetoTimeline';
+import { TurnTimer } from '@/components/match/TurnTimer';
 import { CoinTossModal } from '@/components/match/CoinTossModal';
 import { PositionSelectionModal } from '@/components/match/PositionSelectionModal';
 import { SideSelectionModal } from '@/components/match/SideSelectionModal';
@@ -393,13 +394,24 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
 
             {/* Turn Indicator */}
             {currentStepDef && match.status === 'in_progress' && (
-                <div className="flex justify-center py-6">
+                <div className="flex flex-col items-center gap-3 py-6">
                     <TurnIndicator
                         currentStep={currentStepDef}
                         teamAName={displayedTeams.teamA}
                         teamBName={displayedTeams.teamB}
                         isMyTurn={state ? isMyTurn(state.current_turn) : false}
                     />
+                    {/* Observer-only ascending timer (for referees) */}
+                    {userRole === 'observer' && (
+                        <TurnTimer
+                            currentStep={currentStepDef}
+                            currentStepNumber={state?.current_step ?? 0}
+                            teamAName={displayedTeams.teamA}
+                            teamBName={displayedTeams.teamB}
+                            isInProgress={match.status === 'in_progress'}
+                            isComplete={state?.is_complete ?? false}
+                        />
+                    )}
                 </div>
             )}
 
