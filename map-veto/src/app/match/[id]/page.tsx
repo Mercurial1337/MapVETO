@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams, useParams } from 'next/navigation';
-import { Suspense, useMemo, useEffect, useState, useCallback, useRef } from 'react';
+import { Suspense, useMemo, useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapCard } from '@/components/match/MapCard';
 import { VetoTimeline, TurnIndicator } from '@/components/match/VetoTimeline';
@@ -11,7 +11,6 @@ import { SideSelectionModal } from '@/components/match/SideSelectionModal';
 import { ActionLog } from '@/components/match/ActionLog';
 import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus } from '@/lib/realtime';
 import { createClient } from '@/lib/supabase/client';
-import { useVoiceCues } from '@/hooks/useVoiceCues';
 import type { MapCardState, VetoStep, VetoActor, Match, VetoTemplate, GameMap } from '@/types';
 
 // Map name to local image fallback
@@ -46,10 +45,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     const { banMap, pickMap, pickSide, coinToss, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
     const [isAdmin, setIsAdmin] = useState(false);
-    const [voiceCuesEnabled, setVoiceCuesEnabled] = useState(false);
-    const [showVolumeSlider, setShowVolumeSlider] = useState(false);
-    const volumeSliderRef = useRef<HTMLDivElement>(null);
 
+    // Check if current user is an admin
     // Check if current user is an admin
     useEffect(() => {
         const checkAdmin = async () => {
@@ -276,29 +273,6 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
         return lookup;
     }, [maps]);
 
-    // Voice cues
-    const { volume, setVolume } = useVoiceCues({
-        state,
-        templateSteps,
-        userRole,
-        mapNames,
-        teamAName: match?.team_a_name || 'Team A',
-        teamBName: match?.team_b_name || 'Team B',
-        isInProgress: match?.status === 'in_progress',
-        enabled: voiceCuesEnabled,
-    });
-
-    // Close volume slider when clicking outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (volumeSliderRef.current && !volumeSliderRef.current.contains(event.target as Node)) {
-                setShowVolumeSlider(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
     // Check if we're in a side selection step and get the map that needs side picking
     const pendingSidePickMap = useMemo(() => {
         if (!currentStepDef || currentStepDef.action !== 'side' || !state) return null;
@@ -370,86 +344,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                             {isConnected ? '● Live' : '○ Connecting...'}
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        {/* Voice Cues Toggle */}
-                        <div className="relative" ref={volumeSliderRef}>
-                            <button
-                                onClick={() => {
-                                    if (!voiceCuesEnabled) {
-                                        setVoiceCuesEnabled(true);
-                                    } else {
-                                        setShowVolumeSlider(!showVolumeSlider);
-                                    }
-                                }}
-                                onContextMenu={(e) => {
-                                    e.preventDefault();
-                                    setVoiceCuesEnabled(false);
-                                    setShowVolumeSlider(false);
-                                }}
-                                title={voiceCuesEnabled ? 'Voice cues ON (click for volume, right-click to disable)' : 'Click to enable voice cues'}
-                                className={`p-2 rounded-lg transition-all duration-200 ${voiceCuesEnabled
-                                        ? 'bg-purple-500/30 text-purple-300 hover:bg-purple-500/40'
-                                        : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
-                                    }`}
-                            >
-                                {voiceCuesEnabled ? (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-                                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                                    </svg>
-                                ) : (
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                                        <line x1="23" y1="9" x2="17" y2="15" />
-                                        <line x1="17" y1="9" x2="23" y2="15" />
-                                    </svg>
-                                )}
-                            </button>
-                            {/* Volume Slider Popup */}
-                            <AnimatePresence>
-                                {showVolumeSlider && voiceCuesEnabled && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -8, scale: 0.95 }}
-                                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                                        exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                                        transition={{ duration: 0.15 }}
-                                        className="absolute right-0 top-full mt-2 bg-black/90 backdrop-blur-xl border border-white/10 rounded-xl p-3 shadow-2xl z-50 min-w-[180px]"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white/50 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                                            </svg>
-                                            <input
-                                                type="range"
-                                                min="0"
-                                                max="1"
-                                                step="0.1"
-                                                value={volume}
-                                                onChange={(e) => setVolume(parseFloat(e.target.value))}
-                                                className="flex-1 h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer accent-purple-500"
-                                                style={{
-                                                    background: `linear-gradient(to right, rgb(168 85 247) ${volume * 100}%, rgba(255,255,255,0.1) ${volume * 100}%)`,
-                                                }}
-                                            />
-                                            <span className="text-xs text-white/50 min-w-[2rem] text-right">{Math.round(volume * 100)}%</span>
-                                        </div>
-                                        <button
-                                            onClick={() => {
-                                                setVoiceCuesEnabled(false);
-                                                setShowVolumeSlider(false);
-                                            }}
-                                            className="mt-2 w-full text-xs text-red-400/70 hover:text-red-400 transition-colors py-1"
-                                        >
-                                            Disable voice cues
-                                        </button>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                        <div className="text-xs md:text-sm text-white/60">
-                            {match.format.toUpperCase()}
-                        </div>
+                    <div className="text-xs md:text-sm text-white/60">
+                        {match.format.toUpperCase()}
                     </div>
                 </div>
             </header>
