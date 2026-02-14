@@ -32,7 +32,7 @@ export function useActionSound({ state, userRole, isInProgress }: UseActionSound
         return audioCtxRef.current;
     }, []);
 
-    // Play a clean notification "ding" sound
+    // Play "Alert Ping" notification sound — sharp, attention-grabbing ping
     const playNotificationSound = useCallback(() => {
         try {
             const ctx = getAudioContext();
@@ -44,38 +44,36 @@ export function useActionSound({ state, userRole, isInProgress }: UseActionSound
 
             const now = ctx.currentTime;
 
-            // Create oscillator for the main tone
+            // Primary tone — sustained 1500Hz sine with sharp attack
             const osc = ctx.createOscillator();
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, now); // A5 note
-            osc.frequency.exponentialRampToValueAtTime(1320, now + 0.05); // Quick rise to E6
+            osc.frequency.setValueAtTime(1500, now);
 
-            // Create gain envelope for a short, snappy sound
             const gain = ctx.createGain();
             gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime(0.3, now + 0.02); // Quick attack
-            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3); // Decay
-
-            // Add a subtle second harmonic for richness
-            const osc2 = ctx.createOscillator();
-            osc2.type = 'sine';
-            osc2.frequency.setValueAtTime(1760, now); // A6 (octave above)
-            osc2.frequency.exponentialRampToValueAtTime(2640, now + 0.05);
-
-            const gain2 = ctx.createGain();
-            gain2.gain.setValueAtTime(0, now);
-            gain2.gain.linearRampToValueAtTime(0.1, now + 0.02);
-            gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            gain.gain.linearRampToValueAtTime(0.35, now + 0.005);
+            gain.gain.setValueAtTime(0.35, now + 0.06);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
 
             osc.connect(gain);
             gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + 0.45);
+
+            // Upper harmonic — 2000Hz shimmer for brightness
+            const osc2 = ctx.createOscillator();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(2000, now);
+
+            const gain2 = ctx.createGain();
+            gain2.gain.setValueAtTime(0, now);
+            gain2.gain.linearRampToValueAtTime(0.1, now + 0.005);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
             osc2.connect(gain2);
             gain2.connect(ctx.destination);
-
-            osc.start(now);
-            osc.stop(now + 0.35);
             osc2.start(now);
-            osc2.stop(now + 0.25);
+            osc2.stop(now + 0.35);
         } catch {
             // Silently fail if audio isn't available
         }
