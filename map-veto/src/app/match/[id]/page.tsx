@@ -476,6 +476,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 isSeeded={!!match.coin_toss_forced}
                 onFlip={coinToss}
                 onAnimationComplete={handleCoinTossAnimationComplete}
+                userRole={userRole}
             />
 
             {/* Position Selection Modal */}

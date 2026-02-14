@@ -41,6 +41,7 @@ interface CoinTossModalProps {
     onAnimationComplete?: () => void;
     coinImageA?: string | null;
     coinImageB?: string | null;
+    userRole?: VetoActor | 'observer' | null;
 }
 
 function cn(...classes: (string | boolean | undefined)[]) {
@@ -58,6 +59,7 @@ export function CoinTossModal({
     isSeeded = false,
     onFlip,
     onAnimationComplete,
+    userRole,
 }: CoinTossModalProps) {
     const [phase, setPhase] = useState<CoinPhase>('idle');
     const [winner, setWinner] = useState<VetoActor | null>(null);
@@ -237,7 +239,7 @@ export function CoinTossModal({
                                 />
                             ) : (
                                 <img
-                                    src={COIN_SIDE_A}
+                                    src={userRole === 'team_b' ? COIN_SIDE_B : COIN_SIDE_A}
                                     alt="Coin"
                                     className="w-48 h-48 object-contain opacity-50 grayscale"
                                 />
