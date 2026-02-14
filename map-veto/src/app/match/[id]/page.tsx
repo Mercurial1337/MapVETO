@@ -11,6 +11,7 @@ import { SideSelectionModal } from '@/components/match/SideSelectionModal';
 import { ActionLog } from '@/components/match/ActionLog';
 import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus } from '@/lib/realtime';
 import { createClient } from '@/lib/supabase/client';
+import { useActionSound } from '@/hooks';
 import type { MapCardState, VetoStep, VetoActor, Match, VetoTemplate, GameMap } from '@/types';
 
 // Map name to local image fallback
@@ -45,6 +46,13 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     const { banMap, pickMap, pickSide, coinToss, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
     const [isAdmin, setIsAdmin] = useState(false);
+
+    // Play notification sounds on state changes (turn changes, completion)
+    useActionSound({
+        state: state ?? null,
+        userRole,
+        isInProgress: match?.status === 'in_progress',
+    });
 
     // Check if current user is an admin
     // Check if current user is an admin
