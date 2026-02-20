@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
-import { FileSpreadsheet } from 'lucide-react';
+import { FileSpreadsheet, Trash2 } from 'lucide-react';
 import { ExportModal } from '@/components/admin/ExportModal';
 
 interface Event {
@@ -49,6 +49,7 @@ export default function MatchesPage() {
     const [loadingLinks, setLoadingLinks] = useState<string | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [deletingMatch, setDeletingMatch] = useState<string | null>(null);
 
     const supabase = createClient();
 
@@ -205,6 +206,32 @@ export default function MatchesPage() {
     const copyToClipboard = async (text: string, label: string) => {
         await navigator.clipboard.writeText(text);
         alert(`${label} link copied!`);
+    };
+
+    const deleteMatch = async (matchId: string, teamA: string, teamB: string) => {
+        const confirmed = window.confirm(
+            `Are you sure you want to permanently delete the match "${teamA} vs ${teamB}"?\n\nThis will remove all match data including veto history, links, and logs. This action cannot be undone.`
+        );
+        if (!confirmed) return;
+
+        setDeletingMatch(matchId);
+        try {
+            const response = await fetch(`/api/matches/${matchId}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                setMatches(prev => prev.filter(m => m.id !== matchId));
+            } else {
+                const data = await response.json();
+                alert(`Failed to delete match: ${data.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Delete match error:', error);
+            alert('Failed to delete match. Please try again.');
+        } finally {
+            setDeletingMatch(null);
+        }
     };
 
     const filteredMatches = matches.filter(match => {
@@ -473,6 +500,14 @@ export default function MatchesPage() {
                                                 View
                                             </a>
                                         )}
+                                        <button
+                                            onClick={() => deleteMatch(match.id, match.team_a_name, match.team_b_name)}
+                                            disabled={deletingMatch === match.id}
+                                            className="px-2 py-1 text-xs bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors disabled:opacity-50"
+                                            title="Delete match"
+                                        >
+                                            {deletingMatch === match.id ? '...' : <Trash2 size={14} />}
+                                        </button>
                                     </div>
                                 </td>
                             </motion.tr>

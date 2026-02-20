@@ -213,3 +213,48 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         );
     }
 }
+
+// Delete a match permanently
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+    try {
+        const { id: matchId } = await params;
+        const supabase = createServiceClient();
+
+        // Verify match exists
+        const { data: match, error: matchError } = await supabase
+            .from('matches')
+            .select('id')
+            .eq('id', matchId)
+            .single();
+
+        if (matchError || !match) {
+            return NextResponse.json(
+                { error: 'Match not found' },
+                { status: 404 }
+            );
+        }
+
+        // Delete the match — related rows in match_state, match_links,
+        // and match_logs are removed automatically via ON DELETE CASCADE
+        const { error: deleteError } = await supabase
+            .from('matches')
+            .delete()
+            .eq('id', matchId);
+
+        if (deleteError) {
+            console.error('Delete match error:', deleteError);
+            return NextResponse.json(
+                { error: `Failed to delete match: ${deleteError.message}` },
+                { status: 500 }
+            );
+        }
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error('Delete match error:', error);
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        );
+    }
+}
