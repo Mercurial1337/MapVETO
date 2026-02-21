@@ -100,6 +100,23 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Auto-save teams to event_teams roster if match belongs to an event
+        if (data.event_id) {
+            const teamsToSave = [
+                { event_id: data.event_id, name: data.team_a_name.trim(), logo_url: data.team_a_logo || null },
+                { event_id: data.event_id, name: data.team_b_name.trim(), logo_url: data.team_b_logo || null },
+            ];
+            // Upsert both teams (fire-and-forget, don't block match creation)
+            supabase
+                .from('event_teams')
+                .upsert(teamsToSave, { onConflict: 'event_id,name' })
+                .then(({ error: teamError }) => {
+                    if (teamError) {
+                        console.error('Auto-save event teams error:', teamError);
+                    }
+                });
+        }
+
         // Update match_state with the correct maps based on pool type
         // The trigger created match_state with default pool, now we override if needed
         const COMPETITIVE_MAPS = ['Abyss', 'Bind', 'Breeze', 'Corrode', 'Haven', 'Pearl', 'Split'];

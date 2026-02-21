@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { VetoTemplate, VetoSequence, VetoStep } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -11,6 +11,14 @@ interface Event {
     id: string;
     name: string;
     logo_url: string | null;
+}
+
+interface EventTeam {
+    id: string;
+    event_id: string;
+    name: string;
+    logo_url: string | null;
+    created_at: string;
 }
 
 type MapPoolType = 'competitive' | 'all' | 'custom';
@@ -69,12 +77,19 @@ function NewMatchContent() {
     }, [preselectedEventId]);
     const [events, setEvents] = useState<Event[]>([]);
     const [templates, setTemplates] = useState<VetoTemplate[]>([]);
+    const [eventTeams, setEventTeams] = useState<EventTeam[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [createdMatch, setCreatedMatch] = useState<CreatedMatch | null>(null);
     const [isFlippingCoin, setIsFlippingCoin] = useState(false);
     const [coinFlipResult, setCoinFlipResult] = useState<'team_a' | 'team_b' | null>(null);
     const [wasForced, setWasForced] = useState(false);
+
+    // Team autocomplete state
+    const [showTeamADropdown, setShowTeamADropdown] = useState(false);
+    const [showTeamBDropdown, setShowTeamBDropdown] = useState(false);
+    const teamARef = useRef<HTMLDivElement>(null);
+    const teamBRef = useRef<HTMLDivElement>(null);
 
     // Fetch events on mount
     useEffect(() => {
@@ -90,6 +105,40 @@ function NewMatchContent() {
             }
         };
         fetchEvents();
+    }, []);
+
+    // Fetch event teams when event changes
+    useEffect(() => {
+        const fetchEventTeams = async () => {
+            if (!formData.eventId) {
+                setEventTeams([]);
+                return;
+            }
+            try {
+                const response = await fetch(`/api/events/${formData.eventId}/teams`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setEventTeams(data.teams || []);
+                }
+            } catch (err) {
+                console.error('Error fetching event teams:', err);
+            }
+        };
+        fetchEventTeams();
+    }, [formData.eventId]);
+
+    // Close dropdowns on outside click
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (teamARef.current && !teamARef.current.contains(e.target as Node)) {
+                setShowTeamADropdown(false);
+            }
+            if (teamBRef.current && !teamBRef.current.contains(e.target as Node)) {
+                setShowTeamBDropdown(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     // Fetch templates when format changes
@@ -255,6 +304,34 @@ function NewMatchContent() {
         }
 
         setIsFlippingCoin(false);
+    };
+
+    // Select a team from the event roster
+    const selectEventTeam = (team: EventTeam, side: 'a' | 'b') => {
+        if (side === 'a') {
+            setFormData(prev => ({
+                ...prev,
+                teamAName: team.name,
+                teamALogo: team.logo_url || '',
+            }));
+            setShowTeamADropdown(false);
+        } else {
+            setFormData(prev => ({
+                ...prev,
+                teamBName: team.name,
+                teamBLogo: team.logo_url || '',
+            }));
+            setShowTeamBDropdown(false);
+        }
+    };
+
+    // Filter teams for autocomplete
+    const getFilteredTeams = (query: string, excludeName?: string) => {
+        return eventTeams.filter(t => {
+            const matchesQuery = t.name.toLowerCase().includes(query.toLowerCase());
+            const notExcluded = !excludeName || t.name !== excludeName;
+            return matchesQuery && notExcluded;
+        });
     };
 
     if (createdMatch) {
@@ -441,16 +518,63 @@ function NewMatchContent() {
                     {/* Team A */}
                     <div className="space-y-4">
                         <h3 className="text-sm font-medium text-red-400 uppercase tracking-wider">Team 1</h3>
-                        <div>
+                        <div ref={teamARef} className="relative">
                             <label className="block text-sm text-white/60 mb-2">Team Name *</label>
                             <input
                                 type="text"
                                 required
                                 value={formData.teamAName}
-                                onChange={(e) => setFormData({ ...formData, teamAName: e.target.value })}
-                                placeholder="e.g. Fnatic"
+                                onChange={(e) => {
+                                    setFormData({ ...formData, teamAName: e.target.value });
+                                    if (formData.eventId && eventTeams.length > 0) {
+                                        setShowTeamADropdown(true);
+                                    }
+                                }}
+                                onFocus={() => {
+                                    if (formData.eventId && eventTeams.length > 0) {
+                                        setShowTeamADropdown(true);
+                                    }
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Escape') setShowTeamADropdown(false);
+                                }}
+                                placeholder={formData.eventId && eventTeams.length > 0 ? 'Search or type team name...' : 'e.g. Fnatic'}
                                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-red-500/50"
                             />
+                            {/* Event teams dropdown */}
+                            <AnimatePresence>
+                                {showTeamADropdown && formData.eventId && (() => {
+                                    const filtered = getFilteredTeams(formData.teamAName, formData.teamBName);
+                                    if (filtered.length === 0) return null;
+                                    return (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -4 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -4 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute z-50 top-full left-0 right-0 mt-1 bg-slate-800 border border-white/15 rounded-xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto"
+                                        >
+                                            {filtered.map((team) => (
+                                                <button
+                                                    key={team.id}
+                                                    type="button"
+                                                    onClick={() => selectEventTeam(team, 'a')}
+                                                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition-colors text-left"
+                                                >
+                                                    {team.logo_url ? (
+                                                        <img src={team.logo_url} alt={team.name} className="w-7 h-7 rounded object-cover bg-white/10 flex-shrink-0" />
+                                                    ) : (
+                                                        <div className="w-7 h-7 rounded bg-white/10 flex items-center justify-center text-white/30 text-xs flex-shrink-0">
+                                                            {team.name.charAt(0).toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                    <span className="text-sm text-white truncate">{team.name}</span>
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    );
+                                })()}
+                            </AnimatePresence>
                         </div>
                         <div>
                             <label className="block text-sm text-white/60 mb-2">Team Logo (Optional)</label>
@@ -481,16 +605,63 @@ function NewMatchContent() {
                     {/* Team B */}
                     <div className="space-y-4">
                         <h3 className="text-sm font-medium text-blue-400 uppercase tracking-wider">Team 2</h3>
-                        <div>
+                        <div ref={teamBRef} className="relative">
                             <label className="block text-sm text-white/60 mb-2">Team Name *</label>
                             <input
                                 type="text"
                                 required
                                 value={formData.teamBName}
-                                onChange={(e) => setFormData({ ...formData, teamBName: e.target.value })}
-                                placeholder="e.g. Sentinels"
+                                onChange={(e) => {
+                                    setFormData({ ...formData, teamBName: e.target.value });
+                                    if (formData.eventId && eventTeams.length > 0) {
+                                        setShowTeamBDropdown(true);
+                                    }
+                                }}
+                                onFocus={() => {
+                                    if (formData.eventId && eventTeams.length > 0) {
+                                        setShowTeamBDropdown(true);
+                                    }
+                                }}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Escape') setShowTeamBDropdown(false);
+                                }}
+                                placeholder={formData.eventId && eventTeams.length > 0 ? 'Search or type team name...' : 'e.g. Sentinels'}
                                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50"
                             />
+                            {/* Event teams dropdown */}
+                            <AnimatePresence>
+                                {showTeamBDropdown && formData.eventId && (() => {
+                                    const filtered = getFilteredTeams(formData.teamBName, formData.teamAName);
+                                    if (filtered.length === 0) return null;
+                                    return (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -4 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -4 }}
+                                            transition={{ duration: 0.15 }}
+                                            className="absolute z-50 top-full left-0 right-0 mt-1 bg-slate-800 border border-white/15 rounded-xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto"
+                                        >
+                                            {filtered.map((team) => (
+                                                <button
+                                                    key={team.id}
+                                                    type="button"
+                                                    onClick={() => selectEventTeam(team, 'b')}
+                                                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition-colors text-left"
+                                                >
+                                                    {team.logo_url ? (
+                                                        <img src={team.logo_url} alt={team.name} className="w-7 h-7 rounded object-cover bg-white/10 flex-shrink-0" />
+                                                    ) : (
+                                                        <div className="w-7 h-7 rounded bg-white/10 flex items-center justify-center text-white/30 text-xs flex-shrink-0">
+                                                            {team.name.charAt(0).toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                    <span className="text-sm text-white truncate">{team.name}</span>
+                                                </button>
+                                            ))}
+                                        </motion.div>
+                                    );
+                                })()}
+                            </AnimatePresence>
                         </div>
                         <div>
                             <label className="block text-sm text-white/60 mb-2">Team Logo (Optional)</label>
@@ -518,6 +689,13 @@ function NewMatchContent() {
                         </div>
                     </div>
                 </div>
+
+                {/* Event teams hint */}
+                {formData.eventId && eventTeams.length > 0 && (
+                    <p className="text-xs text-purple-400/70 -mt-3">
+                        {eventTeams.length} team{eventTeams.length !== 1 ? 's' : ''} saved in this event — start typing to search
+                    </p>
+                )}
 
                 {/* Match Settings */}
                 <div className="border-t border-white/10 pt-6 space-y-4">
