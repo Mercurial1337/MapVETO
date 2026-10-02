@@ -47,6 +47,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     const { banMap, pickMap, pickSide, coinToss, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
     const [isAdmin, setIsAdmin] = useState(false);
+    const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
 
     // Play notification sounds on state changes (turn changes, completion)
     useActionSound({
@@ -75,6 +76,11 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             return () => clearTimeout(timer);
         }
     }, [state?.is_complete]);
+
+    // Reset map selection when the veto step advances
+    useEffect(() => {
+        setSelectedMapId(null);
+    }, [state?.current_step]);
 
     // Load custom font if event has one
     useEffect(() => {
@@ -221,15 +227,22 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
         return states;
     }, [state, match, isMyTurn]);
 
-    // Handle map selection
-    const handleMapSelect = async (mapId: string) => {
+    // Handle map selection (first click = select, confirm button = execute)
+    const handleMapSelect = (mapId: string) => {
         if (!currentStepDef || isSubmitting) return;
+        setSelectedMapId(prev => prev === mapId ? null : mapId);
+    };
+
+    // Handle confirm action (execute the ban/pick)
+    const handleConfirm = async () => {
+        if (!selectedMapId || !currentStepDef || isSubmitting) return;
 
         if (currentStepDef.action === 'ban') {
-            await banMap(mapId);
+            await banMap(selectedMapId);
         } else if (currentStepDef.action === 'pick') {
-            await pickMap(mapId);
+            await pickMap(selectedMapId);
         }
+        setSelectedMapId(null);
     };
 
     // === Coin Toss Modal Visibility ===
@@ -418,7 +431,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             {/* Main Content - Map Gallery + Action Log */}
             <div className="flex-1 flex flex-col lg:flex-row px-2 md:px-4 py-4 md:py-6 gap-4">
                 {/* Map Gallery */}
-                <div className="flex-1 flex items-start lg:items-center justify-center">
+                <div className="flex-1 flex flex-col items-start lg:items-center justify-center gap-4">
                     <div className="flex flex-wrap gap-2 md:gap-3 justify-center max-w-5xl">
                         {mapsWithImages.map((map) => {
                             const mapState = mapStates[map.id] || { state: 'available' as MapCardState };
@@ -444,10 +457,39 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                                     canInteract={canInteract}
                                     onSelect={() => handleMapSelect(map.id)}
                                     action={currentStepDef?.action}
+                                    isSelected={selectedMapId === map.id}
                                 />
                             );
                         })}
                     </div>
+
+                    {/* Confirm Bar */}
+                    <AnimatePresence>
+                        {selectedMapId && currentStepDef && (currentStepDef.action === 'ban' || currentStepDef.action === 'pick') && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 20, scale: 0.95 }}
+                                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                                className="flex items-center gap-4 glass rounded-xl px-5 py-3"
+                            >
+                                <span className="text-white/80 text-sm font-medium">
+                                    {mapNames[selectedMapId] || 'Map'}
+                                </span>
+                                <button
+                                    onClick={handleConfirm}
+                                    disabled={isSubmitting}
+                                    className={`px-8 py-2.5 rounded-lg font-bold text-white text-sm uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                                        currentStepDef.action === 'ban'
+                                            ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-500/25'
+                                            : 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 shadow-lg shadow-green-500/25'
+                                    }`}
+                                >
+                                    {isSubmitting ? 'Confirming...' : 'Confirm'}
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 {/* Action Log Panel - Desktop */}

@@ -36,6 +36,7 @@ interface MapCardProps {
     onSelect?: () => void;
     mapNumber?: number;
     action?: string;
+    isSelected?: boolean;
 }
 
 function cn(...classes: (string | boolean | undefined)[]) {
@@ -53,6 +54,7 @@ export function MapCard({
     onSelect,
     mapNumber,
     action,
+    isSelected,
 }: MapCardProps) {
     // canInteract is already computed by the parent based on turn, map state, etc.
     // We just need to make sure the map is not banned or already picked
@@ -74,7 +76,8 @@ export function MapCard({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{
                 opacity: state === 'banned' ? 0.4 : 1,
-                scale: 1,
+                scale: isSelected ? 1.05 : 1,
+                y: isSelected ? -8 : 0,
                 filter: state === 'banned' ? 'grayscale(100%)' : 'none',
             }}
             whileHover={isInteractive ? { scale: 1.05, y: -8 } : {}}
@@ -111,6 +114,20 @@ export function MapCard({
                     className="absolute inset-0 rounded-2xl"
                     style={{
                         border: `4px solid ${teamColor}`,
+                    }}
+                />
+            )}
+
+            {/* Selected Highlight Border */}
+            {isSelected && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0.7, 1, 0.7] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+                    className="absolute inset-0 rounded-xl pointer-events-none z-10"
+                    style={{
+                        border: `3px solid ${action === 'ban' ? '#ef4444' : action === 'pick' ? '#22c55e' : '#ffffff'}`,
+                        boxShadow: `0 0 20px ${action === 'ban' ? 'rgba(239,68,68,0.4)' : action === 'pick' ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.3)'}`,
                     }}
                 />
             )}
@@ -201,7 +218,7 @@ export function MapCard({
             )}
 
             {/* Hover Overlay for Interactive Cards */}
-            {isInteractive && (
+            {isInteractive && !isSelected && (
                 <motion.div
                     initial={{ opacity: 0 }}
                     whileHover={{ opacity: 1 }}
@@ -216,6 +233,29 @@ export function MapCard({
                         )}
                     >
                         {hoverText}
+                    </motion.div>
+                </motion.div>
+            )}
+
+            {/* Selected Checkmark Overlay */}
+            {isSelected && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none"
+                >
+                    <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                        className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center",
+                            action === 'ban' ? 'bg-red-500' : action === 'pick' ? 'bg-green-500' : 'bg-white/30'
+                        )}
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
                     </motion.div>
                 </motion.div>
             )}
