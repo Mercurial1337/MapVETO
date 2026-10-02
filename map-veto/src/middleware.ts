@@ -30,8 +30,11 @@ export async function middleware(request: NextRequest) {
     // --- SUBDOMAIN: mapveto.emeaclash.com ---
     // Serves the existing map veto app as-is
     if (subdomain === 'mapveto') {
-        // Pass through to existing Supabase session middleware
-        return await updateSession(request);
+        // Limit session refresh to admin routes to save DB calls
+        if (pathname.startsWith('/admin') || pathname.startsWith('/auth')) {
+            return await updateSession(request);
+        }
+        return NextResponse.next();
     }
 
     // --- ROOT DOMAIN: emeaclash.com (or www.emeaclash.com) ---
