@@ -118,6 +118,7 @@ export async function POST(request: NextRequest) {
             p_action: action,
             p_map_id: map_id,
             p_side_choice: side_choice,
+            p_is_auto: true,
         });
 
         if (rpcError) {

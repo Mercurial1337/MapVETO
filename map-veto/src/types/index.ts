@@ -120,6 +120,7 @@ export interface Match {
 export interface BannedMap {
   map_id: string;
   banned_by: VetoActor;
+  is_auto?: boolean;
 }
 
 export interface PickedMap {
@@ -128,6 +129,8 @@ export interface PickedMap {
   side: SideChoice | null;
   side_picked_by?: VetoActor;
   map_number: number;
+  is_auto?: boolean;
+  side_is_auto?: boolean;
 }
 
 export interface MatchState {

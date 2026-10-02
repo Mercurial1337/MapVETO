@@ -35,17 +35,9 @@ export function SideSelectionModal({
             {isOpen && (
                 <motion.div
                     initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center"
+                    className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
                 >
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                    />
+                    {/* Removed backdrop so the timer and map pool are fully visible */}
 
                     {/* Modal Content */}
                     <motion.div
@@ -53,7 +45,7 @@ export function SideSelectionModal({
                         animate={{ scale: 1, opacity: 1, y: 0 }}
                         exit={{ scale: 0.8, opacity: 0, y: 50 }}
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className="relative z-10 glass rounded-3xl p-8 max-w-md mx-4 text-center"
+                        className="relative z-10 glass rounded-3xl p-8 max-w-md mx-4 text-center pointer-events-auto"
                     >
                         <h2 className="text-2xl font-bold text-white mb-2">Choose Your Side</h2>
                         <p className="text-white/60 mb-2">

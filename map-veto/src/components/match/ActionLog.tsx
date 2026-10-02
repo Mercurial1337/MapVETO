@@ -59,6 +59,7 @@ export function ActionLog({
         side?: string;
         mapNumber?: number;
         completed: boolean;
+        isAuto?: boolean;
     };
 
     const entries: LogEntry[] = [];
@@ -79,6 +80,7 @@ export function ActionLog({
                     actor: ban.banned_by,
                     mapName: mapNames[ban.map_id] || 'Unknown',
                     completed: true,
+                    isAuto: ban.is_auto,
                 });
                 banIndex++;
             }
@@ -91,6 +93,7 @@ export function ActionLog({
                     mapName: mapNames[pick.map_id] || 'Unknown',
                     mapNumber: pick.map_number,
                     completed: true,
+                    isAuto: pick.is_auto,
                 });
                 pickIndex++;
             }
@@ -104,6 +107,7 @@ export function ActionLog({
                     side: pick.side,
                     mapNumber: pick.map_number,
                     completed: true,
+                    isAuto: pick.side_is_auto,
                 });
             }
         } else if (step.action === 'decider') {
@@ -126,14 +130,15 @@ export function ActionLog({
 
         entries.forEach(entry => {
             const teamName = getTeamName(entry.actor);
+            const autoText = entry.isAuto ? ' [Auto-assigned]' : '';
 
             if (entry.type === 'ban') {
-                lines.push(`${teamName} bans ${entry.mapName}`);
+                lines.push(`${teamName} bans ${entry.mapName}${autoText}`);
             } else if (entry.type === 'pick') {
-                lines.push(`${teamName} picks ${entry.mapName} (Map ${entry.mapNumber})`);
+                lines.push(`${teamName} picks ${entry.mapName} (Map ${entry.mapNumber})${autoText}`);
             } else if (entry.type === 'side') {
                 const sideText = entry.side === 'attack' ? 'Attack' : 'Defense';
-                lines.push(`${teamName} picks ${sideText} side for ${entry.mapName} (Map ${entry.mapNumber})`);
+                lines.push(`${teamName} picks ${sideText} side for ${entry.mapName} (Map ${entry.mapNumber})${autoText}`);
             } else if (entry.type === 'decider') {
                 lines.push(`${entry.mapName} is the decider (Map ${entry.mapNumber})`);
             }
@@ -230,6 +235,11 @@ export function ActionLog({
                             {entry.type === 'decider' && (
                                 <span className="text-white/40 text-xs">
                                     {' '}is decider
+                                </span>
+                            )}
+                            {entry.isAuto && (
+                                <span className="text-yellow-400/80 text-xs font-semibold uppercase tracking-wider ml-1">
+                                    (Random)
                                 </span>
                             )}
                         </div>
