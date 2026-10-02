@@ -24,7 +24,7 @@ export default function LoginPage() {
       });
 
       if (authError) {
-        setError(authError.message);
+        setError('Invalid email or password. Please try again.');
         setIsLoading(false);
         return;
       }
