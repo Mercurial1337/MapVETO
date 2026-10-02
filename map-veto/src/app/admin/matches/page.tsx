@@ -74,71 +74,60 @@ export default function MatchesPage() {
         }
     }, [supabase]);
 
-    const fetchMatches = useCallback(async (userId: string) => {
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const pageSize = 20;
+
+    const fetchMatches = useCallback(async (userId: string, currentPage = page) => {
         setIsLoading(true);
 
-        // 1. Fetch matches created by the user
-        let ownedQuery = supabase
-            .from('matches')
-            .select('*, events(name)')
-            .eq('created_by', userId)
-            .order('created_at', { ascending: sortOrder === 'oldest' });
+        try {
+            // 1. Fetch event IDs where user is an admin or owner
+            const { data: adminEntries } = await supabase
+                .from('event_admins')
+                .select('event_id')
+                .eq('user_id', userId);
+            
+            const { data: ownedEvents } = await supabase
+                .from('events')
+                .select('id')
+                .eq('created_by', userId);
 
-        if (eventFilter) {
-            ownedQuery = ownedQuery.eq('event_id', eventFilter);
-        }
+            const adminEventIds = (adminEntries || []).map(e => e.event_id);
+            const ownedEventIds = (ownedEvents || []).map(e => e.id);
+            const allAccessEventIds = [...new Set([...adminEventIds, ...ownedEventIds])];
 
-        const { data: ownedMatches, error: ownedError } = await ownedQuery;
-
-        // 2. Fetch event IDs where user is an admin
-        const { data: adminEntries } = await supabase
-            .from('event_admins')
-            .select('event_id')
-            .eq('user_id', userId);
-
-        const adminEventIds = (adminEntries || []).map(e => e.event_id);
-
-        // 3. Fetch event IDs where user is the owner
-        const { data: ownedEvents } = await supabase
-            .from('events')
-            .select('id')
-            .eq('created_by', userId);
-
-        const ownedEventIds = (ownedEvents || []).map(e => e.id);
-
-        // 4. Combine all event IDs where user has access (owner or admin)
-        const allAccessEventIds = [...new Set([...adminEventIds, ...ownedEventIds])];
-
-        let sharedMatches: typeof ownedMatches = [];
-        if (allAccessEventIds.length > 0) {
-            let sharedQuery = supabase
-                .from('matches')
-                .select('*, events(name)')
-                .in('event_id', allAccessEventIds)
-                .neq('created_by', userId) // Avoid duplicates with ownedMatches
-                .order('created_at', { ascending: sortOrder === 'oldest' });
-
-            if (eventFilter) {
-                sharedQuery = sharedQuery.eq('event_id', eventFilter);
+            // 2. Build single query with OR condition
+            let orQuery = `created_by.eq.${userId}`;
+            if (allAccessEventIds.length > 0) {
+                orQuery += `,event_id.in.(${allAccessEventIds.join(',')})`;
             }
 
-            const { data } = await sharedQuery;
-            sharedMatches = data || [];
+            let query = supabase
+                .from('matches')
+                .select('*, events(name)', { count: 'exact' })
+                .or(orQuery)
+                .order('created_at', { ascending: sortOrder === 'oldest' })
+                .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
+
+            if (eventFilter) {
+                query = query.eq('event_id', eventFilter);
+            }
+
+            const { data, count, error } = await query;
+
+            if (!error && data) {
+                setMatches(data as Match[]);
+                if (count !== null) {
+                    setTotalPages(Math.ceil(count / pageSize) || 1);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching matches:', error);
         }
 
-        if (!ownedError) {
-            // Merge and deduplicate
-            const allMatches = [...(ownedMatches || []), ...(sharedMatches || [])];
-            // Sort merged results
-            allMatches.sort((a, b) => {
-                const dateA = new Date(a.created_at).getTime();
-                const dateB = new Date(b.created_at).getTime();
-                return sortOrder === 'oldest' ? dateA - dateB : dateB - dateA;
-            });
-            setMatches(allMatches);
-        }
         setIsLoading(false);
-    }, [supabase, eventFilter, sortOrder]);
+    }, [supabase, eventFilter, sortOrder, page]);
 
     useEffect(() => {
         let channel: ReturnType<typeof supabase.channel> | null = null;
@@ -521,6 +510,39 @@ export default function MatchesPage() {
                     </div>
                 )}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+                <div className="flex items-center justify-between glass rounded-xl p-4">
+                    <span className="text-sm text-white/60">
+                        Page {page} of {totalPages}
+                    </span>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => {
+                                const newPage = Math.max(1, page - 1);
+                                setPage(newPage);
+                                if (user) fetchMatches(user.id, newPage);
+                            }}
+                            disabled={page === 1 || isLoading}
+                            className="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white text-sm transition-colors"
+                        >
+                            Previous
+                        </button>
+                        <button
+                            onClick={() => {
+                                const newPage = Math.min(totalPages, page + 1);
+                                setPage(newPage);
+                                if (user) fetchMatches(user.id, newPage);
+                            }}
+                            disabled={page === totalPages || isLoading}
+                            className="px-4 py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-white text-sm transition-colors"
+                        >
+                            Next
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Export Modal */}
             <ExportModal
