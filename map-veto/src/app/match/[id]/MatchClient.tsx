@@ -13,7 +13,7 @@ import { ActionLog } from '@/components/match/ActionLog';
 import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus } from '@/lib/realtime';
 import { createClient } from '@/lib/supabase/client';
 import { useActionSound } from '@/hooks';
-import type { MapCardState, VetoStep, VetoActor, Match, VetoTemplate, GameMap } from '@/types';
+import type { MapCardState, VetoStep, VetoActor, Match, MatchState, VetoTemplate, GameMap } from '@/types';
 
 // Map name to local image fallback
 const MAP_IMAGE_FALLBACKS: Record<string, string> = {
