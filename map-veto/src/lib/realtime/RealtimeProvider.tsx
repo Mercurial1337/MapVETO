@@ -57,22 +57,29 @@ const RealtimeContext = createContext<RealtimeContextValue | null>(null);
 interface RealtimeProviderProps {
     matchId: string;
     token: string;
+    initialData: {
+        match: Match | null;
+        state: MatchState | null;
+        maps: GameMap[];
+        eventBranding: EventBranding | null;
+        userRole: UserRole;
+    };
     children: ReactNode;
 }
 
-export function RealtimeProvider({ matchId, token, children }: RealtimeProviderProps) {
-    const [match, setMatch] = useState<Match | null>(null);
-    const [state, setState] = useState<MatchState | null>(null);
-    const [maps, setMaps] = useState<GameMap[]>([]);
-    const [eventBranding, setEventBranding] = useState<EventBranding | null>(null);
-    const [userRole, setUserRole] = useState<UserRole>(null);
+export function RealtimeProvider({ matchId, token, initialData, children }: RealtimeProviderProps) {
+    const [match, setMatch] = useState<Match | null>(initialData.match);
+    const [state, setState] = useState<MatchState | null>(initialData.state);
+    const [maps, setMaps] = useState<GameMap[]>(initialData.maps);
+    const [eventBranding, setEventBranding] = useState<EventBranding | null>(initialData.eventBranding);
+    const [userRole, setUserRole] = useState<UserRole>(initialData.userRole);
     const [isConnected, setIsConnected] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const supabase = createClient();
 
-    // Fetch initial data and user role
+    // Fetch data manually (for manual refresh)
     const fetchData = useCallback(async () => {
         try {
             // Fetch match and state with event if exists
@@ -96,7 +103,7 @@ export function RealtimeProvider({ matchId, token, children }: RealtimeProviderP
 
             // Set event branding if exists
             if (matchData.events) {
-                setEventBranding(matchData.events);
+                setEventBranding(matchData.events as any);
             } else {
                 setEventBranding(null);
             }
@@ -140,8 +147,6 @@ export function RealtimeProvider({ matchId, token, children }: RealtimeProviderP
         let channel: RealtimeChannel | null = null;
 
         const setupSubscription = async () => {
-            await fetchData();
-
             // Subscribe to match_state changes
             channel = supabase
                 .channel(`match:${matchId}`)
