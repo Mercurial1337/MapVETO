@@ -22,8 +22,12 @@ export function SideSelectionModal({
     const [selectedSide, setSelectedSide] = useState<SideChoice | null>(null);
 
     const handleSelect = (side: SideChoice) => {
-        setSelectedSide(side);
-        onSelect(side);
+        setSelectedSide(prev => prev === side ? null : side);
+    };
+
+    const handleConfirm = () => {
+        if (!selectedSide || isSubmitting) return;
+        onSelect(selectedSide);
     };
 
     return (
@@ -64,7 +68,7 @@ export function SideSelectionModal({
                                 onClick={() => handleSelect('attack')}
                                 disabled={isSubmitting}
                                 className={`flex-1 p-6 rounded-2xl border-2 transition-all ${selectedSide === 'attack'
-                                        ? 'bg-red-500/30 border-red-400'
+                                        ? 'bg-red-500/30 border-red-400 shadow-lg shadow-red-500/20'
                                         : 'bg-red-500/10 border-red-500/30 hover:border-red-400'
                                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
@@ -79,7 +83,7 @@ export function SideSelectionModal({
                                 onClick={() => handleSelect('defense')}
                                 disabled={isSubmitting}
                                 className={`flex-1 p-6 rounded-2xl border-2 transition-all ${selectedSide === 'defense'
-                                        ? 'bg-blue-500/30 border-blue-400'
+                                        ? 'bg-blue-500/30 border-blue-400 shadow-lg shadow-blue-500/20'
                                         : 'bg-blue-500/10 border-blue-500/30 hover:border-blue-400'
                                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
@@ -88,6 +92,33 @@ export function SideSelectionModal({
                                 <div className="text-xs text-white/50 mt-1">Start on defense side</div>
                             </motion.button>
                         </div>
+
+                        {/* Confirm Button */}
+                        <AnimatePresence>
+                            {selectedSide && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 10 }}
+                                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                                    className="mt-6"
+                                >
+                                    <motion.button
+                                        whileHover={{ scale: 1.03 }}
+                                        whileTap={{ scale: 0.97 }}
+                                        onClick={handleConfirm}
+                                        disabled={isSubmitting}
+                                        className={`w-full py-3 rounded-xl font-bold text-white text-sm uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                                            selectedSide === 'attack'
+                                                ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-500/25'
+                                                : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-lg shadow-blue-500/25'
+                                        }`}
+                                    >
+                                        {isSubmitting ? 'Confirming...' : 'Confirm'}
+                                    </motion.button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </motion.div>
                 </motion.div>
             )}
