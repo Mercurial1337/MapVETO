@@ -418,17 +418,16 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                         teamBName={displayedTeams.teamB}
                         isMyTurn={state ? isMyTurn(state.current_turn) : false}
                     />
-                    {/* Observer-only ascending timer (for referees) */}
-                    {userRole === 'observer' && (
-                        <TurnTimer
-                            currentStep={currentStepDef}
-                            stateUpdatedAt={state?.updated_at ?? ''}
-                            teamAName={displayedTeams.teamA}
-                            teamBName={displayedTeams.teamB}
-                            isInProgress={match.status === 'in_progress'}
-                            isComplete={state?.is_complete ?? false}
-                        />
-                    )}
+                    {/* Turn Timer for all users */}
+                    <TurnTimer
+                        currentStep={currentStepDef}
+                        stateUpdatedAt={state?.updated_at ?? ''}
+                        teamAName={displayedTeams.teamA}
+                        teamBName={displayedTeams.teamB}
+                        isInProgress={match.status === 'in_progress'}
+                        isComplete={state?.is_complete ?? false}
+                        matchId={matchId}
+                    />
                 </div>
             )}
 

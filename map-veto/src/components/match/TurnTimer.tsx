@@ -13,6 +13,8 @@ interface TurnTimerProps {
     teamAName: string;
     /** Displayed team B name */
     teamBName: string;
+    /** The match ID to trigger auto-action */
+    matchId?: string;
     /** Whether the match is in progress */
     isInProgress: boolean;
     /** Whether the veto is complete */
@@ -60,28 +62,51 @@ export function TurnTimer({
     teamBName,
     isInProgress,
     isComplete,
+    matchId,
 }: TurnTimerProps) {
-    const [elapsed, setElapsed] = useState(0);
+    const [timeLeft, setTimeLeft] = useState(60);
+    const [isTriggering, setIsTriggering] = useState(false);
     const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const triggeredRef = useRef(false);
 
-    // Calculate elapsed time from the server timestamp, and tick every second
+    // Calculate time left from the server timestamp, and tick every second
     useEffect(() => {
         if (!isInProgress || isComplete || !currentStep || !stateUpdatedAt) {
             if (intervalRef.current) {
                 clearInterval(intervalRef.current);
                 intervalRef.current = null;
             }
-            setElapsed(0);
+            setTimeLeft(60);
+            setIsTriggering(false);
+            triggeredRef.current = false;
             return;
         }
 
-        // Calculate initial elapsed from the server timestamp
+        // Reset trigger state if step changes
+        setIsTriggering(false);
+        triggeredRef.current = false;
+
         const updateTime = new Date(stateUpdatedAt).getTime();
 
         const tick = () => {
             const now = Date.now();
-            const diffSeconds = Math.max(0, Math.floor((now - updateTime) / 1000));
-            setElapsed(diffSeconds);
+            const elapsed = Math.floor((now - updateTime) / 1000);
+            const remaining = Math.max(0, 60 - elapsed);
+            setTimeLeft(remaining);
+
+            if (remaining === 0 && !triggeredRef.current && matchId) {
+                triggeredRef.current = true;
+                setIsTriggering(true);
+                // Trigger auto-action
+                fetch('/api/veto/auto-action', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ match_id: matchId }),
+                }).catch(err => {
+                    console.error('Failed to trigger auto action', err);
+                    triggeredRef.current = false;
+                });
+            }
         };
 
         // Set immediately, then tick every second
@@ -94,7 +119,7 @@ export function TurnTimer({
                 intervalRef.current = null;
             }
         };
-    }, [isInProgress, isComplete, currentStep, stateUpdatedAt]);
+    }, [isInProgress, isComplete, currentStep, stateUpdatedAt, matchId]);
 
     if (!currentStep || !isInProgress || isComplete) {
         return null;
@@ -112,8 +137,8 @@ export function TurnTimer({
     const teamColor = getTeamColor(currentStep.actor);
 
     // Determine urgency level for visual feedback
-    const isLong = elapsed >= 60;   // 1+ minute
-    const isVeryLong = elapsed >= 120; // 2+ minutes
+    const isUrgent = timeLeft <= 10;
+    const isCritical = timeLeft <= 5;
 
     return (
         <AnimatePresence>
@@ -125,7 +150,7 @@ export function TurnTimer({
                 style={{
                     background: 'rgba(0, 0, 0, 0.6)',
                     backdropFilter: 'blur(12px)',
-                    border: `1px solid ${isVeryLong ? 'rgba(239, 68, 68, 0.4)' : isLong ? 'rgba(234, 179, 8, 0.3)' : 'rgba(255, 255, 255, 0.1)'}`,
+                    border: `1px solid ${isCritical ? 'rgba(239, 68, 68, 0.4)' : isUrgent ? 'rgba(234, 179, 8, 0.3)' : 'rgba(255, 255, 255, 0.1)'}`,
                 }}
             >
                 {/* Pulsing dot */}
@@ -137,8 +162,8 @@ export function TurnTimer({
                     transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
                     className="w-2 h-2 rounded-full flex-shrink-0"
                     style={{
-                        backgroundColor: isVeryLong ? '#ef4444' : isLong ? '#eab308' : '#22c55e',
-                        boxShadow: `0 0 8px ${isVeryLong ? 'rgba(239, 68, 68, 0.5)' : isLong ? 'rgba(234, 179, 8, 0.5)' : 'rgba(34, 197, 94, 0.5)'}`,
+                        backgroundColor: isCritical ? '#ef4444' : isUrgent ? '#eab308' : '#22c55e',
+                        boxShadow: `0 0 8px ${isCritical ? 'rgba(239, 68, 68, 0.5)' : isUrgent ? 'rgba(234, 179, 8, 0.5)' : 'rgba(34, 197, 94, 0.5)'}`,
                     }}
                 />
 
@@ -163,12 +188,12 @@ export function TurnTimer({
                 <motion.div
                     className="font-mono text-lg font-bold tabular-nums ml-2"
                     style={{
-                        color: isVeryLong ? '#ef4444' : isLong ? '#eab308' : 'rgba(255, 255, 255, 0.9)',
+                        color: isCritical ? '#ef4444' : isUrgent ? '#eab308' : 'rgba(255, 255, 255, 0.9)',
                     }}
-                    animate={isVeryLong ? { scale: [1, 1.05, 1] } : {}}
-                    transition={{ duration: 0.8, repeat: Infinity }}
+                    animate={isCritical ? { scale: [1, 1.1, 1] } : {}}
+                    transition={{ duration: 0.5, repeat: Infinity }}
                 >
-                    {formatTime(elapsed)}
+                    {isTriggering ? '0:00' : formatTime(timeLeft)}
                 </motion.div>
 
                 {/* Ref label */}
