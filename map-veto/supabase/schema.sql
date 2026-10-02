@@ -226,8 +226,8 @@ CREATE POLICY "Matches are publicly readable" ON matches
 CREATE POLICY "Match state is publicly readable" ON match_state
     FOR SELECT USING (true);
 
-CREATE POLICY "Match links readable for validation" ON match_links
-    FOR SELECT USING (true);
+-- Removed "Match links readable for validation" for security.
+-- Do not allow public access to match_links, as it exposes team tokens.
 
 CREATE POLICY "Match logs are publicly readable" ON match_logs
     FOR SELECT USING (true);

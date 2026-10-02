@@ -122,18 +122,6 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
                 }
             }
 
-            // Fetch user role from token
-            const { data: linkData } = await supabase
-                .from('match_links')
-                .select('link_type')
-                .eq('token', token)
-                .eq('match_id', matchId)
-                .single();
-
-            if (linkData) {
-                setUserRole(linkData.link_type as UserRole);
-            }
-
             setError(null);
         } catch (err) {
             setError('Failed to fetch match data');
