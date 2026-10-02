@@ -48,6 +48,9 @@ interface RealtimeContextValue {
     // Coin toss
     performCoinToss: (forcedWinner?: VetoActor) => Promise<VetoActor | null>;
 
+    // Ready Check
+    performReady: () => Promise<boolean>;
+
     // Refresh
     refresh: () => Promise<void>;
 }
@@ -238,6 +241,36 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
         }
     }, [matchId]);
 
+    // Perform ready check
+    const performReady = useCallback(async (): Promise<boolean> => {
+        try {
+            const response = await fetch('/api/veto/ready', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    match_id: matchId,
+                    token,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setError(data.error || 'Check-in failed');
+                return false;
+            }
+
+            if (data.new_state) {
+                setState(data.new_state);
+            }
+
+            return true;
+        } catch (err) {
+            setError('Network error');
+            return false;
+        }
+    }, [matchId, token]);
+
     // Manual refresh
     const refresh = useCallback(async () => {
         setIsLoading(true);
@@ -255,6 +288,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
         error,
         performAction,
         performCoinToss,
+        performReady,
         refresh,
     };
 
@@ -320,7 +354,14 @@ export function useVetoActions() {
         return result;
     }, [performCoinToss]);
 
-    return { banMap, pickMap, pickSide, coinToss, isSubmitting, error };
+    const readyUp = useCallback(async () => {
+        setIsSubmitting(true);
+        const result = await performReady();
+        setIsSubmitting(false);
+        return result;
+    }, [performReady]);
+
+    return { banMap, pickMap, pickSide, coinToss, readyUp, isSubmitting, error };
 }
 
 export function useConnectionStatus() {

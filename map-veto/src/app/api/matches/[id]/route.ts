@@ -134,9 +134,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         if (action === 'start') {
-            if (match.status !== 'pending' && match.status !== 'coin_toss') {
+            if (match.status !== 'pending' && match.status !== 'ready_check' && match.status !== 'coin_toss') {
                 return NextResponse.json(
-                    { error: 'Can only start pending or coin_toss matches' },
+                    { error: 'Can only start pending, ready_check or coin_toss matches' },
                     { status: 400 }
                 );
             }
@@ -177,13 +177,17 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
                     results: [],
                     is_complete: false,
                     updated_at: new Date().toISOString(),
+                    team_a_ready: false,
+                    team_b_ready: false,
+                    team_a_ready_at: null,
+                    team_b_ready_at: null,
                 })
                 .eq('match_id', matchId);
 
             await supabase
                 .from('matches')
                 .update({
-                    status: 'coin_toss',
+                    status: 'ready_check',
                     coin_toss_winner: null,
                     coin_toss_forced: false,
                     started_at: null,

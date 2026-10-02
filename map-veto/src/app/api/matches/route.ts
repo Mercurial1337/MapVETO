@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
                 format: data.format,
                 map_pool_type: data.map_pool_type,
                 custom_maps: data.custom_maps || null,
-                status: 'coin_toss',
+                status: 'ready_check',
                 scheduled_at: data.scheduled_at || null,
                 created_by: user?.id || null,
                 custom_veto_sequence: data.custom_veto_sequence || null,
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
                 team_a_name: data.team_a_name,
                 team_b_name: data.team_b_name,
                 format: data.format,
-                status: 'coin_toss',
+                status: 'ready_check',
             },
             links: magicLinks,
         });

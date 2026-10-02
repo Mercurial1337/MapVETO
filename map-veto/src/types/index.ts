@@ -93,7 +93,7 @@ export interface Tournament {
   created_at: string;
 }
 
-export type MatchStatus = 'pending' | 'coin_toss' | 'side_selection' | 'in_progress' | 'completed' | 'cancelled';
+export type MatchStatus = 'ready_check' | 'pending' | 'coin_toss' | 'side_selection' | 'in_progress' | 'completed' | 'cancelled';
 
 export interface Match {
   id: string;
@@ -141,6 +141,10 @@ export interface MatchState {
   results: PickedMap[]; // Final ordered list
   is_complete: boolean;
   updated_at: string;
+  team_a_ready: boolean;
+  team_b_ready: boolean;
+  team_a_ready_at?: string;
+  team_b_ready_at?: string;
   // Maps real team (link_type) to template role
   // e.g., { team_a: 'team_b', team_b: 'team_a' } means token team_a plays as template team_b
   actor_mapping?: {
@@ -236,6 +240,8 @@ export interface MatchStatePayload {
   picked_maps: PickedMap[];
   is_complete: boolean;
   updated_at: string;
+  team_a_ready: boolean;
+  team_b_ready: boolean;
 }
 
 // ============================================

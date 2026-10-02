@@ -9,6 +9,7 @@ import { TurnTimer } from '@/components/match/TurnTimer';
 import { CoinTossModal } from '@/components/match/CoinTossModal';
 import { PositionSelectionModal } from '@/components/match/PositionSelectionModal';
 import { SideSelectionModal } from '@/components/match/SideSelectionModal';
+import { ReadyCheckModal } from '@/components/match/ReadyCheckModal';
 import { ActionLog } from '@/components/match/ActionLog';
 import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus } from '@/lib/realtime';
 import { createClient } from '@/lib/supabase/client';
@@ -44,7 +45,7 @@ interface MatchVetoInterfaceProps {
 
 function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     const { match, state, maps, eventBranding, isLoading, error, userRole } = useMatchData();
-    const { banMap, pickMap, pickSide, coinToss, isSubmitting } = useVetoActions();
+    const { banMap, pickMap, pickSide, coinToss, readyUp, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
     const [isAdmin, setIsAdmin] = useState(false);
     const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
@@ -263,6 +264,9 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     }, []);
 
     const showCoinToss = coinTossModalOpen;
+
+    // Ready Check Modal
+    const showReadyCheck = match?.status === 'ready_check';
 
     // Position selection modal: only show after coin toss modal has closed
     const showPositionSelection = match?.status === 'side_selection' && !coinTossModalOpen;
@@ -526,6 +530,17 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 teamName={getCurrentTurnTeamName()}
                 onSelect={pickSide}
                 isSubmitting={isSubmitting}
+            />
+
+            {/* Ready Check Modal */}
+            <ReadyCheckModal
+                isOpen={showReadyCheck}
+                teamAName={match.team_a_name}
+                teamBName={match.team_b_name}
+                teamAReady={state?.team_a_ready || false}
+                teamBReady={state?.team_b_ready || false}
+                userRole={userRole}
+                onReady={readyUp}
             />
 
             {/* Coin Toss Modal */}
