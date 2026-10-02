@@ -97,14 +97,24 @@ export function TurnTimer({
             if (remaining === 0 && !triggeredRef.current && matchId) {
                 triggeredRef.current = true;
                 setIsTriggering(true);
-                // Trigger auto-action
                 fetch('/api/veto/auto-action', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ match_id: matchId }),
+                }).then(async (res) => {
+                    if (!res.ok) {
+                        const data = await res.json().catch(() => ({}));
+                        console.error('Auto action failed:', data);
+                        // Reset trigger to try again on the next tick if it was a timing issue
+                        setTimeout(() => {
+                            triggeredRef.current = false;
+                            setIsTriggering(false);
+                        }, 1000);
+                    }
                 }).catch(err => {
                     console.error('Failed to trigger auto action', err);
                     triggeredRef.current = false;
+                    setIsTriggering(false);
                 });
             }
         };
