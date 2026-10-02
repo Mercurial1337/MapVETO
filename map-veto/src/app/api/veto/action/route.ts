@@ -68,6 +68,24 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Broadcast the new state to all clients
+        const channel = supabase.channel(`match:${match_id}`);
+        await channel.send({
+            type: 'broadcast',
+            event: 'match_state_update',
+            payload: newState
+        });
+
+        if (newState.is_complete) {
+            await channel.send({
+                type: 'broadcast',
+                event: 'match_update',
+                payload: { status: 'completed' }
+            });
+        }
+        
+        await supabase.removeChannel(channel);
+
         return NextResponse.json({
             success: true,
             new_state: newState,

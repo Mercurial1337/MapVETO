@@ -114,6 +114,23 @@ export async function POST(request: NextRequest) {
                 actor: winner,
             });
 
+            // Get updated match state to broadcast
+            const { data: updatedState } = await supabase.from('match_state').select('*').eq('match_id', match_id).single();
+
+            // Broadcast the new match and state
+            const channel = supabase.channel(`match:${match_id}`);
+            await channel.send({
+                type: 'broadcast',
+                event: 'match_update',
+                payload: { coin_toss_winner: winner, coin_toss_forced: true, status: 'in_progress' }
+            });
+            await channel.send({
+                type: 'broadcast',
+                event: 'match_state_update',
+                payload: updatedState
+            });
+            await supabase.removeChannel(channel);
+
             return NextResponse.json({
                 success: true,
                 winner,
@@ -145,6 +162,15 @@ export async function POST(request: NextRequest) {
             action_type: 'coin_toss',
             actor: winner,
         });
+
+        // Broadcast the new match status
+        const channel = supabase.channel(`match:${match_id}`);
+        await channel.send({
+            type: 'broadcast',
+            event: 'match_update',
+            payload: { coin_toss_winner: winner, coin_toss_forced: !!forced_winner, status: 'side_selection' }
+        });
+        await supabase.removeChannel(channel);
 
         return NextResponse.json({
             success: true,

@@ -147,33 +147,25 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
         let channel: RealtimeChannel | null = null;
 
         const setupSubscription = async () => {
-            // Subscribe to match_state changes
+            // Subscribe to match_state changes and match updates via Broadcast
             channel = supabase
                 .channel(`match:${matchId}`)
                 .on(
-                    'postgres_changes',
-                    {
-                        event: '*',
-                        schema: 'public',
-                        table: 'match_state',
-                        filter: `match_id=eq.${matchId}`,
-                    },
-                    (payload: RealtimePostgresChangesPayload<MatchState>) => {
-                        if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
-                            setState(payload.new as MatchState);
+                    'broadcast',
+                    { event: 'match_state_update' },
+                    (payload) => {
+                        if (payload.payload) {
+                            setState(payload.payload as MatchState);
                         }
                     }
                 )
                 .on(
-                    'postgres_changes',
-                    {
-                        event: 'UPDATE',
-                        schema: 'public',
-                        table: 'matches',
-                        filter: `id=eq.${matchId}`,
-                    },
-                    (payload: RealtimePostgresChangesPayload<Match>) => {
-                        setMatch((prev) => (prev ? { ...prev, ...payload.new as Partial<Match> } : null));
+                    'broadcast',
+                    { event: 'match_update' },
+                    (payload) => {
+                        if (payload.payload) {
+                            setMatch((prev) => (prev ? { ...prev, ...(payload.payload as Partial<Match>) } : null));
+                        }
                     }
                 )
                 .subscribe((status: string) => {

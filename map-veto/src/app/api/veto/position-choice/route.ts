@@ -137,6 +137,23 @@ export async function POST(request: NextRequest) {
             metadata: { pick_first, first_picker: firstPicker },
         });
 
+        // Get updated match state to broadcast
+        const { data: updatedState } = await supabase.from('match_state').select('*').eq('match_id', match_id).single();
+
+        // Broadcast the new match status and state
+        const channel = supabase.channel(`match:${match_id}`);
+        await channel.send({
+            type: 'broadcast',
+            event: 'match_update',
+            payload: { status: 'in_progress', started_at: new Date().toISOString() }
+        });
+        await channel.send({
+            type: 'broadcast',
+            event: 'match_state_update',
+            payload: updatedState
+        });
+        await supabase.removeChannel(channel);
+
         return NextResponse.json({
             success: true,
             first_picker: firstPicker,
