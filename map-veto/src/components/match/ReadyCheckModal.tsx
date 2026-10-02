@@ -11,7 +11,7 @@ interface ReadyCheckModalProps {
     teamAReady: boolean;
     teamBReady: boolean;
     userRole?: VetoActor | 'observer' | null;
-    onReady: () => Promise<void>;
+    onReady: () => Promise<boolean | void>;
 }
 
 function cn(...classes: (string | boolean | undefined)[]) {
