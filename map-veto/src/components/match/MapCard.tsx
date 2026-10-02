@@ -97,7 +97,6 @@ export function MapCard({
                 alt={map.name}
                 fill
                 className="object-cover"
-                priority
                 sizes="(max-width: 640px) 96px, (max-width: 768px) 120px, (max-width: 1024px) 160px, 200px"
                 onError={() => setImgError(true)}
             />
