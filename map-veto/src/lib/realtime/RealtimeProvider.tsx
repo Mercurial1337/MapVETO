@@ -314,7 +314,7 @@ export function useMatchData() {
 }
 
 export function useVetoActions() {
-    const { performAction, performCoinToss, error } = useRealtime();
+    const { performAction, performCoinToss, performReady, error } = useRealtime();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     const banMap = useCallback(
