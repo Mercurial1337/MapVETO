@@ -100,7 +100,7 @@ export function SideSelectionModal({
                                         whileTap={{ scale: 0.97 }}
                                         onClick={handleConfirm}
                                         disabled={isSubmitting}
-                                        className={`w-full py-3 rounded-xl font-bold text-white text-sm uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                                        className={`w-full py-3 rounded-xl font-bold text-white text-sm uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
                                             selectedSide === 'attack'
                                                 ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-500/25'
                                                 : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-lg shadow-blue-500/25'
