@@ -40,40 +40,104 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
         );
     }
 
-    // Fetch Logs
-    const { data: logs, error: logsError } = await supabase
-        .from('match_logs')
-        .select('*, maps(name)')
+    // Fetch Match State
+    const { data: state, error: stateError } = await supabase
+        .from('match_state')
+        .select('*')
         .eq('match_id', matchId)
-        .order('step_number', { ascending: true })
-        .order('created_at', { ascending: true });
+        .single();
 
-    // Helper to get actor name
+    // Fetch Sequence
+    let sequence = match.custom_veto_sequence;
+    if (!sequence && match.veto_template_id) {
+        const { data: template } = await supabase
+            .from('veto_templates')
+            .select('sequence')
+            .eq('id', match.veto_template_id)
+            .single();
+        if (template) sequence = template.sequence;
+    }
+    
+    // Fetch Map Names
+    const { data: mapsData } = await supabase.from('maps').select('id, name');
+    const mapNames = (mapsData || []).reduce((acc: any, m: any) => {
+        acc[m.id] = m.name;
+        return acc;
+    }, {});
+
     const getActorName = (actor: string) => {
         if (actor === 'team_a') return match.team_a_name;
         if (actor === 'team_b') return match.team_b_name;
         return 'System';
     };
 
-    // Helper to generate the log text
-    const generateLogText = (log: any) => {
-        const actorName = getActorName(log.actor);
-        const mapName = log.maps?.name || 'Unknown Map';
+    const vetoSteps = sequence?.steps || [];
+    const bannedMaps = state?.banned_maps || [];
+    const pickedMaps = state?.picked_maps || [];
 
-        switch (log.action_type) {
-            case 'ban':
-                return `${actorName} banned ${mapName}`;
-            case 'pick':
-                return `${actorName} picked ${mapName}`;
-            case 'side_pick':
-                const side = log.metadata?.side;
-                const sideText = side === 'attack' ? 'ATK' : 'DEF';
-                return `${actorName} chose ${sideText} on ${mapName}`;
-            case 'decider':
-                return `Decider Map: ${mapName}`;
-            default:
-                return null;
+    // Reconstruct the exact log sequence as ActionLog.tsx
+    const entries: any[] = [];
+    let banIndex = 0;
+    let pickIndex = 0;
+
+    for (let i = 0; i < vetoSteps.length && i < (state?.current_step || 0); i++) {
+        const step = vetoSteps[i];
+
+        if (step.action === 'ban') {
+            const ban = bannedMaps[banIndex];
+            if (ban) {
+                entries.push({
+                    type: 'ban',
+                    actor: ban.banned_by,
+                    mapName: mapNames[ban.map_id] || 'Unknown',
+                });
+                banIndex++;
+            }
+        } else if (step.action === 'pick') {
+            const pick = pickedMaps.find((p: any) => p.map_number === step.map_number);
+            if (pick) {
+                entries.push({
+                    type: 'pick',
+                    actor: pick.picked_by,
+                    mapName: mapNames[pick.map_id] || 'Unknown',
+                });
+                pickIndex++;
+            }
+        } else if (step.action === 'side') {
+            const pick = pickedMaps.find((p: any) => p.map_number === step.map_number);
+            if (pick && pick.side) {
+                entries.push({
+                    type: 'side',
+                    actor: pick.side_picked_by || step.actor,
+                    mapName: mapNames[pick.map_id] || 'Unknown',
+                    side: pick.side,
+                });
+            }
+        } else if (step.action === 'decider') {
+            const pick = pickedMaps.find((p: any) => p.map_number === step.map_number);
+            if (pick) {
+                entries.push({
+                    type: 'decider',
+                    actor: 'system',
+                    mapName: mapNames[pick.map_id] || 'Unknown',
+                });
+            }
         }
+    }
+
+    const generateLogText = (entry: any) => {
+        const actorName = getActorName(entry.actor);
+        if (entry.type === 'ban') {
+            return `${actorName} banned ${entry.mapName}`;
+        } else if (entry.type === 'pick') {
+            return `${actorName} picked ${entry.mapName}`;
+        } else if (entry.type === 'side') {
+            const sideText = entry.side === 'attack' ? 'Attack' : 'Defense';
+            return `${actorName} picked ${sideText} for ${entry.mapName}`;
+        } else if (entry.type === 'decider') {
+            return `${entry.mapName} was left as the Decider`;
+        }
+        return '';
     };
 
     return (
@@ -105,26 +169,20 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
 
             {/* Action Log List */}
             <div className="w-full max-w-lg bg-white/5 border border-white/10 rounded-2xl overflow-hidden p-6 font-mono text-sm leading-relaxed text-white/90">
-                {logs?.length === 0 ? (
+                {entries.length === 0 ? (
                     <div className="text-center text-white/50">No logs found for this match.</div>
                 ) : (
-                    <div className="space-y-2">
-                        {logs?.map((log, index) => {
-                            // Don't show side picks if they are pending or empty
-                            if (log.action_type === 'side_pick' && (!log.metadata || !log.metadata.side)) return null;
-                            if (log.action_type === 'coin_toss') return null; // usually omit coin toss from standard text output or keep it if desired
-                            
-                            return (
-                                <div key={log.id} className="flex gap-4">
-                                    <span className="text-white/30 shrink-0 select-none">
-                                        {(index + 1).toString().padStart(2, '0')}.
-                                    </span>
-                                    <span>
-                                        {generateLogText(log)}
-                                    </span>
-                                </div>
-                            );
-                        })}
+                    <div className="space-y-3">
+                        {entries.map((entry, index) => (
+                            <div key={index} className="flex gap-4">
+                                <span className="text-white/30 shrink-0 select-none">
+                                    {(index + 1).toString().padStart(2, '0')}.
+                                </span>
+                                <span>
+                                    {generateLogText(entry)}
+                                </span>
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
