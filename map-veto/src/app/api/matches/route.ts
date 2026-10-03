@@ -17,6 +17,7 @@ const CreateMatchSchema = z.object({
     scheduled_at: z.string().datetime().optional().nullable(),
     template_id: z.string().uuid().optional(),
     custom_veto_sequence: z.any().optional().nullable(),
+    higher_seed: z.enum(['team_a', 'team_b', 'none']).optional().nullable(),
 });
 
 export async function POST(request: NextRequest) {
@@ -70,6 +71,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        const isSeeded = data.higher_seed === 'team_a' || data.higher_seed === 'team_b';
+
         // Create match
         const matchId = uuidv4();
         const { error: matchError } = await supabase
@@ -90,6 +93,8 @@ export async function POST(request: NextRequest) {
                 scheduled_at: data.scheduled_at || null,
                 created_by: user?.id || null,
                 custom_veto_sequence: data.custom_veto_sequence || null,
+                coin_toss_winner: isSeeded ? data.higher_seed : null,
+                coin_toss_forced: isSeeded,
             });
 
         if (matchError) {

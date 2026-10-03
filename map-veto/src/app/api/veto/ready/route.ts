@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
         // Get match and verify status
         const { data: matchData, error: matchError } = await supabase
             .from('matches')
-            .select('status')
+            .select('status, coin_toss_forced, coin_toss_winner')
             .eq('id', match_id)
             .single();
 
@@ -119,17 +119,41 @@ export async function POST(request: NextRequest) {
 
         let matchStatusUpdate = null;
 
-        // If both teams are now ready, advance match status to coin_toss
+        // If both teams are now ready, advance match status
         if (updatedState.team_a_ready && updatedState.team_b_ready) {
-            const { error: matchUpdateError } = await supabase
-                .from('matches')
-                .update({ status: 'coin_toss' })
-                .eq('id', match_id);
+            // Check if match was seeded at creation (e.g., coin_toss_forced is true and coin_toss_winner is set)
+            if (matchData.coin_toss_forced && matchData.coin_toss_winner) {
+                // Pre-seeded match! Skip coin toss and go directly to side_selection
+                const { error: matchUpdateError } = await supabase
+                    .from('matches')
+                    .update({ status: 'side_selection' })
+                    .eq('id', match_id);
 
-            if (matchUpdateError) {
-                console.error('Update match error:', matchUpdateError);
+                if (matchUpdateError) {
+                    console.error('Update match error:', matchUpdateError);
+                } else {
+                    // Log the auto-coin_toss
+                    await supabase.from('match_logs').insert({
+                        match_id,
+                        step_number: -1, // Pre-veto step
+                        action_type: 'coin_toss',
+                        actor: matchData.coin_toss_winner,
+                        metadata: { is_auto: true, is_seeded: true }
+                    });
+                    matchStatusUpdate = 'side_selection';
+                }
             } else {
-                matchStatusUpdate = 'coin_toss';
+                // Normal unseeded match
+                const { error: matchUpdateError } = await supabase
+                    .from('matches')
+                    .update({ status: 'coin_toss' })
+                    .eq('id', match_id);
+
+                if (matchUpdateError) {
+                    console.error('Update match error:', matchUpdateError);
+                } else {
+                    matchStatusUpdate = 'coin_toss';
+                }
             }
         }
 

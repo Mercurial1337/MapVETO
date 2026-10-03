@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { VetoTemplate, VetoSequence, VetoStep } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
+import { createClient } from '@/lib/supabase/client';
 
 interface Event {
     id: string;
@@ -39,6 +40,7 @@ interface MatchFormData {
     templateId: string;
     isCustomSequence: boolean;
     customSequence: VetoSequence | null;
+    higherSeed: 'team_a' | 'team_b' | 'none';
 }
 
 interface CreatedMatch {
@@ -48,6 +50,8 @@ interface CreatedMatch {
         team_b: { token: string; url: string };
         observer: { token: string; url: string };
     };
+    isSeeded: boolean;
+    seededTeam: 'team_a' | 'team_b' | null;
 }
 
 function NewMatchContent() {
@@ -67,6 +71,7 @@ function NewMatchContent() {
         templateId: '',
         isCustomSequence: false,
         customSequence: null,
+        higherSeed: 'none',
     });
 
     // Sync eventId from URL if it changes (and if not already set manually)
@@ -84,6 +89,10 @@ function NewMatchContent() {
     const [isFlippingCoin, setIsFlippingCoin] = useState(false);
     const [coinFlipResult, setCoinFlipResult] = useState<'team_a' | 'team_b' | null>(null);
     const [wasForced, setWasForced] = useState(false);
+
+    // Readiness state
+    const [teamAReady, setTeamAReady] = useState(false);
+    const [teamBReady, setTeamBReady] = useState(false);
 
     // Team autocomplete state
     const [showTeamADropdown, setShowTeamADropdown] = useState(false);
@@ -141,6 +150,35 @@ function NewMatchContent() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    // Subscribe to ready status when match is created
+    useEffect(() => {
+        if (!createdMatch) return;
+
+        const supabase = createClient();
+        const channel = supabase.channel(`admin-match:${createdMatch.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'match_state',
+                    filter: `match_id=eq.${createdMatch.id}`
+                },
+                (payload) => {
+                    const state = payload.new as any;
+                    if (state) {
+                        setTeamAReady(state.team_a_ready);
+                        setTeamBReady(state.team_b_ready);
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [createdMatch]);
+
     // Fetch templates when format changes
     useEffect(() => {
         const fetchTemplates = async () => {
@@ -189,6 +227,7 @@ function NewMatchContent() {
                     event_id: formData.eventId || null,
                     template_id: formData.templateId || undefined,
                     custom_veto_sequence: formData.isCustomSequence ? formData.customSequence : null,
+                    higher_seed: formData.higherSeed !== 'none' ? formData.higherSeed : null,
                 }),
             });
 
@@ -203,7 +242,12 @@ function NewMatchContent() {
             setCreatedMatch({
                 id: data.match.id,
                 links: data.links,
+                isSeeded: formData.higherSeed !== 'none',
+                seededTeam: formData.higherSeed !== 'none' ? formData.higherSeed : null,
             });
+            // Reset readiness when creating a new match
+            setTeamAReady(false);
+            setTeamBReady(false);
         } catch {
             setError('Network error. Please try again.');
         }
@@ -400,8 +444,34 @@ function NewMatchContent() {
 
                     {/* Coin Flip Section */}
                     <div className="mt-8 p-6 bg-white/5 rounded-xl border border-white/10">
-                        <h3 className="text-lg font-semibold text-white mb-3">Coin Toss</h3>
-                        {coinFlipResult ? (
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-lg font-semibold text-white">Coin Toss</h3>
+                            
+                            {/* Readiness Badges */}
+                            <div className="flex gap-2">
+                                <div className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1.5 ${teamAReady ? 'bg-green-500/20 text-green-400' : 'bg-red-500/10 text-red-400/70'}`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${teamAReady ? 'bg-green-400' : 'bg-red-400/50'}`} />
+                                    {formData.teamAName}: {teamAReady ? 'Ready' : 'Pending'}
+                                </div>
+                                <div className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1.5 ${teamBReady ? 'bg-green-500/20 text-green-400' : 'bg-red-500/10 text-red-400/70'}`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${teamBReady ? 'bg-green-400' : 'bg-red-400/50'}`} />
+                                    {formData.teamBName}: {teamBReady ? 'Ready' : 'Pending'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {createdMatch.isSeeded ? (
+                            <div className="text-center py-4">
+                                <span className="text-4xl inline-block mb-3">👑</span>
+                                <p className="text-yellow-400 text-xl font-bold">
+                                    Seeded Match
+                                </p>
+                                <p className="text-white/60 text-sm mt-1">
+                                    <span className="font-medium text-white">{createdMatch.seededTeam === 'team_a' ? formData.teamAName : formData.teamBName}</span> is the higher seed. 
+                                    They will automatically pick first once both teams are ready.
+                                </p>
+                            </div>
+                        ) : coinFlipResult ? (
                             <motion.div
                                 initial={{ scale: 0.8, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
@@ -428,34 +498,42 @@ function NewMatchContent() {
                         ) : (
                             <div className="space-y-4">
                                 {/* Random Coin Flip */}
-                                <div className="text-center">
+                                <div className="text-center relative group">
                                     <p className="text-white/60 text-sm mb-3">Flip the coin to determine who picks first</p>
                                     <button
                                         onClick={() => handleCoinFlip()}
-                                        className="px-8 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold rounded-xl hover:from-yellow-400 hover:to-orange-400 transition-all"
+                                        disabled={!teamAReady || !teamBReady}
+                                        className="px-8 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold rounded-xl hover:from-yellow-400 hover:to-orange-400 transition-all disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed"
                                     >
                                         Flip Coin
                                     </button>
+                                    {(!teamAReady || !teamBReady) && (
+                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-1.5 bg-black/80 text-white/90 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                            Waiting for both teams to be ready
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Divider */}
                                 <div className="flex items-center gap-3">
                                     <div className="flex-1 h-px bg-white/10" />
-                                    <span className="text-white/30 text-xs">or select winner (seeded match)</span>
+                                    <span className="text-white/30 text-xs">or select winner manually</span>
                                     <div className="flex-1 h-px bg-white/10" />
                                 </div>
 
                                 {/* Manual Selection Buttons */}
-                                <div className="flex gap-3 justify-center">
+                                <div className="flex gap-3 justify-center group relative">
                                     <button
                                         onClick={() => handleCoinFlip('team_a')}
-                                        className="px-6 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl text-red-400 font-medium transition-colors"
+                                        disabled={!teamAReady || !teamBReady}
+                                        className="px-6 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl text-red-400 font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                     >
                                         {formData.teamAName}
                                     </button>
                                     <button
                                         onClick={() => handleCoinFlip('team_b')}
-                                        className="px-6 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-xl text-blue-400 font-medium transition-colors"
+                                        disabled={!teamAReady || !teamBReady}
+                                        className="px-6 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-xl text-blue-400 font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                     >
                                         {formData.teamBName}
                                     </button>
@@ -482,6 +560,7 @@ function NewMatchContent() {
                                     templateId: prev.templateId,
                                     isCustomSequence: prev.isCustomSequence,
                                     customSequence: prev.customSequence,
+                                    higherSeed: prev.higherSeed,
                                 }));
                             }}
                             className="flex-1 px-6 py-3 border border-white/20 rounded-xl text-white hover:bg-white/5 transition-colors"
@@ -736,6 +815,23 @@ function NewMatchContent() {
                         </select>
                         <p className="text-xs text-white/40 mt-1">
                             Assign to an event to use custom branding (logo, coin, font)
+                        </p>
+                    </div>
+
+                    {/* Seed Selection */}
+                    <div>
+                        <label className="block text-sm text-white/60 mb-2">Higher Seed (Optional)</label>
+                        <select
+                            value={formData.higherSeed}
+                            onChange={(e) => setFormData({ ...formData, higherSeed: e.target.value as any })}
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500/50"
+                        >
+                            <option value="none">None (Random Coin Toss)</option>
+                            {formData.teamAName && <option value="team_a">{formData.teamAName}</option>}
+                            {formData.teamBName && <option value="team_b">{formData.teamBName}</option>}
+                        </select>
+                        <p className="text-xs text-white/40 mt-1">
+                            The higher seed automatically wins the coin toss and picks first once both teams are ready.
                         </p>
                     </div>
 
