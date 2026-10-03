@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import type { SideChoice } from '@/types';
 
 interface SideSelectionModalProps {
@@ -30,92 +29,54 @@ export function SideSelectionModal({
         onSelect(selectedSide);
     };
 
+    if (!isOpen) return null;
+
     return (
-        <AnimatePresence>
-            {isOpen && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
-                >
-                    {/* Removed backdrop so the timer and map pool are fully visible */}
+        <div className="fixed bottom-32 left-1/2 -translate-x-1/2 z-50 pointer-events-auto">
+            <div className="bg-[#111111] border border-white/10 rounded-2xl p-6 shadow-2xl w-full max-w-sm text-center">
+                <h2 className="text-xl font-bold text-white mb-1">Side Selection</h2>
+                <p className="text-sm text-white/70 mb-4">
+                    <span className="text-yellow-400 font-semibold">{teamName}</span> is choosing side for <span className="font-bold text-white">{mapName}</span>
+                </p>
 
-                    {/* Modal Content */}
-                    <motion.div
-                        initial={{ scale: 0.8, opacity: 0, y: 50 }}
-                        animate={{ scale: 1, opacity: 1, y: 0 }}
-                        exit={{ scale: 0.8, opacity: 0, y: 50 }}
-                        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                        className="relative z-10 glass rounded-3xl p-8 max-w-md mx-4 text-center pointer-events-auto"
+                <div className="flex gap-3 justify-center mb-4">
+                    <button
+                        onClick={() => handleSelect('attack')}
+                        disabled={isSubmitting}
+                        className={`flex-1 p-4 rounded-xl border-2 transition-colors flex flex-col items-center ${
+                            selectedSide === 'attack'
+                                ? 'bg-red-500/20 border-red-500'
+                                : 'bg-black/50 border-white/10 hover:border-red-400/50'
+                        }`}
                     >
-                        <h2 className="text-2xl font-bold text-white mb-2">Choose Your Side</h2>
-                        <p className="text-white/60 mb-2">
-                            <span className="text-yellow-400 font-semibold">{teamName}</span> is picking side for
-                        </p>
-                        <p className="text-xl font-bold text-white mb-8">{mapName}</p>
+                        <span className="text-2xl mb-1">⚔️</span>
+                        <span className={`font-bold ${selectedSide === 'attack' ? 'text-red-400' : 'text-white/80'}`}>ATTACK</span>
+                    </button>
 
-                        <div className="flex gap-4 justify-center">
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => handleSelect('attack')}
-                                disabled={isSubmitting}
-                                className={`flex-1 p-6 rounded-2xl border-2 transition-all ${selectedSide === 'attack'
-                                        ? 'bg-red-500/30 border-red-400 shadow-lg shadow-red-500/20'
-                                        : 'bg-red-500/10 border-red-500/30 hover:border-red-400'
-                                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                            >
-                                <div className="text-4xl mb-2">⚔️</div>
-                                <div className="text-xl font-bold text-red-400">Attack</div>
-                                <div className="text-xs text-white/50 mt-1">Start on attack side</div>
-                            </motion.button>
+                    <button
+                        onClick={() => handleSelect('defense')}
+                        disabled={isSubmitting}
+                        className={`flex-1 p-4 rounded-xl border-2 transition-colors flex flex-col items-center ${
+                            selectedSide === 'defense'
+                                ? 'bg-blue-500/20 border-blue-500'
+                                : 'bg-black/50 border-white/10 hover:border-blue-400/50'
+                        }`}
+                    >
+                        <span className="text-2xl mb-1">🛡️</span>
+                        <span className={`font-bold ${selectedSide === 'defense' ? 'text-blue-400' : 'text-white/80'}`}>DEFENSE</span>
+                    </button>
+                </div>
 
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => handleSelect('defense')}
-                                disabled={isSubmitting}
-                                className={`flex-1 p-6 rounded-2xl border-2 transition-all ${selectedSide === 'defense'
-                                        ? 'bg-blue-500/30 border-blue-400 shadow-lg shadow-blue-500/20'
-                                        : 'bg-blue-500/10 border-blue-500/30 hover:border-blue-400'
-                                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                            >
-                                <div className="text-4xl mb-2">🛡️</div>
-                                <div className="text-xl font-bold text-blue-400">Defense</div>
-                                <div className="text-xs text-white/50 mt-1">Start on defense side</div>
-                            </motion.button>
-                        </div>
-
-                        {/* Confirm Button */}
-                        <AnimatePresence>
-                            {selectedSide && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 10 }}
-                                    transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                                    className="mt-6"
-                                >
-                                    <motion.button
-                                        whileHover={{ scale: 1.03 }}
-                                        whileTap={{ scale: 0.97 }}
-                                        onClick={handleConfirm}
-                                        disabled={isSubmitting}
-                                        className={`w-full py-3 rounded-xl font-bold text-white text-sm uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                                            selectedSide === 'attack'
-                                                ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-500/25'
-                                                : 'bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 shadow-lg shadow-blue-500/25'
-                                        }`}
-                                    >
-                                        {isSubmitting ? 'Confirming...' : 'Confirm'}
-                                    </motion.button>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </motion.div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+                {selectedSide && (
+                    <button
+                        onClick={handleConfirm}
+                        disabled={isSubmitting}
+                        className="w-full py-3 rounded-xl font-bold text-black bg-white hover:bg-gray-200 transition-colors uppercase tracking-wider text-sm disabled:opacity-50"
+                    >
+                        {isSubmitting ? 'Confirming...' : 'Confirm Pick'}
+                    </button>
+                )}
+            </div>
+        </div>
     );
 }
