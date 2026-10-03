@@ -3,17 +3,18 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 interface PageProps {
-    params: { matchId: string };
+    params: Promise<{ matchId: string }>;
 }
 
 export default async function PublicMatchLogPage({ params }: PageProps) {
     const supabase = createServiceClient();
+    const { matchId } = await params;
     
     // Fetch Match Data
     const { data: match, error: matchError } = await supabase
         .from('matches')
         .select('*, events(name)')
-        .eq('id', params.matchId)
+        .eq('id', matchId)
         .single();
         
     if (matchError || !match) {
@@ -43,7 +44,7 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
     const { data: logs, error: logsError } = await supabase
         .from('match_logs')
         .select('*, maps(name)')
-        .eq('match_id', params.matchId)
+        .eq('match_id', matchId)
         .order('step_number', { ascending: true })
         .order('created_at', { ascending: true });
 

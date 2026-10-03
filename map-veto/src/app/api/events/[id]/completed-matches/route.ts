@@ -3,10 +3,10 @@ import { createServiceClient } from '@/lib/supabase/server';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const { id: eventId } = params;
+        const { id: eventId } = await params;
         const supabase = createServiceClient();
         const { searchParams } = new URL(request.url);
 

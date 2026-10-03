@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 
@@ -18,7 +18,8 @@ interface MatchData {
     scheduled_at: string | null;
 }
 
-export default function PublicEventPage({ params }: { params: { id: string } }) {
+export default function PublicEventPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
     const [event, setEvent] = useState<EventData | null>(null);
     const [matches, setMatches] = useState<MatchData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -33,7 +34,7 @@ export default function PublicEventPage({ params }: { params: { id: string } }) 
         const fetchEventMatches = async () => {
             setIsLoading(true);
             try {
-                const res = await fetch(`/api/events/${params.id}/completed-matches?offset=${offset}&limit=${LIMIT}`);
+                const res = await fetch(`/api/events/${id}/completed-matches?offset=${offset}&limit=${LIMIT}`);
                 const data = await res.json();
                 
                 if (!res.ok) {
@@ -50,7 +51,7 @@ export default function PublicEventPage({ params }: { params: { id: string } }) 
         };
         
         fetchEventMatches();
-    }, [params.id, offset]);
+    }, [id, offset]);
 
     if (isLoading && !event) {
         return (
