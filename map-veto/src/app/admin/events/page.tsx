@@ -190,6 +190,14 @@ export default function EventsPage() {
                                     <Eye size={14} />
                                     Matches
                                 </Link>
+                                <Link
+                                    href={`/events/${event.id}`}
+                                    target="_blank"
+                                    className="px-3 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 rounded-lg text-sm text-cyan-400 flex items-center gap-1.5 transition-colors"
+                                    title="View public event page"
+                                >
+                                    Public Page
+                                </Link>
                                 <button
                                     onClick={() => openExportModal(event.id)}
                                     className="px-3 py-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg text-sm text-green-400 flex items-center gap-1.5 transition-colors"
