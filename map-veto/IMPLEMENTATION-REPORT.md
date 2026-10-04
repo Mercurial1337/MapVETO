@@ -5,7 +5,7 @@ Completed the requested checklist points 1, 2, 4, 5, 6, 7, 8 and 9.
 | Point | Implemented behavior |
 | --- | --- |
 | 1 | Atomic check-in, exact timestamps, duplicate protection, both-ready notification and start gate. |
-| 2 | Higher seed or coin winner chooses Team A/B; role mapping, winner and confirmation are logged. |
+| 2 | Only authorized match admins trigger the coin toss; teams wait after check-in. Higher seed or coin winner chooses Team A/B; role mapping, winner and confirmation are logged. |
 | 4 | Server-enforced 60-second action deadlines, warning at 15 seconds or below, random map/side fallback and stale-request rejection. |
 | 5 | Team A/B choice has its own 60-second deadline, confirmation and random fallback. |
 | 6 | Ordered timestamped history, confirmation times, timeout/random metadata, deciders, referee reasons, copy and text download. Undo/reset preserve prior history. |
@@ -17,7 +17,7 @@ Removed Framer Motion and its dependencies, animated coin assets, gradients, blu
 
 ## Supabase
 
-Migrations 016–024 are applied using verified TLS. The public CA certificate is in `scripts/supabase-ca.crt`; the connection string remains in ignored `.env.local`.
+Migrations 016–025 are applied using verified TLS. The public CA certificate is in `scripts/supabase-ca.crt`; the connection string remains in ignored `.env.local`.
 
 `map-veto-timeouts` runs every five seconds. New sessions opt into automatic deadlines when both teams check in. Existing abandoned sessions are not automatically advanced. Each action rejects late manual submissions at 60 seconds; the scheduled fallback runs on the next worker tick. Connected clients also request the authoritative fallback when the clock expires.
 
@@ -55,3 +55,5 @@ For browser testing, `node tests/http.test.mjs --keep` retains a labeled match a
 ## Feature commits
 
 `61a1de1` readiness; `09fd920` role selection; `8bc1ebb` move timer; `b3e631b` role-choice timer; `a3879ba` audit; `cafe299` referee overrides; `8130511` observers; `bbb455b` notifications; `17614d5` background timeouts; `7855004` stale selection and format verification. Final commits add the flat UI, audit-order correction and reproducible test tooling.
+
+Admin-only coin toss correction: UI hides all toss controls from teams/observers; HTTP and PostgreSQL reject their random and forced toss requests. Local/remote database tests, HTTP integration, targeted ESLint, TypeScript and browser verification passed.

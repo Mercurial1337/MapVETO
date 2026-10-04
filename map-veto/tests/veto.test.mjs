@@ -61,7 +61,14 @@ await db.query(`UPDATE match_links SET expires_at=now()-interval '1 second' WHER
 await rejects('veto_ready',[f.id,f.a],/team link/);
 console.log('PASS check-in: gate, exact timestamps, duplicate requests, seeded path, spectator/admin/expired-link denial');
 
-await rejects('veto_coin',[f.id,f.observer,null],/link required/);
+await db.query('UPDATE match_links SET expires_at=NULL WHERE token=$1',[f.a]);
+for(const token of [f.a,f.b,f.observer,randomUUID()]) {
+ await rejects('veto_coin',[f.id,token,null],/Admin link/);
+ await rejects('veto_coin',[f.id,token,'team_a'],/Admin link/);
+}
+await db.query("UPDATE match_links SET expires_at=now()-interval '1 second' WHERE token=$1",[f.admin]);
+await rejects('veto_coin',[f.id,f.admin,null],/Admin link/);
+await db.query('UPDATE match_links SET expires_at=NULL WHERE token=$1',[f.admin]);
 await rejects('veto_coin',[f.id,f.b,'team_a'],/Admin link/);
 const coin=await rpc('veto_coin',[f.id,f.admin,'team_b']); assert.equal(coin.winner,'team_b');
 await rejects('veto_coin',[f.id,f.admin,null],/not available/);

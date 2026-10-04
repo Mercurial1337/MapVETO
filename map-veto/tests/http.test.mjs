@@ -21,7 +21,7 @@ if(keep) writeFileSync('.qa-session.json',JSON.stringify({id,tokens,template,bas
 try {
 for(const path of ['ready','coin-toss','position-choice','action']) {
  const payload={match_id:id,token:tokens.observer,pick_first:true,action:'ban',map_id:maps[0].id};
- await post('/api/veto/'+path,payload,400);
+ await post('/api/veto/'+path,payload,path==='coin-toss'?403:400);
 }
 for(const operation of ['pause','resume','restart','undo','correct','force','reset']) await post('/api/veto/admin/override',{match_id:id,token:tokens.observer,operation,reason:'QA permission test'},403);
 await post(`/api/matches/${id}`,{},403);await post(`/api/matches/${id}`,{action:'reset'},403,'PATCH');await post(`/api/matches/${id}`,{},403,'DELETE');
@@ -32,7 +32,15 @@ const stolen=await anon.from('match_links').select('*').eq('match_id',id);assert
 console.log('PASS HTTP spectator: team actions denied, all overrides denied, link retrieval/reset/delete denied, invalid link rejected, direct RPC denied, tokens hidden');
 await Promise.all([post('/api/veto/ready',{match_id:id,token:tokens.team_a}),post('/api/veto/ready',{match_id:id,token:tokens.team_b})]);
 let session=await post('/api/veto/session',{match_id:id,token:tokens.observer});assert.equal(session.match.status,'coin_toss');assert.equal(session.logs.length,2);
-const coin=await post('/api/veto/coin-toss',{match_id:id,token:tokens.team_a});
+for(const role of ['team_a','team_b','observer']) {
+ await post('/api/veto/coin-toss',{match_id:id,token:tokens[role]},403);
+ await post('/api/veto/coin-toss',{match_id:id,token:tokens[role],forced_winner:'team_a'},403);
+}
+await post('/api/veto/coin-toss',{match_id:id},403);
+session=await post('/api/veto/session',{match_id:id,token:tokens.observer});
+assert.equal(session.match.status,'coin_toss');assert.equal(session.logs.length,2);
+const coin=await post('/api/veto/coin-toss',{match_id:id,token:tokens.admin});
+console.log('PASS HTTP coin toss: both teams and observer denied random/forced toss; only authorized admin can start');
 await post('/api/veto/position-choice',{match_id:id,token:tokens[coin.match.coin_toss_winner],pick_first:true});
 session=await post('/api/veto/session',{match_id:id,token:tokens.observer});assert.equal(session.match.status,'in_progress');
 console.log('PASS HTTP check-in: concurrent readiness, coin toss, role confirmation, coherent observer state');

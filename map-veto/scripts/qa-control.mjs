@@ -13,7 +13,7 @@ if(command==='warning' || command==='cleanup') {
 async function post(path,body) {const r=await fetch(qa.base+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();assert.ok(r.ok,JSON.stringify(d));return d;}
 if(['reset','pause','resume','restart','undo'].includes(command)) await post('/api/veto/admin/override',{match_id:qa.id,token:qa.tokens.admin,operation:command,reason:'Codex browser QA'});
 if(command==='ready-a' || command==='ready-b') await post('/api/veto/ready',{match_id:qa.id,token:qa.tokens[command==='ready-a'?'team_a':'team_b']});
-if(command==='coin') await post('/api/veto/coin-toss',{match_id:qa.id,token:qa.tokens.team_a});
+if(command==='coin') await post('/api/veto/coin-toss',{match_id:qa.id,token:qa.tokens.admin});
 if(command==='position') {const s=await post('/api/veto/session',{match_id:qa.id,token:qa.tokens.observer});await post('/api/veto/position-choice',{match_id:qa.id,token:qa.tokens[s.match.coin_toss_winner],pick_first:true});}
 if(command==='complete') {
  for(let i=0;i<30;i++) {
