@@ -228,6 +228,15 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
                     }
                 )
                 .on(
+                    'broadcast',
+                    { event: 'match_log_insert' },
+                    (payload) => {
+                        if (payload.payload) {
+                            setLogs((prev) => [...prev, payload.payload as MatchLog]);
+                        }
+                    }
+                )
+                .on(
                     'postgres_changes',
                     {
                         event: 'INSERT',
@@ -236,7 +245,11 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
                         filter: `match_id=eq.${matchId}`,
                     },
                     (payload) => {
-                        setLogs((prev) => [...prev, payload.new as MatchLog]);
+                        // Keep postgres_changes as fallback, but avoid duplicates
+                        setLogs((prev) => {
+                            if (prev.some(log => log.id === payload.new.id)) return prev;
+                            return [...prev, payload.new as MatchLog];
+                        });
                     }
                 )
                 .subscribe((status: string) => {

@@ -496,8 +496,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     </AnimatePresence>
                 </div>
 
-                {/* Action Log Panel - Desktop */}
-                <div className="w-64 glass rounded-xl p-4 hidden lg:block">
+                {/* Action Log Panel */}
+                <div className="w-full lg:w-64 glass rounded-xl p-4 mt-4 lg:mt-0">
                     <h3 className="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wider">Action Log</h3>
                     <ActionLog
                         logs={logs || []}
@@ -589,7 +589,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
 
             {/* Admin Panel */}
             {isAdmin && match && (
-                <AdminPanel matchId={matchId} matchStatus={match.status} />
+                <AdminPanel matchId={matchId} matchStatus={match.status} isPaused={state?.is_paused} />
             )}
         </div>
     );

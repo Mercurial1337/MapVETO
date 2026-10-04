@@ -7,9 +7,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface AdminPanelProps {
     matchId: string;
     matchStatus: string;
+    isPaused?: boolean;
 }
 
-export function AdminPanel({ matchId, matchStatus }: AdminPanelProps) {
+export function AdminPanel({ matchId, matchStatus, isPaused }: AdminPanelProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [isForcing, setIsForcing] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
@@ -77,6 +78,22 @@ export function AdminPanel({ matchId, matchStatus }: AdminPanelProps) {
                         >
                             <Dices size={16} className="text-purple-400" />
                             {isForcing ? 'Forcing...' : 'Force Random Action'}
+                        </button>
+
+                        <button
+                            onClick={async () => {
+                                setIsForcing(true);
+                                await fetch('/api/veto/admin/pause-veto', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ match_id: matchId, is_paused: !isPaused })
+                                });
+                                setIsForcing(false);
+                            }}
+                            className="flex items-center gap-2 text-sm bg-white/5 hover:bg-white/10 p-2 rounded transition-colors disabled:opacity-50 text-orange-300"
+                        >
+                            <Settings size={16} />
+                            {isPaused ? 'Resume Veto' : 'Pause Veto'}
                         </button>
 
                         <button

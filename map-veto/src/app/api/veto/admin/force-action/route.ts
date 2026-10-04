@@ -151,6 +151,23 @@ export async function POST(request: NextRequest) {
             });
         }
         
+        // Broadcast the new log
+        const { data: latestLog } = await supabase
+            .from('match_logs')
+            .select('*')
+            .eq('match_id', match_id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (latestLog) {
+            await channel.send({
+                type: 'broadcast',
+                event: 'match_log_insert',
+                payload: latestLog
+            });
+        }
+
         await supabase.removeChannel(channel);
 
         return NextResponse.json({
