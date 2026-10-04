@@ -107,6 +107,7 @@ const side=await rpc('process_veto_action',[f.id,f.a,'side',null,'attack',false,
 assert.equal(side.picked_maps[0].side,'attack');
 await rpc('process_veto_action',[f.id,f.b,'ban',side.available_maps[0],null,false,null,null]);
 const decider=(await db.query("SELECT * FROM match_logs WHERE match_id=$1 AND action_type='decider'",[f.id])).rows[0];assert.ok(decider.map_id);assert.equal(decider.metadata.map_number,2);
+const preceding=(await db.query("SELECT log_order FROM match_logs WHERE match_id=$1 AND action_type='ban' AND metadata->>'snapshot_id'=$2",[f.id,String(decider.metadata.snapshot_id)])).rows[0];assert.ok(Number(preceding.log_order)<Number(decider.log_order));
 const complete=await rpc('process_veto_action',[f.id,f.a,'side',null,'defense',false,null,null]);
 assert.equal(complete.is_complete,true);assert.equal(complete.results.length,2);
 const sideLogs=(await db.query("SELECT * FROM match_logs WHERE match_id=$1 AND action_type='side' ORDER BY log_order",[f.id])).rows;

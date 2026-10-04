@@ -162,6 +162,10 @@ BEGIN
         FROM jsonb_array_elements(v_new_picked_maps) AS elem;
     END IF;
 
+    -- Record the confirmed move before its derived decider
+    INSERT INTO match_logs (match_id, step_number, action_type, actor, map_id, side_choice, metadata)
+    VALUES (p_match_id, v_current_step, p_action, v_link_type, v_log_map, p_side_choice, jsonb_build_object('is_auto', p_is_auto, 'timeout', p_is_auto AND NOT v_admin, 'admin_override', v_admin, 'map_number', (v_current_step_def->>'map_number')::int, 'confirmed_at', now(), 'snapshot_id', v_snapshot_id));
+
     -- 8. Advance to next step
     v_next_step := v_current_step + 1;
     v_is_complete := v_next_step >= jsonb_array_length(v_template->'steps');
@@ -235,10 +239,6 @@ BEGIN
         SET status = 'completed', completed_at = NOW()
         WHERE id = p_match_id;
     END IF;
-
-    -- 12. Insert log
-    INSERT INTO match_logs (match_id, step_number, action_type, actor, map_id, side_choice, metadata)
-    VALUES (p_match_id, v_current_step, p_action, v_link_type, v_log_map, p_side_choice, jsonb_build_object('is_auto', p_is_auto, 'timeout', p_is_auto AND NOT v_admin, 'admin_override', v_admin, 'map_number', (v_current_step_def->>'map_number')::int, 'confirmed_at', now(), 'snapshot_id', v_snapshot_id));
 
     RETURN v_new_state;
 END;
