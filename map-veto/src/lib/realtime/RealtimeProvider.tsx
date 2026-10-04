@@ -148,8 +148,8 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
         }
     }, [matchId, token, supabase]);
 
-    const prevMatchRef = useRef<Match | null>(null);
-    const prevStateRef = useRef<MatchState | null>(null);
+    const prevMatchRef = useRef<Match | null>(initialData.match);
+    const prevStateRef = useRef<MatchState | null>(initialData.state);
 
     // Notifications effect
     useEffect(() => {
@@ -160,10 +160,10 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
 
         // The other team checks in
         if (prevState && !prevState.team_a_ready && state.team_a_ready && userRole !== 'team_a') {
-            toast.info('Team A has checked in and is ready.');
+            toast.info(`${match.team_a_name} has checked in and is ready.`);
         }
         if (prevState && !prevState.team_b_ready && state.team_b_ready && userRole !== 'team_b') {
-            toast.info('Team B has checked in and is ready.');
+            toast.info(`${match.team_b_name} has checked in and is ready.`);
         }
 
         // Both teams are ready
@@ -356,6 +356,8 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
             if (data.new_state) {
                 setState(data.new_state);
             }
+
+            if (data.match) setMatch(prev => prev ? { ...prev, ...data.match } : data.match);
 
             return true;
         } catch (err) {
