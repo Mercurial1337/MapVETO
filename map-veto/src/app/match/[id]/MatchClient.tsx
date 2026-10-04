@@ -11,6 +11,7 @@ import { PositionSelectionModal } from '@/components/match/PositionSelectionModa
 import { SideSelectionModal } from '@/components/match/SideSelectionModal';
 import { ReadyCheckModal } from '@/components/match/ReadyCheckModal';
 import { ActionLog } from '@/components/match/ActionLog';
+import { AdminPanel } from '@/components/match/AdminPanel';
 import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus } from '@/lib/realtime';
 import { createClient } from '@/lib/supabase/client';
 import { useActionSound } from '@/hooks';
@@ -44,7 +45,7 @@ interface MatchVetoInterfaceProps {
 }
 
 function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
-    const { match, state, maps, eventBranding, isLoading, error, userRole } = useMatchData();
+    const { match, state, maps, logs, eventBranding, isLoading, error, userRole } = useMatchData();
     const { banMap, pickMap, pickSide, coinToss, readyUp, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
     const [isAdmin, setIsAdmin] = useState(false);
@@ -499,15 +500,12 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 <div className="w-64 glass rounded-xl p-4 hidden lg:block">
                     <h3 className="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wider">Action Log</h3>
                     <ActionLog
-                        bannedMaps={state?.banned_maps || []}
-                        pickedMaps={state?.picked_maps || []}
+                        logs={logs || []}
                         dbTeamAName={match.team_a_name}
                         dbTeamBName={match.team_b_name}
                         displayTeam1Name={displayedTeams.teamA}
                         displayTeam2Name={displayedTeams.teamB}
                         mapNames={mapNames}
-                        vetoSteps={templateSteps}
-                        currentStep={state?.current_step || 0}
                     />
                 </div>
             </div>
@@ -588,6 +586,11 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Admin Panel */}
+            {isAdmin && match && (
+                <AdminPanel matchId={matchId} matchStatus={match.status} />
+            )}
         </div>
     );
 }
@@ -599,6 +602,7 @@ export interface MatchClientProps {
         match: Match | null;
         state: MatchState | null;
         maps: GameMap[];
+        logs: any[];
         eventBranding: any | null;
         userRole: any;
     };
