@@ -9,18 +9,18 @@ interface PageProps {
 export default async function PublicMatchLogPage({ params }: PageProps) {
     const supabase = createServiceClient();
     const { matchId } = await params;
-    
+
     // Fetch Match Data
     const { data: match, error: matchError } = await supabase
         .from('matches')
         .select('*, events(name)')
         .eq('id', matchId)
         .single();
-        
+
     if (matchError || !match) {
         return (
             <div className="min-h-screen flex items-center justify-center text-center px-4">
-                <div className="glass p-8 rounded-2xl max-w-md w-full">
+                <div className="glass p-8 rounded max-w-md w-full">
                     <h1 className="text-xl font-bold text-red-400 mb-2">Match Not Found</h1>
                     <p className="text-white/60">This match doesn't exist or hasn't been completed yet.</p>
                 </div>
@@ -32,7 +32,7 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
     if (match.status !== 'completed') {
         return (
             <div className="min-h-screen flex items-center justify-center text-center px-4">
-                <div className="glass p-8 rounded-2xl max-w-md w-full">
+                <div className="glass p-8 rounded max-w-md w-full">
                     <h1 className="text-xl font-bold text-yellow-400 mb-2">Match Not Completed</h1>
                     <p className="text-white/60">The veto process for this match is still ongoing.</p>
                 </div>
@@ -57,7 +57,7 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
             .single();
         if (template) sequence = template.sequence;
     }
-    
+
     // Fetch Map Names
     const { data: mapsData } = await supabase.from('maps').select('id, name');
     const mapNames = (mapsData || []).reduce((acc: any, m: any) => {
@@ -142,12 +142,12 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
 
     return (
         <div className="min-h-screen flex flex-col items-center py-12 px-4 max-w-2xl mx-auto">
-            
+
             {/* Header */}
             <div className="w-full mb-8 text-center">
                 {match.event_id && (
                     <div className="mb-4">
-                        <Link 
+                        <Link
                             href={`/events/${match.event_id}`}
                             className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
                         >
@@ -155,7 +155,7 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
                         </Link>
                     </div>
                 )}
-                
+
                 <h1 className="text-2xl font-bold text-white mb-1">Match Veto Log</h1>
                 <div className="flex items-center justify-center gap-3 text-lg font-medium text-white/80">
                     <span>{match.team_a_name}</span>
@@ -168,7 +168,7 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
             </div>
 
             {/* Action Log List */}
-            <div className="w-full max-w-lg bg-white/5 border border-white/10 rounded-2xl overflow-hidden p-6 font-mono text-sm leading-relaxed text-white/90">
+            <div className="w-full max-w-lg bg-white/5 border border-white/10 rounded overflow-hidden p-6 font-mono text-sm leading-relaxed text-white/90">
                 {entries.length === 0 ? (
                     <div className="text-center text-white/50">No logs found for this match.</div>
                 ) : (
@@ -186,7 +186,7 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
                     </div>
                 )}
             </div>
-            
+
         </div>
     );
 }

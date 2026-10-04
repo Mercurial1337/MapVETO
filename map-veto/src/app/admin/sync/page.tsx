@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 
 interface SheetMatch {
     id: string;
@@ -59,7 +58,7 @@ export default function GoogleSheetsSyncPage() {
             </div>
 
             {/* Sheet URL Input */}
-            <div className="glass rounded-2xl p-6">
+            <div className="glass rounded p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Connect Sheet</h2>
 
                 <div className="flex gap-4">
@@ -68,18 +67,18 @@ export default function GoogleSheetsSyncPage() {
                         value={sheetUrl}
                         onChange={(e) => setSheetUrl(e.target.value)}
                         placeholder="https://docs.google.com/spreadsheets/d/..."
-                        className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
+                        className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
                     />
                     <button
                         onClick={handleSync}
                         disabled={isLoading || !sheetUrl}
-                        className="btn-primary px-6 py-3 rounded-xl disabled:opacity-50"
+                        className="btn-primary px-6 py-3 rounded disabled:opacity-50"
                     >
                         {isLoading ? 'Syncing...' : 'Sync'}
                     </button>
                 </div>
 
-                <div className="mt-4 p-4 bg-white/5 rounded-xl">
+                <div className="mt-4 p-4 bg-white/5 rounded">
                     <h3 className="text-sm font-medium text-white/80 mb-2">Expected Sheet Format</h3>
                     <div className="overflow-x-auto">
                         <table className="text-xs text-white/50">
@@ -106,10 +105,8 @@ export default function GoogleSheetsSyncPage() {
 
             {/* Parsed Matches */}
             {matches.length > 0 && (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="glass rounded-2xl p-6"
+                <div
+                    className="glass rounded p-6"
                 >
                     <div className="flex items-center justify-between mb-4">
                         <div>
@@ -129,10 +126,9 @@ export default function GoogleSheetsSyncPage() {
 
                     <div className="space-y-3">
                         {matches.map((match) => (
-                            <motion.div
+                            <div
                                 key={match.id}
-                                layout
-                                className={`p-4 rounded-xl border ${match.status === 'imported'
+                                className={`p-4 rounded border ${match.status === 'imported'
                                     ? 'bg-green-500/10 border-green-500/20'
                                     : 'bg-white/5 border-white/10'
                                     }`}
@@ -163,14 +159,14 @@ export default function GoogleSheetsSyncPage() {
                                         </button>
                                     )}
                                 </div>
-                            </motion.div>
+                            </div>
                         ))}
                     </div>
-                </motion.div>
+                </div>
             )}
 
             {/* Help Section */}
-            <div className="glass rounded-2xl p-6">
+            <div className="glass rounded p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Setup Instructions</h2>
                 <ol className="space-y-3 text-sm text-white/60">
                     <li className="flex items-start gap-3">

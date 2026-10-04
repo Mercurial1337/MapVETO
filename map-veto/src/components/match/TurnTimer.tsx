@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { toast } from 'sonner';
 import type { VetoStep } from '@/types';
 interface Props {
@@ -9,15 +9,16 @@ interface Props {
 }
 export function TurnTimer({currentStep,stateUpdatedAt,teamAName,teamBName,matchId,token,isInProgress,isComplete,isPaused,pausedRemainingSeconds}:Props) {
  const [remaining,setRemaining]=useState(60);
+ const warnedClock=useRef<string | null>(null);
  const actorName=currentStep?.actor==='team_a'?teamAName:teamBName;
  useEffect(()=>{
   if(!isInProgress || isComplete || !currentStep || !stateUpdatedAt) return;
   if(isPaused) {setRemaining(Math.ceil(pausedRemainingSeconds ?? 60));return;}
-  let cancelled=false, warned=false, pending=false, retryAt=0;
+  let cancelled=false, pending=false, retryAt=0;
   const tick=async()=>{
    const seconds=Math.max(0,Math.ceil((Date.parse(stateUpdatedAt)+60000-Date.now())/1000));
    setRemaining(seconds);
-   if(seconds>0 && seconds<=15 && !warned) {warned=true;toast.warning(`${actorName}: ${seconds} seconds remaining.`);}
+   if(seconds>0 && seconds<=15 && warnedClock.current!==stateUpdatedAt) {warnedClock.current=stateUpdatedAt;toast.warning(`${actorName}: ${seconds} seconds remaining.`);}
    if(seconds===0 && !pending && Date.now()>=retryAt && matchId && token) {
     pending=true;
     try {
@@ -28,7 +29,7 @@ export function TurnTimer({currentStep,stateUpdatedAt,teamAName,teamBName,matchI
   };
   void tick(); const interval=setInterval(tick,1000);
   return ()=>{cancelled=true;clearInterval(interval);};
- },[currentStep?.action,currentStep?.step,stateUpdatedAt,matchId,token,isInProgress,isComplete,isPaused,pausedRemainingSeconds,actorName]);
+ },[currentStep,stateUpdatedAt,matchId,token,isInProgress,isComplete,isPaused,pausedRemainingSeconds,actorName]);
  if(!currentStep || !isInProgress || isComplete) return null;
  return <div role="status" className="border border-white/20 bg-[#18181b] px-4 py-2 rounded flex items-center gap-3">
   <span>{actorName} · {currentStep.description || currentStep.action}</span>

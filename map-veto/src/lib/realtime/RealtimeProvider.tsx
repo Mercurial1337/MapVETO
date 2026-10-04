@@ -247,7 +247,6 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
 
     // Manual refresh
     const refresh = useCallback(async () => {
-        setIsLoading(true);
         await fetchData();
     }, [fetchData]);
 

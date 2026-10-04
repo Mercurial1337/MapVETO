@@ -189,7 +189,7 @@ export interface MatchLog {
   map_id: string | null;
   side_choice: SideChoice | null;
   created_at: string;
-  metadata?: Record<string, any> | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 // ============================================

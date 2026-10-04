@@ -1,8 +1,9 @@
 'use client';
+import { Fragment } from 'react';
 
-import { useSearchParams, useParams } from 'next/navigation';
+import Link from 'next/link';
+import type { ComponentProps } from 'react';
 import { Suspense, useMemo, useEffect, useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { MapCard } from '@/components/match/MapCard';
 import { VetoTimeline, TurnIndicator } from '@/components/match/VetoTimeline';
 import { TurnTimer } from '@/components/match/TurnTimer';
@@ -13,7 +14,6 @@ import { ReadyCheckModal } from '@/components/match/ReadyCheckModal';
 import { ActionLog } from '@/components/match/ActionLog';
 import { AdminPanel } from '@/components/match/AdminPanel';
 import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus } from '@/lib/realtime';
-import { createClient } from '@/lib/supabase/client';
 import { useActionSound } from '@/hooks';
 import type { MapCardState, VetoStep, VetoActor, Match, MatchState, VetoTemplate, GameMap } from '@/types';
 
@@ -48,7 +48,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     const { match, state, maps, logs, eventBranding, isLoading, error, userRole } = useMatchData();
     const { banMap, pickMap, pickSide, coinToss, readyUp, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
-    const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
+    const [selectedMap, setSelectedMap] = useState<{id:string;clock:string | undefined} | null>(null);
+    const selectedMapId=selectedMap?.clock===state?.turn_started_at ? selectedMap?.id ?? null : null;
     const isAdmin = userRole === 'admin' || Boolean((match as (Match & { can_admin?: boolean }) | null)?.can_admin);
 
     // Play notification sounds on state changes (turn changes, completion)
@@ -57,21 +58,6 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
         userRole,
         isInProgress: match?.status === 'in_progress',
     });
-
-    // Completion banner logic
-    const [showCompletedBanner, setShowCompletedBanner] = useState(false);
-    useEffect(() => {
-        if (state?.is_complete) {
-            setShowCompletedBanner(true);
-            const timer = setTimeout(() => setShowCompletedBanner(false), 5000);
-            return () => clearTimeout(timer);
-        }
-    }, [state?.is_complete]);
-
-    // Reset map selection when the veto step advances
-    useEffect(() => {
-        setSelectedMapId(null);
-    }, [state?.current_step]);
 
     // Load custom font if event has one
     useEffect(() => {
@@ -164,11 +150,12 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
         return state.current_turn === 'team_a' ? match.team_a_name : match.team_b_name;
     }, [state?.current_turn, match]);
 
+    const paused=state?.is_paused;
     // Determine if it's user's turn based on their token role
     const isMyTurn = useCallback((turn: VetoActor | null) => {
         if (!userRole || userRole === 'observer') return false;
-        return !state?.is_paused && turn === userRole;
-    }, [userRole, state?.is_paused]);
+        return !paused && turn === userRole;
+    }, [userRole, paused]);
 
     // Determine map states
     const mapStates = useMemo(() => {
@@ -222,7 +209,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     // Handle map selection (first click = select, confirm button = execute)
     const handleMapSelect = (mapId: string) => {
         if (!currentStepDef || isSubmitting || state?.is_paused) return;
-        setSelectedMapId(prev => prev === mapId ? null : mapId);
+        setSelectedMap(prev => prev?.id===mapId ? null : {id:mapId,clock:state?.turn_started_at});
     };
 
     // Handle confirm action (execute the ban/pick)
@@ -234,7 +221,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
         } else if (currentStepDef.action === 'pick') {
             await pickMap(selectedMapId);
         }
-        setSelectedMapId(null);
+        setSelectedMap(null);
     };
 
     // === Coin Toss Modal Visibility ===
@@ -301,9 +288,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     if (isLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                <div
                     className="w-12 h-12 border-4 border-white/20 border-t-purple-500 rounded-full"
                 />
             </div>
@@ -311,15 +296,15 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     }
 
     // Error state
-    if (error || !match) {
+    if (!match) {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center glass rounded-2xl p-8">
+                <div className="text-center glass rounded p-8">
                     <h1 className="text-2xl font-bold text-red-400 mb-2">Error</h1>
                     <p className="text-white/60 mb-4">{error || 'Match not found'}</p>
-                    <a href="/" className="btn-primary px-6 py-2 rounded-xl inline-block">
+                    <Link href="/" className="btn-primary px-6 py-2 rounded inline-block">
                         Go Home
-                    </a>
+                    </Link>
                 </div>
             </div>
         );
@@ -327,6 +312,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
 
     return (
         <div className="min-h-screen flex flex-col">
+            {error && <p role="alert" className="border-b border-red-800 px-4 py-2 text-red-300">{error}</p>}
             {/* Header */}
             <header className="glass-dark border-b border-white/10 px-4 md:px-6 py-3 md:py-4">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -450,14 +436,10 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     </div>
 
                     {/* Confirm Bar */}
-                    <AnimatePresence>
+                    <Fragment>
                         {selectedMapId && currentStepDef && (currentStepDef.action === 'ban' || currentStepDef.action === 'pick') && (
-                            <motion.div
-                                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                                transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-                                className="flex items-center gap-4 glass rounded-xl px-5 py-3"
+                            <div
+                                className="flex items-center gap-4 glass rounded px-5 py-3"
                             >
                                 <span className="text-white/80 text-sm font-medium">
                                     {mapNames[selectedMapId] || 'Map'}
@@ -465,21 +447,21 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                                 <button
                                     onClick={handleConfirm}
                                     disabled={isSubmitting || !!state?.is_paused}
-                                    className={`px-8 py-2.5 rounded-lg font-bold text-white text-sm uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                                    className={`px-8 py-2.5 rounded-lg font-bold text-white text-sm uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                                         currentStepDef.action === 'ban'
-                                            ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-500/25'
-                                            : 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 shadow-lg shadow-green-500/25'
+                                            ? 'bg-[#25252a]      '
+                                            : 'bg-[#25252a]      '
                                     }`}
                                 >
                                     {isSubmitting ? 'Confirming...' : 'Confirm'}
                                 </button>
-                            </motion.div>
+                            </div>
                         )}
-                    </AnimatePresence>
+                    </Fragment>
                 </div>
 
                 {/* Action Log Panel */}
-                <div className="w-full lg:w-64 glass rounded-xl p-4 mt-4 lg:mt-0">
+                <div className="w-full lg:w-64 glass rounded p-4 mt-4 lg:mt-0">
                     <h3 className="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wider">Action Log</h3>
                     <ActionLog
                         logs={logs || []}
@@ -550,28 +532,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 isSeeded={!!match.coin_toss_forced}
             />
 
-            {/* Completed Banner */}
-            <AnimatePresence>
-                {showCompletedBanner && (
-                    <motion.div
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="fixed top-20 left-1/2 -translate-x-1/2 bg-green-500/90 text-white pl-8 pr-4 py-4 rounded-2xl shadow-xl flex items-center gap-4 z-50 backdrop-blur-sm"
-                    >
-                        <p className="text-lg font-bold">✓ Veto Complete!</p>
-                        <button
-                            onClick={() => setShowCompletedBanner(false)}
-                            className="p-1 hover:bg-white/20 rounded-full transition-colors"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                            </svg>
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
+            {state?.is_complete && <p role="status" className="border-t border-white/20 px-4 py-3 text-green-300">Veto complete. The final selections are shown above.</p>}
             {/* Admin Panel */}
             {isAdmin && match && (
                 <AdminPanel matchId={matchId} matchStatus={match.status} isPaused={state?.is_paused} token={token} />
@@ -583,26 +544,19 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
 export interface MatchClientProps {
     matchId: string;
     token: string;
-    initialData: {
-        match: Match | null;
-        state: MatchState | null;
-        maps: GameMap[];
-        logs: any[];
-        eventBranding: any | null;
-        userRole: any;
-    };
+    initialData: ComponentProps<typeof RealtimeProvider>['initialData'];
 }
 
 export default function MatchClient({ matchId, token, initialData }: MatchClientProps) {
     if (!token || token === 'demo-token') {
         return (
             <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center glass rounded-2xl p-8">
+                <div className="text-center glass rounded p-8">
                     <h1 className="text-2xl font-bold text-white mb-4">Demo Mode</h1>
                     <p className="text-white/60 mb-6">
                         Access this page with a valid magic link token to join a match.
                     </p>
-                    <a href="/admin" className="btn-primary px-6 py-2 rounded-xl inline-block">
+                    <a href="/admin" className="btn-primary px-6 py-2 rounded inline-block">
                         Go to Admin
                     </a>
                 </div>
@@ -613,9 +567,7 @@ export default function MatchClient({ matchId, token, initialData }: MatchClient
     return (
         <Suspense fallback={
             <div className="min-h-screen flex items-center justify-center">
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                <div
                     className="w-12 h-12 border-4 border-white/20 border-t-purple-500 rounded-full"
                 />
             </div>

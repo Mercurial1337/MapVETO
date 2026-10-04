@@ -42,3 +42,5 @@ next-env.d.ts
 
 # demo files
 /public/sound-demo.html
+
+/.qa-session.json

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { PlusCircle, ClipboardList, RefreshCw, FileSpreadsheet } from 'lucide-react';
@@ -154,7 +153,7 @@ export default function AdminDashboard() {
             case 'completed':
                 return <span className="px-2 py-1 bg-green-500/20 text-green-400 rounded-full text-xs">Completed</span>;
             case 'in_progress':
-                return <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs animate-pulse">Live</span>;
+                return <span className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs ">Live</span>;
             case 'coin_toss':
                 return <span className="px-2 py-1 bg-orange-500/20 text-orange-400 rounded-full text-xs">Coin Toss</span>;
             case 'pending':
@@ -167,9 +166,7 @@ export default function AdminDashboard() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                <div
                     className="w-8 h-8 border-4 border-white/20 border-t-purple-500 rounded-full"
                 />
             </div>
@@ -180,39 +177,39 @@ export default function AdminDashboard() {
         <div className="space-y-8">
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="glass rounded-2xl p-6">
+                <div className="glass rounded p-6">
                     <p className="text-sm text-white/50 mb-1">Total Matches</p>
                     <p className="text-4xl font-bold text-white">{stats.totalMatches}</p>
                 </div>
-                <div className="glass rounded-2xl p-6">
+                <div className="glass rounded p-6">
                     <p className="text-sm text-white/50 mb-1">Active Now</p>
                     <p className="text-4xl font-bold text-yellow-400">{stats.activeMatches}</p>
                     <p className="text-xs text-white/30 mt-1">Live vetos in progress</p>
                 </div>
-                <div className="glass rounded-2xl p-6">
+                <div className="glass rounded p-6">
                     <p className="text-sm text-white/50 mb-1">Completed Today</p>
                     <p className="text-4xl font-bold text-green-400">{stats.completedToday}</p>
                 </div>
-                <div className="glass rounded-2xl p-6">
+                <div className="glass rounded p-6">
                     <p className="text-sm text-white/50 mb-1">Pending</p>
                     <p className="text-4xl font-bold text-white">{stats.pendingMatches}</p>
                 </div>
             </div>
 
             {/* Quick Actions */}
-            <div className="glass rounded-2xl p-6">
+            <div className="glass rounded p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Quick Actions</h2>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <Link
                         href="/admin/matches/new"
-                        className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition-colors text-center flex flex-col items-center gap-2"
+                        className="p-4 rounded bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/20 transition-colors text-center flex flex-col items-center gap-2"
                     >
                         <PlusCircle size={24} className="text-purple-400" />
                         <span className="text-sm text-white">Create Match</span>
                     </Link>
                     <Link
                         href="/admin/matches"
-                        className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-colors text-center flex flex-col items-center gap-2"
+                        className="p-4 rounded bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-colors text-center flex flex-col items-center gap-2"
                     >
                         <ClipboardList size={24} className="text-blue-400" />
                         <span className="text-sm text-white">All Matches</span>
@@ -220,14 +217,14 @@ export default function AdminDashboard() {
 
                     <button
                         onClick={handleRefresh}
-                        className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 transition-colors text-center flex flex-col items-center gap-2"
+                        className="p-4 rounded bg-orange-500/10 border border-orange-500/20 hover:bg-orange-500/20 transition-colors text-center flex flex-col items-center gap-2"
                     >
                         <RefreshCw size={24} className="text-orange-400" />
                         <span className="text-sm text-white">Refresh</span>
                     </button>
                     <button
                         onClick={() => setIsExportModalOpen(true)}
-                        className="p-4 rounded-xl bg-green-500/10 border border-green-500/20 hover:bg-green-500/20 transition-colors text-center flex flex-col items-center gap-2"
+                        className="p-4 rounded bg-green-500/10 border border-green-500/20 hover:bg-green-500/20 transition-colors text-center flex flex-col items-center gap-2"
                     >
                         <FileSpreadsheet size={24} className="text-green-400" />
                         <span className="text-sm text-white">Export Reports</span>
@@ -241,7 +238,7 @@ export default function AdminDashboard() {
             />
 
             {/* Recent Matches */}
-            <div className="glass rounded-2xl p-6">
+            <div className="glass rounded p-6">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-lg font-semibold text-white">Recent Matches</h2>
                     <Link href="/admin/matches" className="text-sm text-purple-400 hover:text-purple-300">
@@ -252,7 +249,7 @@ export default function AdminDashboard() {
                 {recentMatches.length === 0 ? (
                     <div className="text-center py-8 text-white/40">
                         <p className="mb-4">No matches yet</p>
-                        <Link href="/admin/matches/new" className="btn-primary px-4 py-2 rounded-xl text-sm">
+                        <Link href="/admin/matches/new" className="btn-primary px-4 py-2 rounded text-sm">
                             Create Your First Match
                         </Link>
                     </div>

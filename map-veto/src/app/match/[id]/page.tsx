@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import MatchClient from './MatchClient';
 import { matchAdminToken } from '@/lib/auth/matchAdmin';
+import { validateToken } from '@/lib/auth/token';
 
 interface MatchPageProps {
     params: Promise<{ id: string }>;
@@ -18,6 +19,8 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
         return <MatchClient matchId={matchId} token={token} initialData={{ match: null, state: null, maps: [], logs: [], eventBranding: null, userRole: null }} />;
     }
 
+    const access=await validateToken(matchId,token);
+    if(!access.isValid) return <div role="alert" className="p-8">Invalid or expired match link.</div>;
     const supabase = createServiceClient();
 
     // 1. Fetch Match Data and Token Role in Parallel
@@ -41,7 +44,7 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
     ]);
 
     const link=linkResponse.data;
-    if(!link || (link.expires_at && Date.parse(link.expires_at)<=Date.now())) {
+    if(!link) {
         return <div className="p-8" role="alert">Invalid or expired match link.</div>;
     }
     const matchData = matchResponse.data;

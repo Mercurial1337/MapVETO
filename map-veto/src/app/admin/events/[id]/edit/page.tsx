@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { Upload, Image as ImageIcon, Type, Check, ArrowLeft, X, UserPlus, Trash2, Crown, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -254,7 +253,7 @@ export default function EditEventPage({ params }: PageProps) {
         currentUrl: string;
         icon: typeof ImageIcon;
     }) => (
-        <div className="glass rounded-xl p-4">
+        <div className="glass rounded p-4">
             <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-purple-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Icon size={24} className="text-purple-400" />
@@ -293,9 +292,7 @@ export default function EditEventPage({ params }: PageProps) {
                             />
                             <div className="flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300 transition-colors">
                                 {uploading === type ? (
-                                    <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                    <div
                                         className="w-4 h-4 border-2 border-purple-400/30 border-t-purple-400 rounded-full"
                                     />
                                 ) : (
@@ -313,9 +310,7 @@ export default function EditEventPage({ params }: PageProps) {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                <div
                     className="w-8 h-8 border-4 border-white/20 border-t-purple-500 rounded-full"
                 />
             </div>
@@ -332,13 +327,13 @@ export default function EditEventPage({ params }: PageProps) {
                     </Link>
                     <h1 className="text-2xl font-bold text-white">Event Details</h1>
                 </div>
-                <div className="glass rounded-xl p-6 text-center">
+                <div className="glass rounded p-6 text-center">
                     <Shield size={48} className="text-blue-400 mx-auto mb-4" />
                     <h2 className="text-lg font-semibold text-white mb-2">Admin Access Only</h2>
                     <p className="text-white/50 mb-4">
                         You are an admin for this event. You can manage matches and export data, but only the event owner can edit branding settings.
                     </p>
-                    <Link href="/admin/events" className="btn-primary px-6 py-3 rounded-xl inline-block">
+                    <Link href="/admin/events" className="btn-primary px-6 py-3 rounded inline-block">
                         Back to Events
                     </Link>
                 </div>
@@ -357,13 +352,13 @@ export default function EditEventPage({ params }: PageProps) {
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 {error && (
-                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
+                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm">
                         {error}
                     </div>
                 )}
 
                 {/* Event Name */}
-                <div className="glass rounded-xl p-6">
+                <div className="glass rounded p-6">
                     <label className="block text-sm text-white/60 mb-2">Event Name *</label>
                     <input
                         type="text"
@@ -371,7 +366,7 @@ export default function EditEventPage({ params }: PageProps) {
                         value={formData.name}
                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         placeholder="e.g. VCT 2024 Playoffs"
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
+                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
                     />
                 </div>
 
@@ -408,7 +403,7 @@ export default function EditEventPage({ params }: PageProps) {
                 </div>
 
                 {/* Google Sheets Integration */}
-                <div className="glass rounded-xl p-6">
+                <div className="glass rounded p-6">
                     <h2 className="text-lg font-semibold text-white mb-4">Google Sheets Export (Optional)</h2>
                     <label className="block text-sm text-white/60 mb-2">Default Google Sheet ID</label>
                     <input
@@ -416,7 +411,7 @@ export default function EditEventPage({ params }: PageProps) {
                         value={formData.google_sheet_id}
                         onChange={(e) => setFormData({ ...formData, google_sheet_id: e.target.value })}
                         placeholder="e.g. 1BxiMVs0XRA5nFMdKvBqfYH5_4z7qoR8s8..."
-                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
+                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
                     />
                     <p className="text-xs text-white/30 mt-2">
                         When exporting matches from this event, this Sheet ID will be used by default.
@@ -427,20 +422,18 @@ export default function EditEventPage({ params }: PageProps) {
                 <div className="flex gap-4">
                     <Link
                         href="/admin/events"
-                        className="flex-1 px-6 py-4 border border-white/20 rounded-xl text-white text-center hover:bg-white/5 transition-colors"
+                        className="flex-1 px-6 py-4 border border-white/20 rounded text-white text-center hover:bg-white/5 transition-colors"
                     >
                         Cancel
                     </Link>
                     <button
                         type="submit"
                         disabled={isSubmitting || !formData.name.trim()}
-                        className="flex-1 btn-primary py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 btn-primary py-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSubmitting ? (
                             <span className="flex items-center justify-center gap-2">
-                                <motion.span
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                <span
                                     className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full inline-block"
                                 />
                                 Saving...
@@ -464,7 +457,7 @@ export default function EditEventPage({ params }: PageProps) {
                     </p>
 
                     {/* Add Admin Form */}
-                    <div className="glass rounded-xl p-4">
+                    <div className="glass rounded p-4">
                         <div className="flex gap-2">
                             <input
                                 type="email"
@@ -474,7 +467,7 @@ export default function EditEventPage({ params }: PageProps) {
                                     setAdminError('');
                                 }}
                                 placeholder="Enter user's email address"
-                                className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50"
+                                className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
                                         e.preventDefault();
@@ -486,12 +479,10 @@ export default function EditEventPage({ params }: PageProps) {
                                 type="button"
                                 onClick={handleAddAdmin}
                                 disabled={isAddingAdmin || !adminEmail.trim()}
-                                className="px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-xl text-blue-400 text-sm flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="px-4 py-3 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-400 text-sm flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {isAddingAdmin ? (
-                                    <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                    <div
                                         className="w-4 h-4 border-2 border-blue-400/30 border-t-blue-400 rounded-full"
                                     />
                                 ) : (
@@ -511,7 +502,7 @@ export default function EditEventPage({ params }: PageProps) {
 
                     {/* Admin List */}
                     {admins.length > 0 && (
-                        <div className="glass rounded-xl divide-y divide-white/10">
+                        <div className="glass rounded divide-y divide-white/10">
                             {admins.map((admin) => (
                                 <div key={admin.id} className="px-4 py-3 flex items-center justify-between">
                                     <div className="flex items-center gap-3">
@@ -555,7 +546,7 @@ export default function EditEventPage({ params }: PageProps) {
                     )}
 
                     {admins.length === 0 && (
-                        <div className="glass rounded-xl p-6 text-center">
+                        <div className="glass rounded p-6 text-center">
                             <p className="text-white/40 text-sm">No admins added yet. Add admins by their email address above.</p>
                         </div>
                     )}

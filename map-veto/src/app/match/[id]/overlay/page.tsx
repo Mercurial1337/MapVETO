@@ -1,8 +1,8 @@
 'use client';
+import { Fragment } from 'react';
 
 import { useSearchParams, useParams } from 'next/navigation';
 import { Suspense, useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import type { GameMap, VetoStep, VetoActor } from '@/types';
 
@@ -100,7 +100,7 @@ function LiveOverlayContent() {
     };
 
     return (
-        <div className={`fixed ${position === 'bottom' ? 'bottom-0 left-0 right-0' : position === 'top' ? 'top-0 left-0 right-0' : ''} ${bgClass} backdrop-blur-lg border-t border-white/10 py-4 px-6`}>
+        <div className={`fixed ${position === 'bottom' ? 'bottom-0 left-0 right-0' : position === 'top' ? 'top-0 left-0 right-0' : ''} ${bgClass}  border-t border-white/10 py-4 px-6`}>
             <div className="max-w-6xl mx-auto">
                 {/* Header Row */}
                 <div className="flex items-center justify-between mb-4">
@@ -113,34 +113,27 @@ function LiveOverlayContent() {
                     </div>
 
                     {/* Current Action */}
-                    <AnimatePresence mode="wait">
+                    <Fragment>
                         {currentAction ? (
-                            <motion.div
+                            <div
                                 key={`${step}-${currentAction.action}`}
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
                                 className="flex items-center gap-3 px-6 py-2 rounded-full bg-yellow-500/20 border border-yellow-500/40"
                             >
-                                <motion.div
-                                    animate={{ scale: [1, 1.2, 1] }}
-                                    transition={{ duration: 0.5, repeat: Infinity }}
+                                <div
                                     className="w-2 h-2 rounded-full bg-yellow-400"
                                 />
                                 <span className="text-sm text-yellow-400 font-medium">
                                     {getActorLabel(currentAction.actor)} {currentAction.action === 'ban' ? 'BANNING' : currentAction.action.toUpperCase() + 'ING'}
                                 </span>
-                            </motion.div>
+                            </div>
                         ) : isComplete ? (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
+                            <div
                                 className="px-6 py-2 rounded-full bg-green-500/20 border border-green-500/40"
                             >
                                 <span className="text-sm text-green-400 font-medium">✓ VETO COMPLETE</span>
-                            </motion.div>
+                            </div>
                         ) : null}
-                    </AnimatePresence>
+                    </Fragment>
 
                     {/* Team B */}
                     <div className="flex items-center gap-3">
@@ -160,16 +153,13 @@ function LiveOverlayContent() {
                         const color = pick.actor === 'team_a' ? '#ef4444' : pick.actor === 'team_b' ? '#3b82f6' : '#8b5cf6';
 
                         return (
-                            <motion.div
+                            <div
                                 key={pick.mapId}
-                                initial={{ opacity: 0, scale: 0.8, y: 20 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                transition={{ type: 'spring', damping: 15 }}
-                                className="relative w-40 aspect-video rounded-xl overflow-hidden border-2"
-                                style={{ borderColor: color, boxShadow: `0 0 20px ${color}40` }}
+                                className="relative w-40 aspect-video rounded overflow-hidden border-2"
+                                style={{ borderColor: color }}
                             >
                                 <Image src={map.image_url} alt={map.name} fill className="object-cover" />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                <div className="absolute inset-0 bg-black/50   " />
 
                                 {/* Map Number */}
                                 <div
@@ -181,21 +171,19 @@ function LiveOverlayContent() {
 
                                 {/* Side Badge */}
                                 {pick.side && (
-                                    <motion.div
-                                        initial={{ x: 20, opacity: 0 }}
-                                        animate={{ x: 0, opacity: 1 }}
+                                    <div
                                         className={`absolute top-2 right-2 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${pick.side === 'attack' ? 'bg-red-500 text-white' : 'bg-cyan-500 text-white'
                                             }`}
                                     >
                                         {pick.side}
-                                    </motion.div>
+                                    </div>
                                 )}
 
                                 {/* Map Name */}
                                 <div className="absolute bottom-2 left-2 right-2">
                                     <p className="text-sm font-bold text-white truncate">{map.name}</p>
                                 </div>
-                            </motion.div>
+                            </div>
                         );
                     })}
 
@@ -210,10 +198,8 @@ function LiveOverlayContent() {
                         if (!map) return null;
 
                         return (
-                            <motion.div
+                            <div
                                 key={ban.mapId}
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 0.5, scale: 1 }}
                                 className="relative w-20 aspect-video rounded-lg overflow-hidden grayscale"
                             >
                                 <Image src={map.image_url} alt={map.name} fill className="object-cover" />
@@ -222,18 +208,15 @@ function LiveOverlayContent() {
                                         <div className="w-4 h-0.5 bg-red-500/80 rotate-45" />
                                     </div>
                                 </div>
-                            </motion.div>
+                            </div>
                         );
                     })}
                 </div>
 
                 {/* Progress Bar */}
                 <div className="mt-4 h-1 bg-white/10 rounded-full overflow-hidden">
-                    <motion.div
-                        className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(step / totalSteps) * 100}%` }}
-                        transition={{ duration: 0.3 }}
+                    <div
+                        className="h-full bg-[#25252a]  "
                     />
                 </div>
             </div>

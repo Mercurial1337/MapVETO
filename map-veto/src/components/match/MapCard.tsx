@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import Image from 'next/image';
 import type { MapCardState, SideChoice } from '@/types';
 
@@ -71,23 +70,18 @@ export function MapCard({
     const hoverColor = action === 'ban' ? 'bg-red-500/80 border-red-400' : action === 'pick' ? 'bg-green-500/80 border-green-400' : 'bg-white/20 border-white/30';
 
     return (
-        <motion.div
-            layout
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{
-                opacity: state === 'banned' ? 0.4 : 1,
-                scale: isSelected ? 1.05 : 1,
-                y: isSelected ? -8 : 0,
-                filter: state === 'banned' ? 'grayscale(100%)' : 'none',
-            }}
-            whileHover={isInteractive ? { scale: 1.05, y: -8 } : {}}
-            whileTap={isInteractive ? { scale: 0.98 } : {}}
+        <div
             onClick={isInteractive ? onSelect : undefined}
+            role={isInteractive ? 'button' : undefined}
+            tabIndex={isInteractive ? 0 : undefined}
+            aria-label={isInteractive ? `${hoverText}: ${map.name}` : undefined}
+            aria-pressed={isInteractive ? !!isSelected : undefined}
+            onKeyDown={isInteractive ? event => { if(event.key==='Enter' || event.key===' ') {event.preventDefault();onSelect?.();} } : undefined}
             className={cn(
-                'relative aspect-[16/9] rounded-xl overflow-hidden transition-all duration-300',
+                'relative aspect-[16/9] rounded overflow-hidden transition-colors duration-300',
                 'w-[96px] sm:w-[120px] md:w-[160px] lg:w-[180px] xl:w-[200px]',
                 isInteractive && 'cursor-pointer',
-                state === 'banned' && 'cursor-not-allowed',
+                state === 'banned' && 'cursor-not-allowed opacity-40 grayscale',
                 state === 'active' && 'border-2 border-yellow-400'
             )}
         >
@@ -107,10 +101,8 @@ export function MapCard({
 
             {/* Picked Highlight Border */}
             {state === 'picked' && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="absolute inset-0 rounded-2xl"
+                <div
+                    className="absolute inset-0 rounded"
                     style={{
                         border: `4px solid ${teamColor}`,
                     }}
@@ -119,70 +111,57 @@ export function MapCard({
 
             {/* Selected Highlight Border */}
             {isSelected && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0.7, 1, 0.7] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                    className="absolute inset-0 rounded-xl pointer-events-none z-10"
+                <div
+                    className="absolute inset-0 rounded pointer-events-none z-10"
                     style={{
                         border: `3px solid ${action === 'ban' ? '#ef4444' : action === 'pick' ? '#22c55e' : '#ffffff'}`,
-                        boxShadow: `0 0 20px ${action === 'ban' ? 'rgba(239,68,68,0.4)' : action === 'pick' ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.3)'}`,
+
                     }}
                 />
             )}
 
             {/* Map Number Badge (for picked maps) */}
             {state === 'picked' && mapNumber && (
-                <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
+                <div
                     className="absolute top-2 left-2 w-6 h-6 rounded-full bg-black/80 border-2 flex items-center justify-center text-white font-bold text-xs"
                     style={{ borderColor: teamColor }}
                 >
                     {mapNumber}
-                </motion.div>
+                </div>
             )}
 
             {/* Map Name */}
             <div className="absolute bottom-2 left-2 right-2">
-                <motion.h3
-                    className="text-sm md:text-base font-bold text-white drop-shadow-lg tracking-wide"
-                    animate={{ opacity: state === 'banned' ? 0.6 : 1 }}
+                <h3
+                    className="text-sm md:text-base font-bold text-white  tracking-wide"
                 >
                     {map.name}
-                </motion.h3>
+                </h3>
 
                 {/* Picked By Indicator */}
                 {state === 'picked' && pickedBy && (
-                    <motion.p
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
+                    <p
                         className="text-[10px] md:text-xs text-white/80 font-medium"
                     >
                         Picked by {pickedBy}
-                    </motion.p>
+                    </p>
                 )}
 
                 {state === 'banned' && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                    <div
                         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -mt-8"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-white/20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                         </svg>
-                    </motion.div>
+                    </div>
                 )}
             </div>
 
             {/* Banned Overlay Stripe */}
             {state === 'banned' && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <motion.div
-                        initial={{ rotate: 0, opacity: 0 }}
-                        animate={{ rotate: 45, opacity: 1 }}
-                        transition={{ delay: 0.2 }}
+                    <div
                         className="absolute top-1/2 left-0 right-0 h-[3px] -translate-y-1/2 bg-red-500/90 rounded-full"
                     />
                 </div>
@@ -190,16 +169,13 @@ export function MapCard({
 
             {/* Side Badge */}
             {state === 'picked' && side && (
-                <motion.div
-                    initial={{ x: 20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
+                <div
                     className={cn(
                         'absolute top-2 right-2 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
-                        'shadow-lg backdrop-blur-sm flex items-center gap-1',
+                        '  flex items-center gap-1',
                         side === 'attack'
-                            ? 'bg-red-600 text-white shadow-red-500/30'
-                            : 'bg-blue-600 text-white shadow-blue-500/30'
+                            ? 'bg-red-600 text-white '
+                            : 'bg-blue-600 text-white '
                     )}
                 >
                     {side === 'attack' ? 'ATK' : 'DEF'}
@@ -208,45 +184,36 @@ export function MapCard({
                             · {sidePickedBy}
                         </span>
                     )}
-                </motion.div>
+                </div>
             )}
 
             {/* Active/Current Selection Indicator */}
             {state === 'active' && (
-                <div className="absolute inset-0 rounded-2xl border-2 border-white/40 pointer-events-none" />
+                <div className="absolute inset-0 rounded border-2 border-white/40 pointer-events-none" />
             )}
 
             {/* Hover Overlay for Interactive Cards */}
             {isInteractive && !isSelected && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    whileHover={{ opacity: 1 }}
+                <div
                     className="absolute inset-0 bg-white/10 flex items-center justify-center"
                 >
-                    <motion.div
-                        initial={{ scale: 0.8 }}
-                        whileHover={{ scale: 1 }}
+                    <div
                         className={cn(
-                            "px-6 py-3 backdrop-blur-md rounded-full text-white font-semibold border",
+                            "px-6 py-3  rounded-full text-white font-semibold border",
                             hoverColor
                         )}
                     >
                         {hoverText}
-                    </motion.div>
-                </motion.div>
+                    </div>
+                </div>
             )}
 
             {/* Selected Checkmark Overlay */}
             {isSelected && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                <div
                     className="absolute inset-0 bg-black/20 flex items-center justify-center pointer-events-none"
                 >
-                    <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                    <div
                         className={cn(
                             "w-10 h-10 rounded-full flex items-center justify-center",
                             action === 'ban' ? 'bg-red-500' : action === 'pick' ? 'bg-green-500' : 'bg-white/30'
@@ -255,9 +222,9 @@ export function MapCard({
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                         </svg>
-                    </motion.div>
-                </motion.div>
+                    </div>
+                </div>
             )}
-        </motion.div>
+        </div>
     );
 }

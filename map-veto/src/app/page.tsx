@@ -50,14 +50,14 @@ export default function LoginPage() {
         </div>
 
         {/* Login Card */}
-        <div className="glass rounded-2xl p-8">
+        <div className="glass rounded p-8">
           <h2 className="text-xl font-semibold text-white mb-6 text-center">
             Sign in to continue
           </h2>
 
           <form onSubmit={handleLogin} className="space-y-6">
             {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm text-center">
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm text-center">
                 {error}
               </div>
             )}
@@ -72,7 +72,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@example.com"
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition-colors"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition-colors"
               />
             </div>
 
@@ -86,18 +86,18 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition-colors"
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50 transition-colors"
               />
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full btn-primary py-4 rounded-xl text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+              className="w-full btn-primary py-4 rounded text-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
             >
               {isLoading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full inline-block animate-spin" />
+                  <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full inline-block " />
                   Signing in...
                 </span>
               ) : (

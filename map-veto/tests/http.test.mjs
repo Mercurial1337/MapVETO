@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict';
 import {createClient} from '@supabase/supabase-js';
 import {randomUUID} from 'node:crypto';
-import {writeFileSync,readFileSync} from 'node:fs';
+import {writeFileSync} from 'node:fs';
 process.loadEnvFile('.env.local');
 const db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY);
-const base='http://localhost:3000';
+const base=process.env.TEST_APP_URL || 'http://localhost:3000';
+const keep=process.argv.includes('--keep');
 async function post(path,body,expected=200,method='POST') {
  const response=await fetch(base+path,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
  const data=await response.json();assert.equal(response.status,expected,`${path}: ${JSON.stringify(data)}`);return data;
@@ -16,7 +17,8 @@ const {error}=await db.from('matches').insert({id,veto_template_id:template.id,t
 await db.from('match_state').update({available_maps:maps.map(m=>m.id)}).eq('match_id',id);
 const {data:links}=await db.from('match_links').select('link_type,token').eq('match_id',id);
 const tokens=Object.fromEntries(links.map(l=>[l.link_type,l.token]));
-writeFileSync('.next/qa-match.json',JSON.stringify({id,tokens,template,base}));
+if(keep) writeFileSync('.qa-session.json',JSON.stringify({id,tokens,template,base}));
+try {
 for(const path of ['ready','coin-toss','position-choice','action']) {
  const payload={match_id:id,token:tokens.observer,pick_first:true,action:'ban',map_id:maps[0].id};
  await post('/api/veto/'+path,payload,400);
@@ -34,4 +36,17 @@ const coin=await post('/api/veto/coin-toss',{match_id:id,token:tokens.team_a});
 await post('/api/veto/position-choice',{match_id:id,token:tokens[coin.match.coin_toss_winner],pick_first:true});
 session=await post('/api/veto/session',{match_id:id,token:tokens.observer});assert.equal(session.match.status,'in_progress');
 console.log('PASS HTTP check-in: concurrent readiness, coin toss, role confirmation, coherent observer state');
-console.log('QA match:',id);
+for(let i=0;i<30;i++) {
+ session=await post('/api/veto/session',{match_id:id,token:tokens.observer});
+ if(session.state.is_complete) break;
+ const step=template.sequence.steps[session.state.current_step];
+ await post('/api/veto/admin/override',{match_id:id,token:tokens.admin,operation:'force',reason:'Codex HTTP full-session QA',map_id:['ban','pick'].includes(step.action)?session.state.available_maps[0]:undefined,side:step.action==='side'?'attack':undefined});
+}
+session=await post('/api/veto/session',{match_id:id,token:tokens.observer});
+assert.equal(session.state.is_complete,true);assert.equal(session.state.results.length,3);
+assert.ok(session.logs.some(log=>log.action_type==='decider'));
+console.log('PASS HTTP full BO3: bans, picks, sides, decider, completion and referee audit');
+if(keep) console.log('QA match:',id);
+} finally {
+ if(!keep) {const result=await db.from('matches').delete().eq('id',id).eq('team_a_name','Codex QA Alpha');assert.ifError(result.error);}
+}

@@ -1,7 +1,7 @@
 'use client';
+import { Fragment } from 'react';
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { X, FileSpreadsheet, Check, AlertCircle } from 'lucide-react';
 
 interface Event {
@@ -95,25 +95,19 @@ export function ExportModal({ isOpen, onClose, preselectedEventId }: ExportModal
     if (!isOpen) return null;
 
     return (
-        <AnimatePresence>
+        <Fragment>
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                <div
+                    className="absolute inset-0 bg-black/80 "
                     onClick={onClose}
                 />
 
-                <motion.div
-                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                    animate={{ scale: 1, opacity: 1, y: 0 }}
-                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                    className="relative w-full max-w-lg glass rounded-2xl overflow-hidden"
+                <div
+                    className="relative w-full max-w-lg glass rounded overflow-hidden"
                 >
                     <div className="flex items-center justify-between p-6 border-b border-white/10">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center">
+                            <div className="w-10 h-10 bg-green-500/20 rounded flex items-center justify-center">
                                 <FileSpreadsheet className="text-green-400" size={20} />
                             </div>
                             <div>
@@ -121,7 +115,7 @@ export function ExportModal({ isOpen, onClose, preselectedEventId }: ExportModal
                                 <p className="text-xs text-white/40 uppercase tracking-wider">Reports & Analytics</p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-all">
+                        <button onClick={onClose} className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
                             <X size={20} />
                         </button>
                     </div>
@@ -136,7 +130,7 @@ export function ExportModal({ isOpen, onClose, preselectedEventId }: ExportModal
                                         type="date"
                                         value={formData.date_from}
                                         onChange={(e) => setFormData({ ...formData, date_from: e.target.value })}
-                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-500/50 text-sm"
+                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white focus:outline-none focus:border-green-500/50 text-sm"
                                     />
                                 </div>
                             </div>
@@ -147,7 +141,7 @@ export function ExportModal({ isOpen, onClose, preselectedEventId }: ExportModal
                                         type="date"
                                         value={formData.date_to}
                                         onChange={(e) => setFormData({ ...formData, date_to: e.target.value })}
-                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-500/50 text-sm"
+                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white focus:outline-none focus:border-green-500/50 text-sm"
                                     />
                                 </div>
                             </div>
@@ -169,7 +163,7 @@ export function ExportModal({ isOpen, onClose, preselectedEventId }: ExportModal
                                         sheet_id: selectedEvent?.google_sheet_id || prev.sheet_id,
                                     }));
                                 }}
-                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-500/50 text-sm"
+                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white focus:outline-none focus:border-green-500/50 text-sm"
                             >
                                 <option value="">Select an event...</option>
                                 <option value="standalone">Standalone Matches</option>
@@ -198,7 +192,7 @@ export function ExportModal({ isOpen, onClose, preselectedEventId }: ExportModal
                                 placeholder="Paste spreadsheet ID here..."
                                 value={formData.sheet_id}
                                 onChange={(e) => setFormData({ ...formData, sheet_id: e.target.value })}
-                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-green-500/50 text-sm"
+                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white focus:outline-none focus:border-green-500/50 text-sm"
                             />
                             <p className="text-[10px] text-white/30">
                                 Tip: Make sure the sheet is shared with the service account email.
@@ -206,35 +200,31 @@ export function ExportModal({ isOpen, onClose, preselectedEventId }: ExportModal
                         </div>
 
                         {exportStatus && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className={`p-4 rounded-xl flex items-start gap-3 ${exportStatus.type === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
+                            <div
+                                className={`p-4 rounded flex items-start gap-3 ${exportStatus.type === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'
                                     }`}
                             >
                                 {exportStatus.type === 'success' ? <Check size={18} /> : <AlertCircle size={18} />}
                                 <p className="text-sm">{exportStatus.message}</p>
-                            </motion.div>
+                            </div>
                         )}
 
                         <div className="flex gap-3 pt-2">
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-medium transition-all"
+                                className="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 text-white rounded font-medium transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 type="submit"
                                 disabled={isExporting || !formData.sheet_id || !formData.event_id}
-                                className="flex-[2] px-4 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                className="flex-[2] px-4 py-3 bg-green-600 hover:bg-green-500 text-white rounded font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {isExporting ? (
                                     <>
-                                        <motion.div
-                                            animate={{ rotate: 360 }}
-                                            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                        <div
                                             className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
                                         />
                                         Exporting...
@@ -248,8 +238,8 @@ export function ExportModal({ isOpen, onClose, preselectedEventId }: ExportModal
                             </button>
                         </div>
                     </form>
-                </motion.div>
+                </div>
             </div>
-        </AnimatePresence>
+        </Fragment>
     );
 }

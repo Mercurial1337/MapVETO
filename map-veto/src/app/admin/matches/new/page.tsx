@@ -1,8 +1,8 @@
 'use client';
+import { Fragment } from 'react';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
 import { VetoTemplate, VetoSequence, VetoStep } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -381,12 +381,10 @@ function NewMatchContent() {
 
     if (createdMatch) {
         return (
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+            <div
                 className="max-w-2xl mx-auto"
             >
-                <div className="glass rounded-2xl p-8">
+                <div className="glass rounded p-8">
                     <div className="text-center mb-8">
                         <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                             <span className="text-3xl text-green-400">✓</span>
@@ -404,7 +402,7 @@ function NewMatchContent() {
                         </p>
 
                         {/* Team A Link */}
-                        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+                        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded">
                             <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm font-medium text-red-400">{formData.teamAName}</span>
                                 <button
@@ -417,7 +415,7 @@ function NewMatchContent() {
                         </div>
 
                         {/* Team B Link */}
-                        <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                        <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded">
                             <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm font-medium text-blue-400">{formData.teamBName}</span>
                                 <button
@@ -430,7 +428,7 @@ function NewMatchContent() {
                         </div>
 
                         {/* Observer Link */}
-                        <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                        <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded">
                             <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm font-medium text-purple-400">Observer</span>
                                 <button
@@ -443,7 +441,7 @@ function NewMatchContent() {
                         </div>
 
                         {/* Admin Link */}
-                        <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+                        <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded">
                             <div className="flex items-center justify-between mb-2">
                                 <span className="text-sm font-medium text-yellow-400">Admin</span>
                                 <button
@@ -457,10 +455,10 @@ function NewMatchContent() {
                     </div>
 
                     {/* Coin Flip Section */}
-                    <div className="mt-8 p-6 bg-white/5 rounded-xl border border-white/10">
+                    <div className="mt-8 p-6 bg-white/5 rounded border border-white/10">
                         <div className="flex items-center justify-between mb-3">
                             <h3 className="text-lg font-semibold text-white">Coin Toss</h3>
-                            
+
                             {/* Readiness Badges */}
                             <div className="flex gap-2">
                                 <div className={`px-2 py-1 rounded text-xs font-medium flex items-center gap-1.5 ${teamAReady ? 'bg-green-500/20 text-green-400' : 'bg-red-500/10 text-red-400/70'}`}>
@@ -481,14 +479,12 @@ function NewMatchContent() {
                                     Seeded Match
                                 </p>
                                 <p className="text-white/60 text-sm mt-1">
-                                    <span className="font-medium text-white">{createdMatch.seededTeam === 'team_a' ? formData.teamAName : formData.teamBName}</span> is the higher seed. 
+                                    <span className="font-medium text-white">{createdMatch.seededTeam === 'team_a' ? formData.teamAName : formData.teamBName}</span> is the higher seed.
                                     They will automatically pick first once both teams are ready.
                                 </p>
                             </div>
                         ) : coinFlipResult ? (
-                            <motion.div
-                                initial={{ scale: 0.8, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
+                            <div
                                 className="text-center py-4"
                             >
                                 <p className="text-yellow-400 text-xl font-bold">
@@ -497,16 +493,14 @@ function NewMatchContent() {
                                 <p className="text-white/60 text-sm mt-1">
                                     {wasForced ? 'Admin selected winner' : 'They will pick first'}
                                 </p>
-                            </motion.div>
+                            </div>
                         ) : isFlippingCoin ? (
                             <div className="text-center py-4">
-                                <motion.span
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 0.5, repeat: Infinity, ease: 'linear' }}
+                                <span
                                     className="text-4xl inline-block"
                                 >
                                     🪙
-                                </motion.span>
+                                </span>
                                 <p className="text-white/60 mt-2">Flipping...</p>
                             </div>
                         ) : (
@@ -517,7 +511,7 @@ function NewMatchContent() {
                                     <button
                                         onClick={() => handleCoinFlip()}
                                         disabled={!teamAReady || !teamBReady}
-                                        className="px-8 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-black font-bold rounded-xl hover:from-yellow-400 hover:to-orange-400 transition-all disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed"
+                                        className="px-8 py-3 bg-[#25252a]   text-black font-bold rounded   transition-colors disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed"
                                     >
                                         Flip Coin
                                     </button>
@@ -540,14 +534,14 @@ function NewMatchContent() {
                                     <button
                                         onClick={() => handleCoinFlip('team_a')}
                                         disabled={!teamAReady || !teamBReady}
-                                        className="px-6 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-xl text-red-400 font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="px-6 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded text-red-400 font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                     >
                                         {formData.teamAName}
                                     </button>
                                     <button
                                         onClick={() => handleCoinFlip('team_b')}
                                         disabled={!teamAReady || !teamBReady}
-                                        className="px-6 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded-xl text-blue-400 font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="px-6 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-400 font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                     >
                                         {formData.teamBName}
                                     </button>
@@ -577,7 +571,7 @@ function NewMatchContent() {
                                     higherSeed: prev.higherSeed,
                                 }));
                             }}
-                            className="flex-1 px-6 py-3 border border-white/20 rounded-xl text-white hover:bg-white/5 transition-colors"
+                            className="flex-1 px-6 py-3 border border-white/20 rounded text-white hover:bg-white/5 transition-colors"
                         >
                             Create Another
                         </button>
@@ -585,13 +579,13 @@ function NewMatchContent() {
                             href={createdMatch.links.observer.url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-1 btn-primary px-6 py-3 rounded-xl text-center"
+                            className="flex-1 btn-primary px-6 py-3 rounded text-center"
                         >
                             Open Match (Observer)
                         </a>
                     </div>
                 </div>
-            </motion.div>
+            </div>
         );
     }
 
@@ -599,9 +593,9 @@ function NewMatchContent() {
         <div className="max-w-2xl mx-auto">
             <h1 className="text-2xl font-bold text-white mb-6">Create New Match</h1>
 
-            <form onSubmit={handleSubmit} className="glass rounded-2xl p-6 space-y-6">
+            <form onSubmit={handleSubmit} className="glass rounded p-6 space-y-6">
                 {error && (
-                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm">
+                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm">
                         {error}
                     </div>
                 )}
@@ -632,20 +626,16 @@ function NewMatchContent() {
                                     if (e.key === 'Escape') setShowTeamADropdown(false);
                                 }}
                                 placeholder={formData.eventId && eventTeams.length > 0 ? 'Search or type team name...' : 'e.g. Fnatic'}
-                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-red-500/50"
+                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white placeholder-white/30 focus:outline-none focus:border-red-500/50"
                             />
                             {/* Event teams dropdown */}
-                            <AnimatePresence>
+                            <Fragment>
                                 {showTeamADropdown && formData.eventId && (() => {
                                     const filtered = getFilteredTeams(formData.teamAName, formData.teamBName);
                                     if (filtered.length === 0) return null;
                                     return (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: -4 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -4 }}
-                                            transition={{ duration: 0.15 }}
-                                            className="absolute z-50 top-full left-0 right-0 mt-1 bg-slate-800 border border-white/15 rounded-xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto"
+                                        <div
+                                            className="absolute z-50 top-full left-0 right-0 mt-1 bg-slate-800 border border-white/15 rounded  overflow-hidden max-h-48 overflow-y-auto"
                                         >
                                             {filtered.map((team) => (
                                                 <button
@@ -664,10 +654,10 @@ function NewMatchContent() {
                                                     <span className="text-sm text-white truncate">{team.name}</span>
                                                 </button>
                                             ))}
-                                        </motion.div>
+                                        </div>
                                     );
                                 })()}
-                            </AnimatePresence>
+                            </Fragment>
                         </div>
                         <div>
                             <label className="block text-sm text-white/60 mb-2">Team Logo (Optional)</label>
@@ -675,7 +665,7 @@ function NewMatchContent() {
                                 {formData.teamALogo && (
                                     <img src={formData.teamALogo} alt="Team A" className="w-12 h-12 rounded-lg object-cover bg-white/10" />
                                 )}
-                                <label className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white/50 cursor-pointer hover:bg-white/10 transition-colors text-center">
+                                <label className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded text-white/50 cursor-pointer hover:bg-white/10 transition-colors text-center">
                                     <input
                                         type="file"
                                         accept="image/*"
@@ -719,20 +709,16 @@ function NewMatchContent() {
                                     if (e.key === 'Escape') setShowTeamBDropdown(false);
                                 }}
                                 placeholder={formData.eventId && eventTeams.length > 0 ? 'Search or type team name...' : 'e.g. Sentinels'}
-                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50"
+                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50"
                             />
                             {/* Event teams dropdown */}
-                            <AnimatePresence>
+                            <Fragment>
                                 {showTeamBDropdown && formData.eventId && (() => {
                                     const filtered = getFilteredTeams(formData.teamBName, formData.teamAName);
                                     if (filtered.length === 0) return null;
                                     return (
-                                        <motion.div
-                                            initial={{ opacity: 0, y: -4 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -4 }}
-                                            transition={{ duration: 0.15 }}
-                                            className="absolute z-50 top-full left-0 right-0 mt-1 bg-slate-800 border border-white/15 rounded-xl shadow-2xl overflow-hidden max-h-48 overflow-y-auto"
+                                        <div
+                                            className="absolute z-50 top-full left-0 right-0 mt-1 bg-slate-800 border border-white/15 rounded  overflow-hidden max-h-48 overflow-y-auto"
                                         >
                                             {filtered.map((team) => (
                                                 <button
@@ -751,10 +737,10 @@ function NewMatchContent() {
                                                     <span className="text-sm text-white truncate">{team.name}</span>
                                                 </button>
                                             ))}
-                                        </motion.div>
+                                        </div>
                                     );
                                 })()}
-                            </AnimatePresence>
+                            </Fragment>
                         </div>
                         <div>
                             <label className="block text-sm text-white/60 mb-2">Team Logo (Optional)</label>
@@ -762,7 +748,7 @@ function NewMatchContent() {
                                 {formData.teamBLogo && (
                                     <img src={formData.teamBLogo} alt="Team B" className="w-12 h-12 rounded-lg object-cover bg-white/10" />
                                 )}
-                                <label className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white/50 cursor-pointer hover:bg-white/10 transition-colors text-center">
+                                <label className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded text-white/50 cursor-pointer hover:bg-white/10 transition-colors text-center">
                                     <input
                                         type="file"
                                         accept="image/*"
@@ -799,7 +785,7 @@ function NewMatchContent() {
                         <select
                             value={formData.format}
                             onChange={(e) => setFormData({ ...formData, format: e.target.value as 'bo1' | 'bo3' | 'bo5' })}
-                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500/50"
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white focus:outline-none focus:border-purple-500/50"
                         >
                             <option value="bo1">Best of 1</option>
                             <option value="bo3">Best of 3 (Default)</option>
@@ -818,7 +804,7 @@ function NewMatchContent() {
                         <select
                             value={formData.eventId}
                             onChange={(e) => setFormData({ ...formData, eventId: e.target.value })}
-                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500/50"
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white focus:outline-none focus:border-purple-500/50"
                         >
                             <option value="">No Event (Standalone Match)</option>
                             {events.map((event) => (
@@ -838,7 +824,7 @@ function NewMatchContent() {
                         <select
                             value={formData.higherSeed}
                             onChange={(e) => setFormData({ ...formData, higherSeed: e.target.value as any })}
-                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500/50"
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white focus:outline-none focus:border-purple-500/50"
                         >
                             <option value="none">None (Random Coin Toss)</option>
                             {formData.teamAName && <option value="team_a">{formData.teamAName}</option>}
@@ -862,7 +848,7 @@ function NewMatchContent() {
                             <button
                                 type="button"
                                 onClick={() => setFormData({ ...formData, mapPoolType: 'competitive', customMaps: [] })}
-                                className={`p-4 rounded-xl border-2 text-left transition-all ${formData.mapPoolType === 'competitive'
+                                className={`p-4 rounded border-2 text-left transition-colors ${formData.mapPoolType === 'competitive'
                                     ? 'border-cyan-500 bg-cyan-500/10'
                                     : 'border-white/10 bg-white/5 hover:border-white/30'
                                     }`}
@@ -880,7 +866,7 @@ function NewMatchContent() {
                             <button
                                 type="button"
                                 onClick={() => setFormData({ ...formData, mapPoolType: 'all', customMaps: [] })}
-                                className={`p-4 rounded-xl border-2 text-left transition-all ${formData.mapPoolType === 'all'
+                                className={`p-4 rounded border-2 text-left transition-colors ${formData.mapPoolType === 'all'
                                     ? 'border-cyan-500 bg-cyan-500/10'
                                     : 'border-white/10 bg-white/5 hover:border-white/30'
                                     }`}
@@ -898,7 +884,7 @@ function NewMatchContent() {
                             <button
                                 type="button"
                                 onClick={() => setFormData({ ...formData, mapPoolType: 'custom', customMaps: formData.customMaps.length > 0 ? formData.customMaps : [...COMPETITIVE_MAPS] })}
-                                className={`p-4 rounded-xl border-2 text-left transition-all ${formData.mapPoolType === 'custom'
+                                className={`p-4 rounded border-2 text-left transition-colors ${formData.mapPoolType === 'custom'
                                     ? 'border-cyan-500 bg-cyan-500/10'
                                     : 'border-white/10 bg-white/5 hover:border-white/30'
                                     }`}
@@ -917,13 +903,10 @@ function NewMatchContent() {
 
                         {/* Custom Map Selector */}
                         {formData.mapPoolType === 'custom' && (
-                            <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
+                            <div
                                 className="overflow-hidden"
                             >
-                                <div className="p-4 bg-white/5 rounded-xl border border-white/10">
+                                <div className="p-4 bg-white/5 rounded border border-white/10">
                                     <div className="flex items-center justify-between mb-3">
                                         <p className="text-sm text-white/60">Select maps for this match</p>
                                         <span className="text-xs text-cyan-400">{formData.customMaps.length} selected</span>
@@ -948,7 +931,7 @@ function NewMatchContent() {
                                                             });
                                                         }
                                                     }}
-                                                    className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-all ${isSelected
+                                                    className={`relative aspect-video rounded-lg overflow-hidden border-2 transition-colors ${isSelected
                                                         ? 'border-cyan-500 ring-2 ring-cyan-500/30'
                                                         : 'border-transparent opacity-50 grayscale hover:opacity-75 hover:grayscale-0'
                                                         }`}
@@ -959,7 +942,7 @@ function NewMatchContent() {
                                                         fill
                                                         className="object-cover"
                                                     />
-                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                                                    <div className="absolute inset-0 bg-[#25252a]  " />
                                                     <span className={`absolute bottom-1 left-2 text-xs font-medium ${isSelected ? 'text-cyan-400' : 'text-white/80'}`}>
                                                         {mapName}
                                                     </span>
@@ -978,7 +961,7 @@ function NewMatchContent() {
                                         </p>
                                     )}
                                 </div>
-                            </motion.div>
+                            </div>
                         )}
                     </div>
                     {/* Veto Sequence */}
@@ -993,7 +976,7 @@ function NewMatchContent() {
                             <button
                                 type="button"
                                 onClick={() => setFormData({ ...formData, isCustomSequence: !formData.isCustomSequence })}
-                                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${formData.isCustomSequence
+                                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors ${formData.isCustomSequence
                                     ? 'bg-purple-500 text-white'
                                     : 'bg-white/5 text-white/60 hover:bg-white/10'
                                     }`}
@@ -1014,7 +997,7 @@ function NewMatchContent() {
                                             customSequence: template?.sequence || null
                                         });
                                     }}
-                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-purple-500/50"
+                                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white focus:outline-none focus:border-purple-500/50"
                                 >
                                     {templates.map((template) => (
                                         <option key={template.id} value={template.id}>
@@ -1025,7 +1008,7 @@ function NewMatchContent() {
                             ) : (
                                 <div className="space-y-3">
                                     {formData.customSequence?.steps.map((step, index) => (
-                                        <div key={index} className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded-xl">
+                                        <div key={index} className="flex items-center gap-3 p-3 bg-white/5 border border-white/10 rounded">
                                             <span className="w-6 h-6 flex items-center justify-center bg-white/10 rounded text-[10px] font-bold text-white/40">
                                                 {index + 1}
                                             </span>
@@ -1080,7 +1063,7 @@ function NewMatchContent() {
                                     <button
                                         type="button"
                                         onClick={addSequenceStep}
-                                        className="w-full py-2 border-2 border-dashed border-white/10 rounded-xl text-xs text-white/40 hover:border-white/20 hover:text-white/60 transition-all"
+                                        className="w-full py-2 border-2 border-dashed border-white/10 rounded text-xs text-white/40 hover:border-white/20 hover:text-white/60 transition-colors"
                                     >
                                         + Add Veto Step
                                     </button>
@@ -1095,13 +1078,11 @@ function NewMatchContent() {
                     <button
                         type="submit"
                         disabled={isSubmitting || !formData.teamAName || !formData.teamBName}
-                        className="w-full btn-primary py-4 rounded-xl text-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full btn-primary py-4 rounded text-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {isSubmitting ? (
                             <span className="flex items-center justify-center gap-2">
-                                <motion.span
-                                    animate={{ rotate: 360 }}
-                                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                                <span
                                     className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full inline-block"
                                 />
                                 Creating Match...
@@ -1120,9 +1101,7 @@ export default function NewMatchPage() {
     return (
         <Suspense fallback={
             <div className="flex items-center justify-center py-20">
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                <div
                     className="w-8 h-8 border-4 border-white/20 border-t-purple-500 rounded-full"
                 />
             </div>

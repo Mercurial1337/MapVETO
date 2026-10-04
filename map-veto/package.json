@@ -6,14 +6,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node tests/notifications.test.mjs && node tests/veto.test.mjs",
+    "test:remote": "node tests/veto.test.mjs --remote",
+    "test:http": "node tests/http.test.mjs",
+    "test:scheduler": "node tests/scheduler.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
     "@upstash/ratelimit": "^2.0.7",
     "@upstash/redis": "^1.36.0",
-    "framer-motion": "^12.24.5",
     "google-auth-library": "^10.5.0",
     "googleapis": "^170.1.0",
     "lucide-react": "^0.563.0",

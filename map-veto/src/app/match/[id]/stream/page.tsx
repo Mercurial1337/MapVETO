@@ -1,8 +1,8 @@
 'use client';
+import { Fragment } from 'react';
 
 import { useSearchParams, useParams } from 'next/navigation';
 import { Suspense, useMemo, useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 import type { GameMap, VetoStep } from '@/types';
 
@@ -46,16 +46,8 @@ function StreamOverlayContent() {
     const bgMode = (searchParams.get('bg') || 'dark') as BackgroundMode;
     const showBanned = searchParams.get('banned') !== 'false';
     const compact = searchParams.get('compact') === 'true';
-    const animateIn = searchParams.get('animate') !== 'false';
 
-    const [isRevealed, setIsRevealed] = useState(!animateIn);
-
-    useEffect(() => {
-        if (animateIn) {
-            const timer = setTimeout(() => setIsRevealed(true), 500);
-            return () => clearTimeout(timer);
-        }
-    }, [animateIn]);
+    const isRevealed=true;
 
     const bgClass = {
         dark: 'bg-[#0a0a0f]',
@@ -71,27 +63,20 @@ function StreamOverlayContent() {
                     <div>?bg=transparent | chroma | dark</div>
                     <div>?banned=false (hide banned)</div>
                     <div>?compact=true (smaller)</div>
-                    <div>?animate=false (no entrance)</div>
                 </div>
             )}
 
             {/* Main Container */}
-            <motion.div
-                initial={animateIn ? { opacity: 0, y: 30 } : false}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
+            <div
                 className="max-w-5xl mx-auto"
             >
                 {/* Header with Teams */}
-                <motion.div
-                    initial={animateIn ? { opacity: 0, scale: 0.95 } : false}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.2, duration: 0.5 }}
+                <div
                     className="flex items-center justify-center gap-8 mb-8"
                 >
                     {/* Team A */}
                     <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-red-500/30 to-red-600/20 border border-red-500/40 flex items-center justify-center">
+                        <div className="w-16 h-16 rounded bg-[#25252a]   border border-red-500/40 flex items-center justify-center">
                             <span className="text-2xl font-bold text-red-400">F</span>
                         </div>
                         <div className="text-right">
@@ -108,40 +93,34 @@ function StreamOverlayContent() {
                             <h2 className="text-2xl font-bold text-white">{DEMO_RESULTS.teamB}</h2>
                             <span className="text-xs text-blue-400/70 uppercase tracking-wider">Team 2</span>
                         </div>
-                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500/30 to-blue-600/20 border border-blue-500/40 flex items-center justify-center">
+                        <div className="w-16 h-16 rounded bg-[#25252a]   border border-blue-500/40 flex items-center justify-center">
                             <span className="text-2xl font-bold text-blue-400">S</span>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
                 {/* Veto Results Title */}
-                <motion.div
-                    initial={animateIn ? { opacity: 0 } : false}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4, duration: 0.4 }}
+                <div
                     className="text-center mb-6"
                 >
                     <h1 className="text-lg font-semibold text-white/60 uppercase tracking-[0.3em]">
                         Map Veto Results
                     </h1>
-                </motion.div>
+                </div>
 
                 {/* Picked Maps */}
                 <div className={`grid ${compact ? 'grid-cols-3 gap-4' : 'grid-cols-3 gap-6'} mb-8`}>
                     {DEMO_RESULTS.maps.map((result, index) => (
-                        <motion.div
+                        <div
                             key={result.map.id}
-                            initial={animateIn ? { opacity: 0, y: 20, scale: 0.9 } : false}
-                            animate={isRevealed ? { opacity: 1, y: 0, scale: 1 } : {}}
-                            transition={{ delay: 0.5 + index * 0.2, duration: 0.5, ease: 'backOut' }}
                             className="relative group"
                         >
                             {/* Map Card */}
                             <div
-                                className={`relative overflow-hidden rounded-2xl border-2 ${compact ? 'aspect-[16/10]' : 'aspect-video'}`}
+                                className={`relative overflow-hidden rounded border-2 ${compact ? 'aspect-[16/10]' : 'aspect-video'}`}
                                 style={{
                                     borderColor: result.pickedBy === 'team_a' ? '#ef4444' : result.pickedBy === 'team_b' ? '#3b82f6' : '#8b5cf6',
-                                    boxShadow: `0 0 30px ${result.pickedBy === 'team_a' ? 'rgba(239,68,68,0.3)' : result.pickedBy === 'team_b' ? 'rgba(59,130,246,0.3)' : 'rgba(139,92,246,0.3)'}`,
+
                                 }}
                             >
                                 <Image
@@ -152,7 +131,7 @@ function StreamOverlayContent() {
                                 />
 
                                 {/* Gradient Overlay */}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                                <div className="absolute inset-0 bg-black/50   " />
 
                                 {/* Map Number Badge */}
                                 <div
@@ -167,8 +146,8 @@ function StreamOverlayContent() {
                                 {/* Side Badge */}
                                 <div
                                     className={`absolute top-3 right-3 px-3 py-1 rounded-full text-xs font-bold uppercase ${result.side === 'attack'
-                                        ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white'
-                                        : 'bg-gradient-to-r from-cyan-500 to-blue-500 text-white'
+                                        ? 'bg-[#25252a]   text-white'
+                                        : 'bg-[#25252a]   text-white'
                                         }`}
                                 >
                                     {result.side}
@@ -182,29 +161,22 @@ function StreamOverlayContent() {
                                     </p>
                                 </div>
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
 
                 {/* Banned Maps */}
-                <AnimatePresence>
+                <Fragment>
                     {showBanned && (
-                        <motion.div
-                            initial={animateIn ? { opacity: 0, y: 20 } : false}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ delay: 1.2, duration: 0.4 }}
+                        <div
                         >
                             <div className="text-center mb-4">
                                 <span className="text-xs text-white/40 uppercase tracking-wider">Banned Maps</span>
                             </div>
                             <div className="flex justify-center gap-3">
                                 {DEMO_RESULTS.banned.map((ban, index) => (
-                                    <motion.div
+                                    <div
                                         key={ban.map.id}
-                                        initial={animateIn ? { opacity: 0, scale: 0.8 } : false}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: 1.3 + index * 0.1, duration: 0.3 }}
                                         className="relative w-24 aspect-video rounded-lg overflow-hidden opacity-50 grayscale"
                                     >
                                         <Image
@@ -221,23 +193,20 @@ function StreamOverlayContent() {
                                         <div className="absolute bottom-1 left-1 right-1 text-center">
                                             <span className="text-[10px] text-white/60">{ban.map.name}</span>
                                         </div>
-                                    </motion.div>
+                                    </div>
                                 ))}
                             </div>
-                        </motion.div>
+                        </div>
                     )}
-                </AnimatePresence>
+                </Fragment>
 
                 {/* Footer Branding */}
-                <motion.div
-                    initial={animateIn ? { opacity: 0 } : false}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1.5, duration: 0.4 }}
+                <div
                     className="mt-8 text-center"
                 >
                     <span className="text-xs text-white/20 uppercase tracking-[0.5em]">Map Veto</span>
-                </motion.div>
-            </motion.div>
+                </div>
+            </div>
         </div>
     );
 }
@@ -246,9 +215,7 @@ export default function StreamPage() {
     return (
         <Suspense fallback={
             <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                <div
                     className="w-8 h-8 border-2 border-white/20 border-t-purple-500 rounded-full"
                 />
             </div>

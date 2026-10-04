@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Plus, Pencil, Trash2, Image as ImageIcon, Eye, FileSpreadsheet, Shield, Crown } from 'lucide-react';
@@ -85,9 +84,7 @@ export default function EventsPage() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                <div
                     className="w-8 h-8 border-4 border-white/20 border-t-purple-500 rounded-full"
                 />
             </div>
@@ -98,7 +95,7 @@ export default function EventsPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-white">Events</h1>
-                <Link href="/admin/events/new" className="btn-primary px-4 py-2 rounded-xl text-sm flex items-center gap-2">
+                <Link href="/admin/events/new" className="btn-primary px-4 py-2 rounded text-sm flex items-center gap-2">
                     <Plus size={18} />
                     New Event
                 </Link>
@@ -109,13 +106,13 @@ export default function EventsPage() {
             </p>
 
             {events.length === 0 ? (
-                <div className="glass rounded-2xl p-12 text-center">
+                <div className="glass rounded p-12 text-center">
                     <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
                         <ImageIcon size={32} className="text-purple-400" />
                     </div>
                     <h2 className="text-xl font-semibold text-white mb-2">No Events Yet</h2>
                     <p className="text-white/50 mb-6">Create your first event to start branding your matches.</p>
-                    <Link href="/admin/events/new" className="btn-primary px-6 py-3 rounded-xl inline-flex items-center gap-2">
+                    <Link href="/admin/events/new" className="btn-primary px-6 py-3 rounded inline-flex items-center gap-2">
                         <Plus size={18} />
                         Create Your First Event
                     </Link>
@@ -123,11 +120,9 @@ export default function EventsPage() {
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {events.map((event) => (
-                        <motion.div
+                        <div
                             key={event.id}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="glass rounded-xl p-5 relative group"
+                            className="glass rounded p-5 relative group"
                         >
                             {/* Logo Preview */}
                             <div className="h-12 mb-4 flex items-center">
@@ -241,7 +236,7 @@ export default function EventsPage() {
                                     )
                                 )}
                             </div>
-                        </motion.div>
+                        </div>
                     ))}
                 </div>
             )}

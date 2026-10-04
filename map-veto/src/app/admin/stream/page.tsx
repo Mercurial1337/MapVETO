@@ -8,7 +8,6 @@ export default function StreamSettingsPage() {
     const [bgMode, setBgMode] = useState<'dark' | 'transparent' | 'chroma'>('transparent');
     const [showBanned, setShowBanned] = useState(true);
     const [compact, setCompact] = useState(false);
-    const [animate, setAnimate] = useState(true);
     const [overlayPos, setOverlayPos] = useState<'bottom' | 'top'>('bottom');
 
     const generateUrl = (type: 'stream' | 'overlay') => {
@@ -17,7 +16,6 @@ export default function StreamSettingsPage() {
         params.set('bg', bgMode);
         if (!showBanned) params.set('banned', 'false');
         if (compact) params.set('compact', 'true');
-        if (!animate) params.set('animate', 'false');
         if (type === 'overlay') params.set('pos', overlayPos);
         return `${base}?${params.toString()}`;
     };
@@ -36,7 +34,7 @@ export default function StreamSettingsPage() {
             </div>
 
             {/* Match Selection */}
-            <div className="glass rounded-2xl p-6">
+            <div className="glass rounded p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Match</h2>
                 <div className="flex gap-4">
                     <input
@@ -44,13 +42,13 @@ export default function StreamSettingsPage() {
                         value={matchId}
                         onChange={(e) => setMatchId(e.target.value)}
                         placeholder="Match ID"
-                        className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
+                        className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
                     />
                 </div>
             </div>
 
             {/* Overlay Options */}
-            <div className="glass rounded-2xl p-6">
+            <div className="glass rounded p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Display Options</h2>
 
                 <div className="grid grid-cols-2 gap-6">
@@ -113,26 +111,16 @@ export default function StreamSettingsPage() {
                             />
                             <span className="text-sm text-white/70">Compact mode</span>
                         </label>
-
-                        <label className="flex items-center gap-3 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={animate}
-                                onChange={(e) => setAnimate(e.target.checked)}
-                                className="w-5 h-5 rounded bg-white/10 border-white/20"
-                            />
-                            <span className="text-sm text-white/70">Entrance animations</span>
-                        </label>
                     </div>
                 </div>
             </div>
 
             {/* Generated URLs */}
-            <div className="glass rounded-2xl p-6 space-y-6">
+            <div className="glass rounded p-6 space-y-6">
                 <h2 className="text-lg font-semibold text-white">OBS Browser Sources</h2>
 
                 {/* Results Overlay */}
-                <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded">
                     <div className="flex items-center justify-between mb-3">
                         <div>
                             <h3 className="text-sm font-medium text-purple-400">Results Overlay (Full Screen)</h3>
@@ -161,7 +149,7 @@ export default function StreamSettingsPage() {
                 </div>
 
                 {/* Live Overlay */}
-                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded">
                     <div className="flex items-center justify-between mb-3">
                         <div>
                             <h3 className="text-sm font-medium text-blue-400">Live Overlay (Bottom Bar)</h3>
@@ -191,7 +179,7 @@ export default function StreamSettingsPage() {
             </div>
 
             {/* OBS Setup Instructions */}
-            <div className="glass rounded-2xl p-6">
+            <div className="glass rounded p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">OBS Setup</h2>
                 <ol className="space-y-3 text-sm text-white/60">
                     <li className="flex items-start gap-3">

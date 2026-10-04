@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { motion } from 'framer-motion';
 import Image from 'next/image';
 
 interface MapUpload {
@@ -76,14 +75,14 @@ export default function MapUploadPage() {
             </div>
 
             {/* Game Selection */}
-            <div className="glass rounded-2xl p-6">
+            <div className="glass rounded p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Select Game</h2>
                 <div className="flex gap-4">
                     {['valorant', 'cs2', 'cod'].map((game) => (
                         <button
                             key={game}
                             onClick={() => setSelectedGame(game)}
-                            className={`px-6 py-3 rounded-xl text-sm font-medium uppercase transition-colors ${selectedGame === game
+                            className={`px-6 py-3 rounded text-sm font-medium uppercase transition-colors ${selectedGame === game
                                 ? 'bg-purple-500 text-white'
                                 : 'bg-white/10 text-white/60 hover:bg-white/20'
                                 }`}
@@ -97,7 +96,7 @@ export default function MapUploadPage() {
             {/* Upload Zone */}
             <div
                 onClick={() => fileInputRef.current?.click()}
-                className="glass rounded-2xl p-12 border-2 border-dashed border-white/20 hover:border-purple-500/50 transition-colors cursor-pointer text-center"
+                className="glass rounded p-12 border-2 border-dashed border-white/20 hover:border-purple-500/50 transition-colors cursor-pointer text-center"
             >
                 <input
                     ref={fileInputRef}
@@ -115,10 +114,8 @@ export default function MapUploadPage() {
 
             {/* Upload Queue */}
             {maps.length > 0 && (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="glass rounded-2xl p-6"
+                <div
+                    className="glass rounded p-6"
                 >
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold text-white">Upload Queue ({maps.length})</h2>
@@ -141,10 +138,9 @@ export default function MapUploadPage() {
 
                     <div className="space-y-4">
                         {maps.map((map) => (
-                            <motion.div
+                            <div
                                 key={map.id}
-                                layout
-                                className={`p-4 rounded-xl border ${map.status === 'success'
+                                className={`p-4 rounded border ${map.status === 'success'
                                     ? 'bg-green-500/10 border-green-500/20'
                                     : 'bg-white/5 border-white/10'
                                     }`}
@@ -173,10 +169,8 @@ export default function MapUploadPage() {
                                         {/* Progress Bar */}
                                         {map.status === 'uploading' && (
                                             <div className="mt-2 h-1 bg-white/10 rounded-full overflow-hidden">
-                                                <motion.div
+                                                <div
                                                     className="h-full bg-purple-500"
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: `${map.progress}%` }}
                                                 />
                                             </div>
                                         )}
@@ -210,18 +204,18 @@ export default function MapUploadPage() {
                                         )}
                                     </div>
                                 </div>
-                            </motion.div>
+                            </div>
                         ))}
                     </div>
-                </motion.div>
+                </div>
             )}
 
             {/* Current Maps */}
-            <div className="glass rounded-2xl p-6">
+            <div className="glass rounded p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Current {selectedGame.toUpperCase()} Maps</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {['Abyss', 'Bind', 'Breeze', 'Corrode', 'Haven', 'Pearl', 'Split'].map((mapName) => (
-                        <div key={mapName} className="aspect-video rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                        <div key={mapName} className="aspect-video rounded bg-white/5 border border-white/10 flex items-center justify-center">
                             <span className="text-white/40 text-sm">{mapName}</span>
                         </div>
                     ))}

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
-import type { VetoActor } from '@/types';
+import type { VetoActor, LinkType } from '@/types';
 
 export interface TokenValidationResult {
     isValid: boolean;
-    linkType: VetoActor | 'observer' | null;
+    linkType: LinkType | null;
     matchId: string | null;
     error?: string;
 }
@@ -56,7 +56,7 @@ export async function validateToken(
 
         return {
             isValid: true,
-            linkType: link.link_type as VetoActor | 'observer',
+            linkType: link.link_type as LinkType,
             matchId: link.match_id,
         };
     } catch (error) {
@@ -87,7 +87,7 @@ export async function requireTeamAccess(
         );
     }
 
-    if (validation.linkType === 'observer') {
+    if (validation.linkType !== 'team_a' && validation.linkType !== 'team_b') {
         return NextResponse.json(
             { error: 'Observers cannot perform this action' },
             { status: 403 }
@@ -144,7 +144,7 @@ export async function getTeamIdentity(
     matchId: string,
     token: string
 ): Promise<{
-    linkType: VetoActor | 'observer';
+    linkType: LinkType;
     teamName: string;
     opponentName: string;
     canInteract: boolean;
@@ -187,7 +187,7 @@ export async function getTeamIdentity(
             linkType,
             teamName,
             opponentName,
-            canInteract: linkType !== 'observer',
+            canInteract: linkType === 'team_a' || linkType === 'team_b',
         };
     } catch (error) {
         return null;

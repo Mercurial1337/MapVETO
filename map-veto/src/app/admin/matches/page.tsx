@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { FileSpreadsheet, Trash2 } from 'lucide-react';
@@ -88,7 +87,7 @@ export default function MatchesPage() {
                 .from('event_admins')
                 .select('event_id')
                 .eq('user_id', userId);
-            
+
             const { data: ownedEvents } = await supabase
                 .from('events')
                 .select('id')
@@ -250,7 +249,7 @@ export default function MatchesPage() {
         const styles = {
             pending: 'bg-gray-500/20 text-gray-400',
             coin_toss: 'bg-yellow-500/20 text-yellow-400',
-            in_progress: 'bg-green-500/20 text-green-400 animate-pulse',
+            in_progress: 'bg-green-500/20 text-green-400 ',
             completed: 'bg-blue-500/20 text-blue-400',
             cancelled: 'bg-red-500/20 text-red-400',
         };
@@ -264,9 +263,7 @@ export default function MatchesPage() {
     if (isLoading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                <div
                     className="w-8 h-8 border-4 border-white/20 border-t-purple-500 rounded-full"
                 />
             </div>
@@ -279,7 +276,7 @@ export default function MatchesPage() {
                 <h1 className="text-2xl font-bold text-white">Matches</h1>
                 <button
                     onClick={() => setIsExportModalOpen(true)}
-                    className="btn-secondary px-4 py-2 rounded-xl text-sm flex items-center gap-2"
+                    className="btn-secondary px-4 py-2 rounded text-sm flex items-center gap-2"
                 >
                     <FileSpreadsheet size={18} />
                     Export
@@ -287,7 +284,7 @@ export default function MatchesPage() {
             </div>
 
             {/* Filters */}
-            <div className="glass rounded-xl p-4 space-y-4">
+            <div className="glass rounded p-4 space-y-4">
                 {/* Status Filter Buttons */}
                 <div className="flex flex-wrap gap-2">
                     {['all', 'pending', 'coin_toss', 'in_progress', 'completed', 'cancelled'].map((status) => (
@@ -361,16 +358,12 @@ export default function MatchesPage() {
 
             {/* Links Modal */}
             {selectedMatchLinks && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                <div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
                     onClick={() => setSelectedMatchLinks(null)}
                 >
-                    <motion.div
-                        initial={{ scale: 0.9 }}
-                        animate={{ scale: 1 }}
-                        className="glass rounded-2xl p-6 max-w-lg w-full mx-4"
+                    <div
+                        className="glass rounded p-6 max-w-lg w-full mx-4"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <h3 className="text-xl font-bold text-white mb-4">Match Links</h3>
@@ -426,12 +419,12 @@ export default function MatchesPage() {
                         >
                             Close
                         </button>
-                    </motion.div>
-                </motion.div>
+                    </div>
+                </div>
             )}
 
             {/* Matches List */}
-            <div className="glass rounded-2xl overflow-hidden">
+            <div className="glass rounded overflow-hidden">
                 <table className="w-full">
                     <thead>
                         <tr className="text-left text-sm text-white/50 border-b border-white/10">
@@ -445,9 +438,8 @@ export default function MatchesPage() {
                     </thead>
                     <tbody>
                         {filteredMatches.map((match) => (
-                            <motion.tr
+                            <tr
                                 key={match.id}
-                                layout
                                 className="border-b border-white/5 hover:bg-white/5"
                             >
                                 <td className="px-6 py-4">
@@ -503,7 +495,7 @@ export default function MatchesPage() {
                                         </button>
                                     </div>
                                 </td>
-                            </motion.tr>
+                            </tr>
                         ))}
                     </tbody>
                 </table>
@@ -517,7 +509,7 @@ export default function MatchesPage() {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-                <div className="flex items-center justify-between glass rounded-xl p-4">
+                <div className="flex items-center justify-between glass rounded p-4">
                     <span className="text-sm text-white/60">
                         Page {page} of {totalPages}
                     </span>

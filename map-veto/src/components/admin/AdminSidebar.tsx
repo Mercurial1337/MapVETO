@@ -110,7 +110,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
                                 <li key={item.href}>
                                     <Link
                                         href={item.href}
-                                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${isActive
+                                        className={`flex items-center gap-3 px-4 py-3 rounded transition-colors ${isActive
                                             ? 'bg-purple-500/20 text-purple-400'
                                             : 'text-white/70 hover:text-white hover:bg-white/5'
                                             }`}
@@ -134,7 +134,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
                     )}
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:text-white hover:bg-red-500/10 transition-colors"
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded text-white/70 hover:text-white hover:bg-red-500/10 transition-colors"
                     >
                         <LogOut size={20} />
                         <span>Sign Out</span>
