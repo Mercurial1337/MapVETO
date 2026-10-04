@@ -34,12 +34,16 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
             .single(),
         supabase
             .from('match_links')
-            .select('link_type')
+            .select('link_type,expires_at')
             .eq('token', token)
             .eq('match_id', matchId)
             .single()
     ]);
 
+    const link=linkResponse.data;
+    if(!link || (link.expires_at && Date.parse(link.expires_at)<=Date.now())) {
+        return <div className="p-8" role="alert">Invalid or expired match link.</div>;
+    }
     const matchData = matchResponse.data;
     const userRole = linkResponse.data?.link_type || null;
 
@@ -62,7 +66,7 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
             .from('match_logs')
             .select('*')
             .eq('match_id', matchId)
-            .order('created_at', { ascending: true });
+            .order('log_order', { ascending: true });
         if (data) {
             logsData = data;
         }

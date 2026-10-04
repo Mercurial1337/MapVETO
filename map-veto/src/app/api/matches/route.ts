@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
+import { canAccessEvent } from '@/lib/auth/eventAuth';
 
 // Request validation schema
 const CreateMatchSchema = z.object({
@@ -40,6 +41,8 @@ export async function POST(request: NextRequest) {
         const authClient = await createClient();
         const { data: { user } } = await authClient.auth.getUser();
 
+        if (!user) return NextResponse.json({error:'Authentication required'},{status:401});
+        if(data.event_id && !await canAccessEvent(user.id,data.event_id)) return NextResponse.json({error:'Event administrator required'},{status:403});
         // Get default template for format if not specified
         let templateId = data.template_id;
         if (!templateId) {

@@ -99,6 +99,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
 
     const templateSteps: VetoStep[] = useMemo(() => {
         const matchExt = match as MatchWithTemplate | null;
+        if (match?.custom_veto_sequence) return match.custom_veto_sequence.steps;
         if (!matchExt?.veto_templates?.sequence) {
             // Default Bo3 steps
             return [
@@ -354,6 +355,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 </div>
             </header>
 
+            {(userRole==='observer' || userRole==='admin') && <p role="status" className="px-4 py-2 border-b border-white/20 text-sm text-white/70">Read-only view{isAdmin?' · Use Referee controls to make changes.':''}</p>}
             {/* Teams Banner */}
             <div className="bg-black/40 border-b border-white/5 px-4 md:px-6 py-4 md:py-6">
                 <div className="max-w-4xl mx-auto flex items-center justify-center gap-4 md:gap-8">
@@ -462,7 +464,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                                 </span>
                                 <button
                                     onClick={handleConfirm}
-                                    disabled={isSubmitting}
+                                    disabled={isSubmitting || !!state?.is_paused}
                                     className={`px-8 py-2.5 rounded-lg font-bold text-white text-sm uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                                         currentStepDef.action === 'ban'
                                             ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 shadow-lg shadow-red-500/25'

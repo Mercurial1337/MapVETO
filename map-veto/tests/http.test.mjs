@@ -1,0 +1,37 @@
+import assert from 'node:assert/strict';
+import {createClient} from '@supabase/supabase-js';
+import {randomUUID} from 'node:crypto';
+import {writeFileSync,readFileSync} from 'node:fs';
+process.loadEnvFile('.env.local');
+const db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY);
+const base='http://localhost:3000';
+async function post(path,body,expected=200,method='POST') {
+ const response=await fetch(base+path,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+ const data=await response.json();assert.equal(response.status,expected,`${path}: ${JSON.stringify(data)}`);return data;
+}
+const {data:template,error:templateError}=await db.from('veto_templates').select('*').eq('format','bo3').eq('is_default',true).single();assert.ifError(templateError);
+const {data:maps}=await db.from('maps').select('id').eq('game_id',template.game_id).eq('is_active',true).limit(7);
+const id=randomUUID();
+const {error}=await db.from('matches').insert({id,veto_template_id:template.id,team_a_name:'Codex QA Alpha',team_b_name:'Codex QA Beta',format:'bo3',status:'ready_check'});assert.ifError(error);
+await db.from('match_state').update({available_maps:maps.map(m=>m.id)}).eq('match_id',id);
+const {data:links}=await db.from('match_links').select('link_type,token').eq('match_id',id);
+const tokens=Object.fromEntries(links.map(l=>[l.link_type,l.token]));
+writeFileSync('.next/qa-match.json',JSON.stringify({id,tokens,template,base}));
+for(const path of ['ready','coin-toss','position-choice','action']) {
+ const payload={match_id:id,token:tokens.observer,pick_first:true,action:'ban',map_id:maps[0].id};
+ await post('/api/veto/'+path,payload,400);
+}
+for(const operation of ['pause','resume','restart','undo','correct','force','reset']) await post('/api/veto/admin/override',{match_id:id,token:tokens.observer,operation,reason:'QA permission test'},403);
+await post(`/api/matches/${id}`,{},403);await post(`/api/matches/${id}`,{action:'reset'},403,'PATCH');await post(`/api/matches/${id}`,{},403,'DELETE');
+await post('/api/veto/session',{match_id:id,token:randomUUID()},401);
+const anon=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+const unauthorized=await anon.rpc('veto_admin',{p_match_id:id,p_token:tokens.admin,p_operation:'reset',p_reason:'QA'});assert.ok(unauthorized.error);
+const stolen=await anon.from('match_links').select('*').eq('match_id',id);assert.equal(stolen.data?.length || 0,0);
+console.log('PASS HTTP spectator: team actions denied, all overrides denied, link retrieval/reset/delete denied, invalid link rejected, direct RPC denied, tokens hidden');
+await Promise.all([post('/api/veto/ready',{match_id:id,token:tokens.team_a}),post('/api/veto/ready',{match_id:id,token:tokens.team_b})]);
+let session=await post('/api/veto/session',{match_id:id,token:tokens.observer});assert.equal(session.match.status,'coin_toss');assert.equal(session.logs.length,2);
+const coin=await post('/api/veto/coin-toss',{match_id:id,token:tokens.team_a});
+await post('/api/veto/position-choice',{match_id:id,token:tokens[coin.match.coin_toss_winner],pick_first:true});
+session=await post('/api/veto/session',{match_id:id,token:tokens.observer});assert.equal(session.match.status,'in_progress');
+console.log('PASS HTTP check-in: concurrent readiness, coin toss, role confirmation, coherent observer state');
+console.log('QA match:',id);

@@ -87,66 +87,17 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
 
     const supabase = createClient();
 
-    // Fetch data manually (for manual refresh)
     const fetchData = useCallback(async () => {
         try {
-            // Fetch match and state with event if exists
-            const { data: matchData, error: matchError } = await supabase
-                .from('matches')
-                .select(`
-                    *,
-                    match_state(*),
-                    veto_templates(id, name, format, sequence, game_id),
-                    events(logo_url, coin_image_url, custom_font_url, custom_font_name)
-                `)
-                .eq('id', matchId)
-                .single();
-
-            if (matchError) {
-                setError('Match not found');
-                return;
-            }
-
-            setMatch(matchData);
-
-            // Set event branding if exists
-            if (matchData.events) {
-                setEventBranding(matchData.events as any);
-            } else {
-                setEventBranding(null);
-            }
-            setState(Array.isArray(matchData.match_state) ? matchData.match_state[0] : matchData.match_state);
-
-            const { data: logsData } = await supabase
-                .from('match_logs')
-                .select('*')
-                .eq('match_id', matchId)
-                .order('created_at', { ascending: true });
-            
-            if (logsData) {
-                setLogs(logsData as MatchLog[]);
-            }
-
-            // Fetch maps for this game
-            if (matchData.veto_templates?.game_id) {
-                const { data: mapsData } = await supabase
-                    .from('maps')
-                    .select('*')
-                    .eq('game_id', matchData.veto_templates.game_id)
-                    .eq('is_active', true);
-
-                if (mapsData) {
-                    setMaps(mapsData);
-                }
-            }
-
+            const response=await fetch('/api/veto/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,token})});
+            const data=await response.json();
+            if(!response.ok) {setError(data.error || 'Could not load match');return;}
+            setMatch(prev=>({...prev,...data.match}));
+            setState(data.state);setLogs(data.logs);setUserRole(data.userRole);setEventBranding(data.eventBranding);
             setError(null);
-        } catch (err) {
-            setError('Failed to fetch match data');
-        } finally {
-            setIsLoading(false);
-        }
-    }, [matchId, token, supabase]);
+        } catch { setError('Connection lost. Retrying…'); }
+        finally {setIsLoading(false);}
+    },[matchId,token]);
 
     const prevMatchRef = useRef<Match | null>(initialData.match);
     const prevStateRef = useRef<MatchState | null>(initialData.state);
@@ -194,77 +145,27 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
         prevStateRef.current = state;
     }, [match, state, userRole]);
 
-    // Subscribe to realtime updates
+    // Read the authoritative snapshot after changes. Coalesce a transaction's
+    // broadcasts into one request and recover missed events on reconnect/focus.
     useEffect(() => {
-        let channel: RealtimeChannel | null = null;
-
-        const setupSubscription = async () => {
-            // Subscribe to match_state changes and match updates via Broadcast
-            channel = supabase
-                .channel(`match:${matchId}`)
-                .on(
-                    'broadcast',
-                    { event: 'match_state_update' },
-                    (payload) => {
-                        if (payload.payload) {
-                            setState(payload.payload as MatchState);
-                        }
-                    }
-                )
-                .on(
-                    'broadcast',
-                    { event: 'match_update' },
-                    (payload) => {
-                        if (payload.payload) {
-                            setMatch((prev) => (prev ? { ...prev, ...(payload.payload as Partial<Match>) } : null));
-                        }
-                    }
-                )
-                .on(
-                    'broadcast',
-                    { event: 'admin_veto_reset' },
-                    () => {
-                        window.location.reload();
-                    }
-                )
-                .on(
-                    'broadcast',
-                    { event: 'match_log_insert' },
-                    (payload) => {
-                        if (payload.payload) {
-                            setLogs((prev) => [...prev, payload.payload as MatchLog]);
-                        }
-                    }
-                )
-                .on(
-                    'postgres_changes',
-                    {
-                        event: 'INSERT',
-                        schema: 'public',
-                        table: 'match_logs',
-                        filter: `match_id=eq.${matchId}`,
-                    },
-                    (payload) => {
-                        // Keep postgres_changes as fallback, but avoid duplicates
-                        setLogs((prev) => {
-                            if (prev.some(log => log.id === payload.new.id)) return prev;
-                            return [...prev, payload.new as MatchLog];
-                        });
-                    }
-                )
-                .subscribe((status: string) => {
-                    setIsConnected(status === 'SUBSCRIBED');
-                });
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const schedule=()=>{
+            if(timer) return;
+            timer=setTimeout(()=>{timer=undefined;void fetchData();},100);
         };
-
-        setupSubscription();
-
-        return () => {
-            if (channel) {
-                supabase.removeChannel(channel);
-            }
-        };
-    }, [matchId, supabase, fetchData]);
+        const channel=supabase.channel(`match:${matchId}`)
+            .on('broadcast',{event:'match_state_update'},schedule)
+            .on('broadcast',{event:'match_update'},schedule)
+            .on('broadcast',{event:'match_log_insert'},schedule)
+            .on('postgres_changes',{event:'UPDATE',schema:'public',table:'match_state',filter:`match_id=eq.${matchId}`},schedule)
+            .on('postgres_changes',{event:'UPDATE',schema:'public',table:'matches',filter:`id=eq.${matchId}`},schedule)
+            .on('postgres_changes',{event:'INSERT',schema:'public',table:'match_logs',filter:`match_id=eq.${matchId}`},schedule)
+            .subscribe(status=>{setIsConnected(status==='SUBSCRIBED');if(status==='SUBSCRIBED')schedule();});
+        const recover=()=>{if(document.visibilityState==='visible')schedule();};
+        const interval=setInterval(recover,15000);
+        window.addEventListener('focus',recover);document.addEventListener('visibilitychange',recover);
+        return ()=>{clearTimeout(timer);clearInterval(interval);window.removeEventListener('focus',recover);document.removeEventListener('visibilitychange',recover);void supabase.removeChannel(channel);};
+    },[matchId,supabase,fetchData]);
 
     // Perform veto action
     const performAction = useCallback(

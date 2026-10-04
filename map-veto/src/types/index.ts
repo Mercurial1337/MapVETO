@@ -96,6 +96,7 @@ export interface Tournament {
 export type MatchStatus = 'ready_check' | 'pending' | 'coin_toss' | 'side_selection' | 'in_progress' | 'completed' | 'cancelled';
 
 export interface Match {
+  custom_veto_sequence?: VetoSequence | null;
   id: string;
   tournament_id: string | null;
   veto_template_id: string;

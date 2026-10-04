@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
+import { matchAdminToken } from '@/lib/auth/matchAdmin';
+import { adminAction } from '@/lib/veto/adminAction';
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -48,6 +50,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function POST(request: NextRequest, { params }: RouteParams) {
     try {
         const { id: matchId } = await params;
+        if(!await matchAdminToken(matchId)) return NextResponse.json({error:'Match administrator required'},{status:403});
         const supabase = createServiceClient();
 
         // Verify match exists
@@ -112,6 +115,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
     try {
         const { id: matchId } = await params;
+        if(!await matchAdminToken(matchId)) return NextResponse.json({error:'Match administrator required'},{status:403});
         const body = await request.json();
         const supabase = createServiceClient();
 
@@ -139,73 +143,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         }
 
         if (action === 'start') {
-            if (match.status !== 'pending' && match.status !== 'ready_check' && match.status !== 'coin_toss') {
-                return NextResponse.json(
-                    { error: 'Can only start pending, ready_check or coin_toss matches' },
-                    { status: 400 }
-                );
-            }
-
-            await supabase
-                .from('matches')
-                .update({
-                    status: 'in_progress',
-                    started_at: new Date().toISOString(),
-                })
-                .eq('id', matchId);
-
+            return NextResponse.json({error:'Both teams must check in, then choose Team A/B before starting.'},{status:409});
         } else if (action === 'reset') {
-            // Reset match state to initial
-            const template = match.veto_templates?.sequence;
-
-            // Get map pool
-            const { data: poolMaps } = await supabase
-                .from('pool_maps')
-                .select('map_id')
-                .eq('pool_id', (await supabase
-                    .from('map_pools')
-                    .select('id')
-                    .eq('is_default', true)
-                    .single()).data?.id)
-                .order('display_order');
-
-            const mapIds = poolMaps?.map(pm => pm.map_id) || [];
-
-            await supabase
-                .from('match_state')
-                .update({
-                    current_step: 0,
-                    current_turn: template?.steps?.[0]?.actor || 'team_a',
-                    available_maps: mapIds,
-                    banned_maps: [],
-                    picked_maps: [],
-                    results: [],
-                    is_complete: false,
-                    updated_at: new Date().toISOString(),
-                    team_a_ready: false,
-                    team_b_ready: false,
-                    team_a_ready_at: null,
-                    team_b_ready_at: null,
-                })
-                .eq('match_id', matchId);
-
-            await supabase
-                .from('matches')
-                .update({
-                    status: 'ready_check',
-                    coin_toss_winner: null,
-                    coin_toss_forced: false,
-                    started_at: null,
-                    completed_at: null,
-                })
-                .eq('id', matchId);
-
-            // Clear logs
-            await supabase
-                .from('match_logs')
-                .delete()
-                .eq('match_id', matchId);
-
+            return adminAction(new NextRequest(request.url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,operation:'reset',reason:body.reason || 'Dashboard restart'})}));
         } else if (action === 'cancel') {
             await supabase
                 .from('matches')
@@ -227,6 +167,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
     try {
         const { id: matchId } = await params;
+        if(!await matchAdminToken(matchId)) return NextResponse.json({error:'Match administrator required'},{status:403});
         const supabase = createServiceClient();
 
         // Verify match exists
