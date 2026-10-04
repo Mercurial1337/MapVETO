@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {matchNotices,timeoutNotice} from '../src/lib/veto/notifications.ts';
+const match={status:'ready_check',team_a_name:'Alpha',team_b_name:'Beta',coin_toss_winner:'team_a'};
+const state={team_a_ready:false,team_b_ready:false,current_step:0,current_turn:null,is_complete:false};
+const old={match,state};const ready={match:{...match,status:'coin_toss'},state:{...state,team_a_ready:true,team_b_ready:true}};
+assert.deepEqual(matchNotices(old,ready,'team_a').map(n=>n.message),['Beta checked in.','Both teams are ready.']);
+assert.equal(matchNotices(ready,ready,'team_a').length,0);
+const start={match:{...match,status:'in_progress'},state:{...ready.state,current_turn:'team_a'}};
+assert.ok(matchNotices(ready,start,'team_a').some(n=>n.message.startsWith('Your turn')));
+const sameTeamNext={...start,state:{...start.state,current_step:1}};
+assert.ok(matchNotices(start,sameTeamNext,'team_a').some(n=>n.message.startsWith('Your turn')));
+assert.ok(!matchNotices(start,sameTeamNext,'observer').some(n=>n.message.startsWith('Your turn')));
+assert.equal(matchNotices(start,{...start,state:{...start.state,is_complete:true}},'team_a')[0].message,'The veto is complete.');
+assert.ok(timeoutNotice({actor:'team_a',action_type:'pick',metadata:{timeout:true}},match).message.includes('random pick'));
+assert.equal(timeoutNotice({actor:'team_a',action_type:'pick',metadata:{admin_override:true}},match),null);
+console.log('PASS notifications: ready transitions, first and repeated team turns, spectator suppression, completion, confirmed timeout source');

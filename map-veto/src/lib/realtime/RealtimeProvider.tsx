@@ -13,6 +13,7 @@ import type { MatchState, Match, VetoActor, SideChoice, GameMap, MatchLog } from
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { useRef } from 'react';
+import { matchNotices, timeoutNotice } from '@/lib/veto/notifications';
 
 interface EventBranding {
     logo_url: string | null;
@@ -102,48 +103,21 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
     const prevMatchRef = useRef<Match | null>(initialData.match);
     const prevStateRef = useRef<MatchState | null>(initialData.state);
 
-    // Notifications effect
+    const seenLogs = useRef(new Set(initialData.logs.map(log=>log.id)));
     useEffect(() => {
-        if (!match || !state || !userRole) return;
-        
-        const prevMatch = prevMatchRef.current;
-        const prevState = prevStateRef.current;
-
-        // The other team checks in
-        if (prevState && !prevState.team_a_ready && state.team_a_ready && userRole !== 'team_a') {
-            toast.info(`${match.team_a_name} has checked in and is ready.`);
+        const notices=matchNotices({match:prevMatchRef.current,state:prevStateRef.current},{match,state},userRole);
+        for(const notice of notices) toast[notice.kind](notice.message);
+        prevMatchRef.current=match;prevStateRef.current=state;
+    },[match,state,userRole]);
+    useEffect(()=>{
+        if(!match) return;
+        for(const log of logs) {
+            if(seenLogs.current.has(log.id)) continue;
+            seenLogs.current.add(log.id);
+            const notice=timeoutNotice(log,match);
+            if(notice) toast[notice.kind](notice.message);
         }
-        if (prevState && !prevState.team_b_ready && state.team_b_ready && userRole !== 'team_b') {
-            toast.info(`${match.team_b_name} has checked in and is ready.`);
-        }
-
-        // Both teams are ready
-        if (prevState && (!prevState.team_a_ready || !prevState.team_b_ready) && state.team_a_ready && state.team_b_ready) {
-            toast.success('Both teams are ready!');
-        }
-
-        // Veto starts
-        if (prevMatch && prevMatch.status !== 'in_progress' && match.status === 'in_progress') {
-            toast.success('The veto process has started!');
-        }
-        
-        if (prevMatch && prevMatch.status !== 'coin_toss' && match.status === 'coin_toss') {
-            toast.info('Coin toss phase has started.');
-        }
-
-        // Turn notifications
-        if (prevState && prevState.current_turn !== state.current_turn && state.current_turn === userRole && !state.is_complete && match.status === 'in_progress') {
-            toast.message("It's your turn!", { description: 'Please make your selection.' });
-        }
-
-        // Veto completed
-        if (prevState && !prevState.is_complete && state.is_complete) {
-            toast.success('The veto process is complete!');
-        }
-
-        prevMatchRef.current = match;
-        prevStateRef.current = state;
-    }, [match, state, userRole]);
+    },[logs,match]);
 
     // Read the authoritative snapshot after changes. Coalesce a transaction's
     // broadcasts into one request and recover missed events on reconnect/focus.
