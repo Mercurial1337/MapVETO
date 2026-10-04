@@ -33,7 +33,7 @@ Database changes are live. Website changes are committed locally; this work did 
 - HTTP integration: passed, including concurrent readiness, observer restrictions, direct RPC restrictions and a complete BO3.
 - Actual Supabase scheduled worker with a disconnected QA match: passed.
 - Browser: team check-in, role confirmation, keyboard map selection, completion, referee force while paused, countdown warning and 390px layout checked.
-- Full repository ESLint: 30 pre-existing errors remain in seven legacy files. Each affected file was compared with starting revision `1bd5811`; its error count and rule set are unchanged. Core veto implementation has no ESLint errors.
+- Full repository ESLint: passed with zero errors after fixing the 30 legacy errors in seven files. Non-blocking warnings remain.
 
 Tests create labeled fixtures. HTTP/scheduler tests delete their fixtures; remote transactional tests roll back. Browser fixtures are cleaned up separately.
 
@@ -68,3 +68,8 @@ Requesting or resolving an incident does not pause, resume or restart the clock.
 
 Migration 026 provides service-only functions and a protected request table. Local and remote database tests cover permissions, expired/cross-match links, idempotence, duplicate open requests, immutable resolution and preserved clocks/pauses. HTTP tests exercise report delivery and protected resolution. Production build and targeted ESLint passed.
 Browser verification passed: a team submitted its explanation, the already-open referee Timeouts tab received it without reload, the referee resolved it, and both tabs showed the request and resolution in the audit. The labeled QA match was deleted afterward.
+
+## Lint cleanup
+
+The 30 legacy lint errors were fixed without disabling rules: typed public API/log data and form choices, derived simulation state, conditional route/event state adjustments and a cancellable export initialization request. Repository-wide ESLint reports zero errors; 40 existing non-blocking warnings remain.
+Lint-cleanup verification: production webpack build and TypeScript passed, notification/PostgreSQL regression suites passed, and HTTP tests passed against the production build, including ordered public veto actions, completed-match discovery and rendered public logs. Test fixtures were deleted.

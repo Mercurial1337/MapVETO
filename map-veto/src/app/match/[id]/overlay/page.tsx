@@ -6,6 +6,19 @@ import { Suspense, useState, useEffect } from 'react';
 import Image from 'next/image';
 import type { GameMap, VetoStep, VetoActor } from '@/types';
 
+const DEMO_SEQUENCE = [
+        { action: 'ban', actor: 'team_a' as VetoActor, mapId: '1', delay: 2000 },
+        { action: 'ban', actor: 'team_b' as VetoActor, mapId: '2', delay: 2500 },
+        { action: 'pick', actor: 'team_a' as VetoActor, mapId: '3', mapNumber: 1, delay: 3000 },
+        { action: 'side', actor: 'team_b' as VetoActor, mapId: '3', side: 'defense' as const, delay: 1500 },
+        { action: 'pick', actor: 'team_b' as VetoActor, mapId: '5', mapNumber: 2, delay: 2500 },
+        { action: 'side', actor: 'team_a' as VetoActor, mapId: '5', side: 'attack' as const, delay: 1500 },
+        { action: 'ban', actor: 'team_a' as VetoActor, mapId: '4', delay: 2000 },
+        { action: 'ban', actor: 'team_b' as VetoActor, mapId: '7', delay: 2000 },
+        { action: 'decider', actor: 'system' as VetoActor, mapId: '6', mapNumber: 3, delay: 1000 },
+        { action: 'side', actor: 'team_a' as VetoActor, mapId: '6', side: 'attack' as const, delay: 1500 },
+    ];
+
 // Mock maps for demo
 const MOCK_MAPS: GameMap[] = [
     { id: '1', game_id: 'val', name: 'Abyss', slug: 'abyss', image_url: '/maps/valorant/Abyss.webp', callout_image_url: null, is_active: true, metadata: {}, created_at: '' },
@@ -22,31 +35,16 @@ const useLiveVetoSimulation = () => {
     const [step, setStep] = useState(0);
     const [banned, setBanned] = useState<{ mapId: string; actor: VetoActor }[]>([]);
     const [picked, setPicked] = useState<{ mapId: string; actor: VetoActor; side?: 'attack' | 'defense'; mapNumber: number }[]>([]);
-    const [currentAction, setCurrentAction] = useState<{ action: string; actor: VetoActor } | null>(null);
-    const [isComplete, setIsComplete] = useState(false);
 
-    const sequence = [
-        { action: 'ban', actor: 'team_a' as VetoActor, mapId: '1', delay: 2000 },
-        { action: 'ban', actor: 'team_b' as VetoActor, mapId: '2', delay: 2500 },
-        { action: 'pick', actor: 'team_a' as VetoActor, mapId: '3', mapNumber: 1, delay: 3000 },
-        { action: 'side', actor: 'team_b' as VetoActor, mapId: '3', side: 'defense' as const, delay: 1500 },
-        { action: 'pick', actor: 'team_b' as VetoActor, mapId: '5', mapNumber: 2, delay: 2500 },
-        { action: 'side', actor: 'team_a' as VetoActor, mapId: '5', side: 'attack' as const, delay: 1500 },
-        { action: 'ban', actor: 'team_a' as VetoActor, mapId: '4', delay: 2000 },
-        { action: 'ban', actor: 'team_b' as VetoActor, mapId: '7', delay: 2000 },
-        { action: 'decider', actor: 'system' as VetoActor, mapId: '6', mapNumber: 3, delay: 1000 },
-        { action: 'side', actor: 'team_a' as VetoActor, mapId: '6', side: 'attack' as const, delay: 1500 },
-    ];
+    const sequence = DEMO_SEQUENCE;
+    const isComplete = step >= sequence.length;
+    const currentAction = isComplete ? null : sequence[step];
+
 
     useEffect(() => {
-        if (step >= sequence.length) {
-            setIsComplete(true);
-            setCurrentAction(null);
-            return;
-        }
+        if (isComplete) return;
 
         const currentSeq = sequence[step];
-        setCurrentAction({ action: currentSeq.action, actor: currentSeq.actor });
 
         const timer = setTimeout(() => {
             if (currentSeq.action === 'ban') {
@@ -68,7 +66,7 @@ const useLiveVetoSimulation = () => {
         }, currentSeq.delay);
 
         return () => clearTimeout(timer);
-    }, [step]);
+    }, [step, sequence, isComplete]);
 
     return { step, banned, picked, currentAction, isComplete, totalSteps: sequence.length };
 };

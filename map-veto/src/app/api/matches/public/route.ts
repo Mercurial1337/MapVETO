@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Map to clean public shape
-        const publicMatches = (matches || []).map((m: any) => ({
+        const publicMatches = (matches || []).map(m => ({
             id: m.id,
             team_a: m.team_a_name,
             team_b: m.team_b_name,

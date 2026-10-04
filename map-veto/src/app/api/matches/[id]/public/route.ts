@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
+import type { Match, MatchState, VetoTemplate, SideChoice } from '@/types';
+type PublicMatch = Pick<Match, 'id' | 'format' | 'status' | 'team_a_name' | 'team_b_name'> & {
+ match_state: MatchState | MatchState[] | null;
+ veto_templates: Pick<VetoTemplate, 'id' | 'name' | 'format' | 'sequence' | 'game_id'> | null;
+};
+interface PublicAction {
+ action:number; type:'ban_map'|'pick_map'|'pick_side'|'decider'; team:string|null; map:string;
+ map_number?:number; side?:SideChoice;
+}
 
 interface RouteParams {
     params: Promise<{ id: string }>;
@@ -67,7 +76,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 events(id, name, logo_url)
             `)
             .eq('id', matchId)
-            .single();
+            .single<PublicMatch>();
 
         if (matchError || !match) {
             return NextResponse.json(
@@ -77,13 +86,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         // Fetch all maps for this game so we can resolve names
-        let mapsLookup: Record<string, { name: string }> = {};
+        const mapsLookup: Record<string, { name: string }> = {};
 
-        if ((match as any).veto_templates?.game_id) {
+        if (match.veto_templates?.game_id) {
             const { data: mapsData } = await supabase
                 .from('maps')
                 .select('id, name')
-                .eq('game_id', (match as any).veto_templates.game_id)
+                .eq('game_id', match.veto_templates.game_id)
                 .eq('is_active', true);
 
             if (mapsData) {
@@ -93,13 +102,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             }
         }
 
-        // Handle one-to-one mapping returned as array
-        if (Array.isArray((match as any).match_state)) {
-            (match as any).match_state = (match as any).match_state[0] || null;
-        }
-
-        const state = (match as any).match_state;
-        const template = (match as any).veto_templates;
+        const state = Array.isArray(match.match_state) ? match.match_state[0] || null : match.match_state;
+        const template = match.veto_templates;
 
         // Helper to resolve actor to team name
         const resolveActor = (actor: string) => {
@@ -117,7 +121,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             : null;
 
         // Build structured action objects
-        const actions: Record<string, any>[] = [];
+        const actions: PublicAction[] = [];
 
         if (state && template?.sequence?.steps) {
             const vetoSteps = template.sequence.steps;
@@ -143,7 +147,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                         banIndex++;
                     }
                 } else if (step.action === 'pick') {
-                    const pick = pickedMaps.find((p: any) => p.map_number === step.map_number);
+                    const pick = pickedMaps.find(p => p.map_number === step.map_number);
                     if (pick) {
                         actions.push({
                             action: actionNumber++,
@@ -154,7 +158,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                         });
                     }
                 } else if (step.action === 'side') {
-                    const pick = pickedMaps.find((p: any) => p.map_number === step.map_number);
+                    const pick = pickedMaps.find(p => p.map_number === step.map_number);
                     if (pick && pick.side) {
                         actions.push({
                             action: actionNumber++,
@@ -166,7 +170,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                         });
                     }
                 } else if (step.action === 'decider') {
-                    const decider = pickedMaps.find((p: any) => p.map_number === step.map_number);
+                    const decider = pickedMaps.find(p => p.map_number === step.map_number);
                     if (decider) {
                         actions.push({
                             action: actionNumber++,

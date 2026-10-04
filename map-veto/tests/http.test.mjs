@@ -74,6 +74,18 @@ session=await post('/api/veto/session',{match_id:id,token:tokens.observer});
 assert.equal(session.state.is_complete,true);assert.equal(session.state.results.length,3);
 assert.ok(session.logs.some(log=>log.action_type==='decider'));
 console.log('PASS HTTP full BO3: bans, picks, sides, decider, completion and referee audit');
+const publicResponse=await fetch(`${base}/api/matches/${id}/public`);
+assert.equal(publicResponse.status,200);
+const publicVeto=await publicResponse.json();
+assert.equal(publicVeto.best_of,3);assert.equal(publicVeto.is_complete,true);
+assert.deepEqual(publicVeto.actions.map(action=>action.type),template.sequence.steps.map(step=>({ban:'ban_map',pick:'pick_map',side:'pick_side',decider:'decider'})[step.action]));
+assert.ok(publicVeto.actions.every(action=>typeof action.map==='string' && action.map!=='Unknown'));
+const listingResponse=await fetch(`${base}/api/matches/public?status=completed&limit=100`);
+assert.equal(listingResponse.status,200);const listing=await listingResponse.json();
+assert.equal(listing.pagination.count,listing.matches.length);assert.ok(listing.matches.some(match=>match.id===id));
+const logResponse=await fetch(`${base}/public/log/${id}`);assert.equal(logResponse.status,200);
+const logHtml=await logResponse.text();assert.ok(logHtml.includes('Match Veto Log'));assert.ok(logHtml.includes('Codex QA Alpha'));assert.ok(logHtml.includes('was left as the Decider'));
+console.log('PASS public outputs: ordered veto actions, map names, completed-match listing and rendered public log');
 if(keep) console.log('QA match:',id);
 } finally {
  if(!keep) {const result=await db.from('matches').delete().eq('id',id).eq('team_a_name','Codex QA Alpha');assert.ifError(result.error);}

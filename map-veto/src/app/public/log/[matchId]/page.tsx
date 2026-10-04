@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import Link from 'next/link';
-import Image from 'next/image';
+import type { Match, MatchState, VetoTemplate, VetoActor, SideChoice } from '@/types';
+interface LogEntry {type:'ban'|'pick'|'side'|'decider';actor:VetoActor;mapName:string;side?:SideChoice;}
 
 interface PageProps {
     params: Promise<{ matchId: string }>;
@@ -15,14 +16,14 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
         .from('matches')
         .select('*, events(name)')
         .eq('id', matchId)
-        .single();
+        .single<Match & {event_id:string|null;events:{name:string}|null}>();
 
     if (matchError || !match) {
         return (
             <div className="min-h-screen flex items-center justify-center text-center px-4">
                 <div className="glass p-8 rounded max-w-md w-full">
                     <h1 className="text-xl font-bold text-red-400 mb-2">Match Not Found</h1>
-                    <p className="text-white/60">This match doesn't exist or hasn't been completed yet.</p>
+                    <p className="text-white/60">This match doesn&apos;t exist or hasn&apos;t been completed yet.</p>
                 </div>
             </div>
         );
@@ -41,11 +42,11 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
     }
 
     // Fetch Match State
-    const { data: state, error: stateError } = await supabase
+    const { data: state } = await supabase
         .from('match_state')
         .select('*')
         .eq('match_id', matchId)
-        .single();
+        .single<MatchState>();
 
     // Fetch Sequence
     let sequence = match.custom_veto_sequence;
@@ -54,13 +55,13 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
             .from('veto_templates')
             .select('sequence')
             .eq('id', match.veto_template_id)
-            .single();
+            .single<Pick<VetoTemplate,'sequence'>>();
         if (template) sequence = template.sequence;
     }
 
     // Fetch Map Names
     const { data: mapsData } = await supabase.from('maps').select('id, name');
-    const mapNames = (mapsData || []).reduce((acc: any, m: any) => {
+    const mapNames = (mapsData || []).reduce<Record<string,string>>((acc, m) => {
         acc[m.id] = m.name;
         return acc;
     }, {});
@@ -76,9 +77,8 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
     const pickedMaps = state?.picked_maps || [];
 
     // Reconstruct the exact log sequence as ActionLog.tsx
-    const entries: any[] = [];
+    const entries: LogEntry[] = [];
     let banIndex = 0;
-    let pickIndex = 0;
 
     for (let i = 0; i < vetoSteps.length && i < (state?.current_step || 0); i++) {
         const step = vetoSteps[i];
@@ -94,17 +94,16 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
                 banIndex++;
             }
         } else if (step.action === 'pick') {
-            const pick = pickedMaps.find((p: any) => p.map_number === step.map_number);
+            const pick = pickedMaps.find(p => p.map_number === step.map_number);
             if (pick) {
                 entries.push({
                     type: 'pick',
                     actor: pick.picked_by,
                     mapName: mapNames[pick.map_id] || 'Unknown',
                 });
-                pickIndex++;
             }
         } else if (step.action === 'side') {
-            const pick = pickedMaps.find((p: any) => p.map_number === step.map_number);
+            const pick = pickedMaps.find(p => p.map_number === step.map_number);
             if (pick && pick.side) {
                 entries.push({
                     type: 'side',
@@ -114,7 +113,7 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
                 });
             }
         } else if (step.action === 'decider') {
-            const pick = pickedMaps.find((p: any) => p.map_number === step.map_number);
+            const pick = pickedMaps.find(p => p.map_number === step.map_number);
             if (pick) {
                 entries.push({
                     type: 'decider',
@@ -125,7 +124,7 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
         }
     }
 
-    const generateLogText = (entry: any) => {
+    const generateLogText = (entry: LogEntry) => {
         const actorName = getActorName(entry.actor);
         if (entry.type === 'ban') {
             return `${actorName} banned ${entry.mapName}`;

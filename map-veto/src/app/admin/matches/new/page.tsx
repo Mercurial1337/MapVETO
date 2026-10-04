@@ -3,7 +3,7 @@ import { Fragment } from 'react';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { VetoTemplate, VetoSequence, VetoStep } from '@/types';
+import { VetoTemplate, VetoSequence, VetoStep, MatchState } from '@/types';
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
@@ -75,12 +75,14 @@ function NewMatchContent() {
         higherSeed: 'none',
     });
 
-    // Sync eventId from URL if it changes (and if not already set manually)
-    useEffect(() => {
+    // Adjust only when the URL changes; preserve a manually chosen event.
+    const [previousEventId, setPreviousEventId] = useState(preselectedEventId);
+    if (previousEventId !== preselectedEventId) {
+        setPreviousEventId(preselectedEventId);
         if (preselectedEventId && !formData.eventId) {
             setFormData(prev => ({ ...prev, eventId: preselectedEventId }));
         }
-    }, [preselectedEventId]);
+    }
     const [events, setEvents] = useState<Event[]>([]);
     const [templates, setTemplates] = useState<VetoTemplate[]>([]);
     const [eventTeams, setEventTeams] = useState<EventTeam[]>([]);
@@ -166,7 +168,7 @@ function NewMatchContent() {
                     filter: `match_id=eq.${createdMatch.id}`
                 },
                 (payload) => {
-                    const state = payload.new as any;
+                    const state = payload.new as Pick<MatchState, 'team_a_ready' | 'team_b_ready'>;
                     if (state) {
                         setTeamAReady(state.team_a_ready);
                         setTeamBReady(state.team_b_ready);
@@ -823,7 +825,7 @@ function NewMatchContent() {
                         <label className="block text-sm text-white/60 mb-2">Higher Seed (Optional)</label>
                         <select
                             value={formData.higherSeed}
-                            onChange={(e) => setFormData({ ...formData, higherSeed: e.target.value as any })}
+                            onChange={(e) => setFormData({ ...formData, higherSeed: e.target.value as MatchFormData['higherSeed'] })}
                             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white focus:outline-none focus:border-purple-500/50"
                         >
                             <option value="none">None (Random Coin Toss)</option>
@@ -1015,7 +1017,7 @@ function NewMatchContent() {
 
                                             <select
                                                 value={step.action}
-                                                onChange={(e) => updateSequenceStep(index, { action: e.target.value as any })}
+                                                onChange={(e) => updateSequenceStep(index, { action: e.target.value as VetoStep['action'] })}
                                                 className="bg-transparent text-sm text-cyan-400 font-semibold focus:outline-none"
                                             >
                                                 <option value="ban" className="bg-slate-900">Ban</option>
@@ -1028,7 +1030,7 @@ function NewMatchContent() {
 
                                             <select
                                                 value={step.actor}
-                                                onChange={(e) => updateSequenceStep(index, { actor: e.target.value as any })}
+                                                onChange={(e) => updateSequenceStep(index, { actor: e.target.value as VetoStep['actor'] })}
                                                 className="bg-transparent text-sm text-white/80 focus:outline-none"
                                             >
                                                 <option value="team_a" className="bg-slate-900">Team A</option>

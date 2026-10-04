@@ -30,41 +30,38 @@ export function ExportModal({ isOpen, onClose, preselectedEventId }: ExportModal
     });
 
     useEffect(() => {
-        if (isOpen) {
-            fetchEvents();
-            // Try to load last used sheet ID from localStorage
-            const savedSheetId = localStorage.getItem('last_google_sheet_id');
-            if (savedSheetId && !preselectedEventId) {
-                setFormData(prev => ({ ...prev, sheet_id: savedSheetId }));
+        if (!isOpen) return;
+        const controller = new AbortController();
+        async function loadEvents() {
+            setIsLoadingEvents(true);
+            let loaded: Event[] = [];
+            try {
+                const response = await fetch('/api/events', { signal: controller.signal });
+                if (!response.ok) return;
+                const data: { events?: Event[] } = await response.json();
+                if (controller.signal.aborted) return;
+                loaded = data.events || [];
+                setEvents(loaded);
+            } catch (error) {
+                if (!controller.signal.aborted) console.error('Error fetching events:', error);
+            } finally {
+                if (!controller.signal.aborted) {
+                    const savedSheetId = localStorage.getItem('last_google_sheet_id');
+                    const selectedEvent = loaded.find(event => event.id === preselectedEventId);
+                    setFormData(prev => ({
+                        ...prev,
+                        event_id: preselectedEventId || prev.event_id,
+                        sheet_id: preselectedEventId
+                            ? selectedEvent?.google_sheet_id || prev.sheet_id
+                            : savedSheetId || prev.sheet_id,
+                    }));
+                    setIsLoadingEvents(false);
+                }
             }
         }
+        void loadEvents();
+        return () => controller.abort();
     }, [isOpen, preselectedEventId]);
-
-    // Effect to handle preselected event
-    useEffect(() => {
-        if (isOpen && events.length > 0 && preselectedEventId) {
-            const selectedEvent = events.find(ev => ev.id === preselectedEventId);
-            setFormData(prev => ({
-                ...prev,
-                event_id: preselectedEventId,
-                sheet_id: selectedEvent?.google_sheet_id || prev.sheet_id,
-            }));
-        }
-    }, [isOpen, events, preselectedEventId]);
-
-    const fetchEvents = async () => {
-        setIsLoadingEvents(true);
-        try {
-            const response = await fetch('/api/events');
-            if (response.ok) {
-                const data = await response.json();
-                setEvents(data.events || []);
-            }
-        } catch (err) {
-            console.error('Error fetching events:', err);
-        }
-        setIsLoadingEvents(false);
-    };
 
     const handleExport = async (e: React.FormEvent) => {
         e.preventDefault();

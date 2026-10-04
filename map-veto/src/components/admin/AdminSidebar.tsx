@@ -27,10 +27,12 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
         getUser();
     }, [supabase]);
 
-    // Close sidebar on route change (mobile)
-    useEffect(() => {
+    // Reset during the route render so the old mobile menu never paints.
+    const [previousPathname, setPreviousPathname] = useState(pathname);
+    if (previousPathname !== pathname) {
+        setPreviousPathname(pathname);
         setSidebarOpen(false);
-    }, [pathname]);
+    }
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
