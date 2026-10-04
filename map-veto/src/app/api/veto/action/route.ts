@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { z } from 'zod';
-import type { MatchState, VetoStep, VetoSequence, VetoActor } from '@/types';
 
 // Request validation schema
 const VetoActionSchema = z.object({
@@ -9,6 +8,7 @@ const VetoActionSchema = z.object({
     token: z.string().uuid(),
     action: z.enum(['ban', 'pick', 'side']),
     map_id: z.string().uuid().optional(),
+    turn_started_at: z.string().datetime({offset:true}).optional(),
     side_choice: z.enum(['attack', 'defense']).optional(),
 }).refine((data) => {
     if (['ban', 'pick'].includes(data.action)) {
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { match_id, token, action, map_id, side_choice } = validationResult.data;
+        const { match_id, token, action, map_id, side_choice, turn_started_at } = validationResult.data;
         const supabase = createServiceClient();
 
         // 1. Call the atomic PostgreSQL RPC
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
             p_action: action,
             p_map_id: map_id || null,
             p_side_choice: side_choice || null,
+            p_expected: turn_started_at || null,
         });
 
         if (rpcError) {
@@ -52,6 +53,9 @@ export async function POST(request: NextRequest) {
             // Distinguish between client errors (raised exceptions) and server errors
             const isClientError = rpcError.message && (
                 rpcError.message.includes('Invalid') ||
+                rpcError.message.includes('Turn changed') ||
+                rpcError.message.includes('paused') ||
+                rpcError.message.includes('deadline') ||
                 rpcError.message.includes('Observer') ||
                 rpcError.message.includes('Not your turn') ||
                 rpcError.message.includes('Expected action') ||

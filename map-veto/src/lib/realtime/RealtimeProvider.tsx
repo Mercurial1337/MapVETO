@@ -10,7 +10,6 @@ import {
 } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { MatchState, Match, VetoActor, SideChoice, GameMap, MatchLog } from '@/types';
-import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { toast } from 'sonner';
 import { useRef } from 'react';
 import { matchNotices, timeoutNotice } from '@/lib/veto/notifications';
@@ -78,7 +77,7 @@ interface RealtimeProviderProps {
 export function RealtimeProvider({ matchId, token, initialData, children }: RealtimeProviderProps) {
     const [match, setMatch] = useState<Match | null>(initialData.match);
     const [state, setState] = useState<MatchState | null>(initialData.state);
-    const [maps, setMaps] = useState<GameMap[]>(initialData.maps);
+    const [maps] = useState<GameMap[]>(initialData.maps);
     const [logs, setLogs] = useState<MatchLog[]>(initialData.logs);
     const [eventBranding, setEventBranding] = useState<EventBranding | null>(initialData.eventBranding);
     const [userRole, setUserRole] = useState<UserRole>(initialData.userRole);
@@ -158,6 +157,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
                         action,
                         map_id: mapId,
                         side_choice: sideChoice,
+                        turn_started_at: state?.turn_started_at,
                     }),
                 });
 
@@ -174,12 +174,12 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
                 }
 
                 return true;
-            } catch (err) {
+            } catch {
                 setError('Network error');
                 return false;
             }
         },
-        [matchId, token]
+        [matchId, token, state?.turn_started_at]
     );
 
     // Perform coin toss (admin only - uses cookie auth)
@@ -206,7 +206,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
             if (data.match) setMatch(prev => prev ? { ...prev, ...data.match } : data.match);
             if (data.new_state) setState(data.new_state);
             return data.match?.coin_toss_winner as VetoActor;
-        } catch (err) {
+        } catch {
             setError('Network error');
             return null;
         }
@@ -239,7 +239,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
 
             if (data.match) setMatch(prev => prev ? { ...prev, ...data.match } : data.match);
             return true;
-        } catch (err) {
+        } catch {
             setError('Network error');
             return false;
         }

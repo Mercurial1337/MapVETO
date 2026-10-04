@@ -140,5 +140,29 @@ await db.query("UPDATE match_state SET turn_started_at=now()-interval '61 second
 const count=await rpc('veto_expired_turns',[]);assert.ok(count>=1);
 assert.equal((await db.query('SELECT status FROM matches WHERE id=$1',[background.id])).rows[0].status,'in_progress');
 console.log('PASS background timer: expired role choice advances with no connected browser');
+
+const {BO1_STANDARD,BO3_STANDARD,BO5_GRAND_FINALS}=await import('../src/lib/veto/templates.ts');
+const fullPool=[...mapIds];
+for(let i=4;i<7;i++){const map=randomUUID();fullPool.push(map);await db.query("INSERT INTO maps(id,game_id,name,slug,image_url) VALUES($1,$2,$3,$3,'/test.webp')",[map,game,`Map${i}`]);}
+for(const sequence of [BO1_STANDARD,BO3_STANDARD,BO5_GRAND_FINALS]) {
+ const scenario=await fixture(true);
+ await db.query('UPDATE matches SET custom_veto_sequence=$2 WHERE id=$1',[scenario.id,JSON.stringify(sequence)]);
+ await db.query('UPDATE match_state SET available_maps=$2 WHERE match_id=$1',[scenario.id,JSON.stringify(fullPool)]);
+ await rpc('veto_ready',[scenario.id,scenario.a]);await rpc('veto_ready',[scenario.id,scenario.b]);
+ let position=await rpc('veto_position',[scenario.id,scenario.b,true,false,null]);let st=position.new_state;
+ let previousClock=null;
+ while(!st.is_complete) {
+  const step=sequence.steps[st.current_step];
+  if(previousClock && previousClock!==st.turn_started_at) await rejects('process_veto_action',[scenario.id,st.current_turn==='team_a'?scenario.a:scenario.b,step.action,step.action==='side'?null:st.available_maps[0],step.action==='side'?'attack':null,false,previousClock,null],/Turn changed/);
+  previousClock=st.turn_started_at;
+  // Exercise random timeout picks and sides as well as bans.
+  await db.query("UPDATE match_state SET turn_started_at=now()-interval '61 seconds' WHERE match_id=$1",[scenario.id]);
+  const turnClock=(await db.query('SELECT turn_started_at::text FROM match_state WHERE match_id=$1',[scenario.id])).rows[0].turn_started_at;
+  st=(await rpc('veto_timeout',[scenario.id,scenario.observer,turnClock])).new_state;
+ }
+ assert.equal(st.results.length,sequence.format==='bo1'?1:sequence.format==='bo3'?3:5);
+ assert.equal(new Set([...st.banned_maps.map(m=>m.map_id),...st.picked_maps.map(m=>m.map_id)]).size,7);
+}
+console.log('PASS formats: complete BO1/BO3/BO5 with swapped roles, random picks/bans/sides and deciders');
 await db.close();
 
