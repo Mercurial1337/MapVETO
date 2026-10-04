@@ -49,6 +49,7 @@ interface CreatedMatch {
         team_a: { token: string; url: string };
         team_b: { token: string; url: string };
         observer: { token: string; url: string };
+        admin: { token: string; url: string };
     };
     isSeeded: boolean;
     seededTeam: 'team_a' | 'team_b' | null;
@@ -435,6 +436,19 @@ function NewMatchContent() {
                                 <button
                                     onClick={() => copyToClipboard(createdMatch.links.observer.url, 'Observer')}
                                     className="text-xs px-3 py-1 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-300 transition-colors"
+                                >
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Admin Link */}
+                        <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm font-medium text-yellow-400">Admin</span>
+                                <button
+                                    onClick={() => copyToClipboard(createdMatch.links.admin.url, 'Admin')}
+                                    className="text-xs px-3 py-1 bg-yellow-500/20 hover:bg-yellow-500/30 rounded-lg text-yellow-300 transition-colors"
                                 >
                                     Copy
                                 </button>
