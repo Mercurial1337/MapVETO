@@ -9,8 +9,10 @@ import {
     ReactNode,
 } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { MatchState, Match, VetoActor, SideChoice, GameMap } from '@/types';
+import type { MatchState, Match, VetoActor, SideChoice, GameMap, MatchLog } from '@/types';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { toast } from 'sonner';
+import { useRef } from 'react';
 
 interface EventBranding {
     logo_url: string | null;
@@ -26,6 +28,7 @@ interface RealtimeContextValue {
     match: Match | null;
     state: MatchState | null;
     maps: GameMap[];
+    logs: MatchLog[];
 
     // Event branding
     eventBranding: EventBranding | null;
@@ -64,6 +67,7 @@ interface RealtimeProviderProps {
         match: Match | null;
         state: MatchState | null;
         maps: GameMap[];
+        logs: MatchLog[];
         eventBranding: EventBranding | null;
         userRole: UserRole;
     };
@@ -74,6 +78,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
     const [match, setMatch] = useState<Match | null>(initialData.match);
     const [state, setState] = useState<MatchState | null>(initialData.state);
     const [maps, setMaps] = useState<GameMap[]>(initialData.maps);
+    const [logs, setLogs] = useState<MatchLog[]>(initialData.logs);
     const [eventBranding, setEventBranding] = useState<EventBranding | null>(initialData.eventBranding);
     const [userRole, setUserRole] = useState<UserRole>(initialData.userRole);
     const [isConnected, setIsConnected] = useState(false);
@@ -112,6 +117,16 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
             }
             setState(matchData.match_state);
 
+            const { data: logsData } = await supabase
+                .from('match_logs')
+                .select('*')
+                .eq('match_id', matchId)
+                .order('created_at', { ascending: true });
+            
+            if (logsData) {
+                setLogs(logsData as MatchLog[]);
+            }
+
             // Fetch maps for this game
             if (matchData.veto_templates?.game_id) {
                 const { data: mapsData } = await supabase
@@ -132,6 +147,52 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
             setIsLoading(false);
         }
     }, [matchId, token, supabase]);
+
+    const prevMatchRef = useRef<Match | null>(null);
+    const prevStateRef = useRef<MatchState | null>(null);
+
+    // Notifications effect
+    useEffect(() => {
+        if (!match || !state || !userRole) return;
+        
+        const prevMatch = prevMatchRef.current;
+        const prevState = prevStateRef.current;
+
+        // The other team checks in
+        if (prevState && !prevState.team_a_ready && state.team_a_ready && userRole !== 'team_a') {
+            toast.info('Team A has checked in and is ready.');
+        }
+        if (prevState && !prevState.team_b_ready && state.team_b_ready && userRole !== 'team_b') {
+            toast.info('Team B has checked in and is ready.');
+        }
+
+        // Both teams are ready
+        if (prevState && (!prevState.team_a_ready || !prevState.team_b_ready) && state.team_a_ready && state.team_b_ready) {
+            toast.success('Both teams are ready!');
+        }
+
+        // Veto starts
+        if (prevMatch && prevMatch.status !== 'in_progress' && match.status === 'in_progress') {
+            toast.success('The veto process has started!');
+        }
+        
+        if (prevMatch && prevMatch.status !== 'coin_toss' && match.status === 'coin_toss') {
+            toast.info('Coin toss phase has started.');
+        }
+
+        // Turn notifications
+        if (prevState && prevState.current_turn !== state.current_turn && state.current_turn === userRole && !state.is_complete && match.status === 'in_progress') {
+            toast.message("It's your turn!", { description: 'Please make your selection.' });
+        }
+
+        // Veto completed
+        if (prevState && !prevState.is_complete && state.is_complete) {
+            toast.success('The veto process is complete!');
+        }
+
+        prevMatchRef.current = match;
+        prevStateRef.current = state;
+    }, [match, state, userRole]);
 
     // Subscribe to realtime updates
     useEffect(() => {
@@ -157,6 +218,25 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
                         if (payload.payload) {
                             setMatch((prev) => (prev ? { ...prev, ...(payload.payload as Partial<Match>) } : null));
                         }
+                    }
+                )
+                .on(
+                    'broadcast',
+                    { event: 'admin_veto_reset' },
+                    () => {
+                        window.location.reload();
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'match_logs',
+                        filter: `match_id=eq.${matchId}`,
+                    },
+                    (payload) => {
+                        setLogs((prev) => [...prev, payload.new as MatchLog]);
                     }
                 )
                 .subscribe((status: string) => {
@@ -281,6 +361,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
         match,
         state,
         maps,
+        logs,
         eventBranding,
         userRole,
         isConnected,
@@ -309,8 +390,8 @@ export function useRealtime() {
 
 // Convenience hooks
 export function useMatchData() {
-    const { match, state, maps, eventBranding, isLoading, error, userRole } = useRealtime();
-    return { match, state, maps, eventBranding, isLoading, error, userRole };
+    const { match, state, maps, logs, eventBranding, isLoading, error, userRole } = useRealtime();
+    return { match, state, maps, logs, eventBranding, isLoading, error, userRole };
 }
 
 export function useVetoActions() {

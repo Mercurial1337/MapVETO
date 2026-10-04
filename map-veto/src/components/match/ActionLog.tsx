@@ -2,48 +2,42 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import type { BannedMap, PickedMap, VetoActor, VetoStep } from '@/types';
-import { Ban, Check, Swords, Shield, Dices, Copy } from 'lucide-react';
+import type { MatchLog, VetoActor } from '@/types';
+import { Ban, Check, Swords, Shield, Dices, Copy, Play, UserCheck, Settings, Coins } from 'lucide-react';
 
 interface ActionLogProps {
-    bannedMaps: BannedMap[];
-    pickedMaps: PickedMap[];
-    // Database team names (for resolving picked_by/banned_by)
+    logs: MatchLog[];
     dbTeamAName: string;
     dbTeamBName: string;
-    // Displayed team names (Team 1 = red, Team 2 = blue)
     displayTeam1Name: string;
     displayTeam2Name: string;
     mapNames: Record<string, string>; // map_id -> name
-    vetoSteps?: VetoStep[];
-    currentStep?: number;
 }
 
 export function ActionLog({
-    bannedMaps,
-    pickedMaps,
+    logs,
     dbTeamAName,
     dbTeamBName,
     displayTeam1Name,
     displayTeam2Name,
     mapNames,
-    vetoSteps = [],
-    currentStep = 0,
 }: ActionLogProps) {
     const [copied, setCopied] = useState(false);
 
     // Get the actual team name from database team identifier
-    const getTeamName = (actor: VetoActor) => {
+    const getTeamName = (actor: VetoActor | string) => {
         switch (actor) {
             case 'team_a': return dbTeamAName;
             case 'team_b': return dbTeamBName;
             case 'system': return 'System';
-            default: return actor;
+            case 'admin': return 'Admin';
+            default: return String(actor);
         }
     };
 
     // Get color based on displayed position (Team 1 = red, Team 2 = blue)
-    const getTeamColor = (actor: VetoActor) => {
+    const getTeamColor = (actor: VetoActor | string) => {
+        if (actor === 'admin') return 'text-yellow-400';
         const teamName = getTeamName(actor);
         if (teamName === displayTeam1Name) return 'text-red-400';
         if (teamName === displayTeam2Name) return 'text-blue-400';
@@ -51,96 +45,51 @@ export function ActionLog({
         return 'text-white';
     };
 
-    // Build log entries in chronological order based on veto steps
-    type LogEntry = {
-        type: 'ban' | 'pick' | 'side' | 'decider';
-        actor: VetoActor;
-        mapName: string;
-        side?: string;
-        mapNumber?: number;
-        completed: boolean;
-        isAuto?: boolean;
-    };
-
-    const entries: LogEntry[] = [];
-
-    // Track which bans/picks we've processed
-    let banIndex = 0;
-    let pickIndex = 0;
-
-    // Go through completed steps
-    for (let i = 0; i < vetoSteps.length && i < currentStep; i++) {
-        const step = vetoSteps[i];
-
-        if (step.action === 'ban') {
-            const ban = bannedMaps[banIndex];
-            if (ban) {
-                entries.push({
-                    type: 'ban',
-                    actor: ban.banned_by,
-                    mapName: mapNames[ban.map_id] || 'Unknown',
-                    completed: true,
-                    isAuto: ban.is_auto,
-                });
-                banIndex++;
-            }
-        } else if (step.action === 'pick') {
-            const pick = pickedMaps.find(p => p.map_number === step.map_number);
-            if (pick) {
-                entries.push({
-                    type: 'pick',
-                    actor: pick.picked_by,
-                    mapName: mapNames[pick.map_id] || 'Unknown',
-                    mapNumber: pick.map_number,
-                    completed: true,
-                    isAuto: pick.is_auto,
-                });
-                pickIndex++;
-            }
-        } else if (step.action === 'side') {
-            const pick = pickedMaps.find(p => p.map_number === step.map_number);
-            if (pick && pick.side) {
-                entries.push({
-                    type: 'side',
-                    actor: pick.side_picked_by || step.actor,
-                    mapName: mapNames[pick.map_id] || 'Unknown',
-                    side: pick.side,
-                    mapNumber: pick.map_number,
-                    completed: true,
-                    isAuto: pick.side_is_auto,
-                });
-            }
-        } else if (step.action === 'decider') {
-            const decider = pickedMaps.find(p => p.map_number === step.map_number);
-            if (decider) {
-                entries.push({
-                    type: 'decider',
-                    actor: 'system',
-                    mapName: mapNames[decider.map_id] || 'Unknown',
-                    mapNumber: decider.map_number,
-                    completed: true,
-                });
-            }
+    const getIcon = (type: string, side?: string) => {
+        switch (type) {
+            case 'ban': return <Ban size={16} className="text-red-400" />;
+            case 'pick': return <Check size={16} className="text-green-400" />;
+            case 'side': return side === 'attack' ? <Swords size={16} className="text-red-400" /> : <Shield size={16} className="text-blue-400" />;
+            case 'decider': return <Dices size={16} className="text-purple-400" />;
+            case 'ready_check': return <UserCheck size={16} className="text-green-300" />;
+            case 'coin_toss': return <Coins size={16} className="text-yellow-400" />;
+            case 'position_choice': return <UserCheck size={16} className="text-blue-300" />;
+            case 'admin_action': return <Settings size={16} className="text-yellow-400" />;
+            default: return <Play size={16} className="text-white/40" />;
         }
-    }
+    };
 
     // Generate copy text in the requested format
     const generateCopyText = () => {
         const lines: string[] = [];
 
-        entries.forEach(entry => {
+        logs.forEach(entry => {
             const teamName = getTeamName(entry.actor);
-            const autoText = entry.isAuto ? ' [Auto-assigned]' : '';
+            const isAuto = entry.metadata?.is_auto;
+            const autoText = isAuto ? ' [Auto-assigned]' : '';
+            const mapName = entry.map_id ? mapNames[entry.map_id] || 'Unknown Map' : '';
 
-            if (entry.type === 'ban') {
-                lines.push(`${teamName} bans ${entry.mapName}${autoText}`);
-            } else if (entry.type === 'pick') {
-                lines.push(`${teamName} picks ${entry.mapName} (Map ${entry.mapNumber})${autoText}`);
-            } else if (entry.type === 'side') {
-                const sideText = entry.side === 'attack' ? 'Attack' : 'Defense';
-                lines.push(`${teamName} picks ${sideText} side for ${entry.mapName} (Map ${entry.mapNumber})${autoText}`);
-            } else if (entry.type === 'decider') {
-                lines.push(`${entry.mapName} is the decider (Map ${entry.mapNumber})`);
+            if (entry.action_type === 'ready_check') {
+                lines.push(`${teamName} is ready`);
+            } else if (entry.action_type === 'coin_toss') {
+                lines.push(`Coin toss won by ${teamName}${entry.metadata?.is_seeded ? ' (Seeded)' : ''}`);
+            } else if (entry.action_type === 'position_choice') {
+                const choiceText = entry.metadata?.pick_first ? 'Team A (First)' : 'Team B (Second)';
+                lines.push(`${teamName} chooses ${choiceText}`);
+            } else if (entry.action_type === 'ban') {
+                lines.push(`${teamName} bans ${mapName}${autoText}`);
+            } else if (entry.action_type === 'pick') {
+                const mapNumText = entry.metadata?.map_number ? ` (Map ${entry.metadata.map_number})` : '';
+                lines.push(`${teamName} picks ${mapName}${mapNumText}${autoText}`);
+            } else if (entry.action_type === 'side') {
+                const sideText = entry.side_choice === 'attack' ? 'Attack' : 'Defense';
+                const mapNumText = entry.metadata?.map_number ? ` (Map ${entry.metadata.map_number})` : '';
+                lines.push(`${teamName} picks ${sideText} side for ${mapName}${mapNumText}${autoText}`);
+            } else if (entry.action_type === 'decider') {
+                const mapNumText = entry.metadata?.map_number ? ` (Map ${entry.metadata.map_number})` : '';
+                lines.push(`${mapName} is the decider${mapNumText}`);
+            } else if (entry.action_type === 'admin_action') {
+                lines.push(`[ADMIN] ${entry.metadata?.action_details || 'Action taken'}`);
             }
         });
 
@@ -154,7 +103,7 @@ export function ActionLog({
         setTimeout(() => setCopied(false), 2000);
     };
 
-    if (entries.length === 0) {
+    if (!logs || logs.length === 0) {
         return (
             <div className="text-center text-white/40 py-4">
                 No actions yet
@@ -163,11 +112,11 @@ export function ActionLog({
     }
 
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full max-h-[400px]">
             {/* Copy Button */}
             <button
                 onClick={handleCopy}
-                className="mb-3 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs text-white/70 hover:text-white transition-colors flex items-center gap-1.5 justify-center"
+                className="mb-3 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs text-white/70 hover:text-white transition-colors flex items-center gap-1.5 justify-center flex-shrink-0"
             >
                 {copied ? (
                     <>
@@ -183,68 +132,94 @@ export function ActionLog({
             </button>
 
             {/* Log Entries */}
-            <div className="space-y-2 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
-                {entries.map((entry, index) => (
-                    <motion.div
-                        key={index}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="flex items-start gap-2 text-sm"
-                    >
-                        {/* Icon */}
-                        <span className="w-5 text-center flex-shrink-0 mt-0.5">
-                            {entry.type === 'ban' && <Ban size={16} className="text-red-400" />}
-                            {entry.type === 'pick' && <Check size={16} className="text-green-400" />}
-                            {entry.type === 'side' && (entry.side === 'attack' ? <Swords size={16} className="text-red-400" /> : <Shield size={16} className="text-blue-400" />)}
-                            {entry.type === 'decider' && <Dices size={16} className="text-purple-400" />}
-                        </span>
+            <div className="space-y-3 flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 pr-2">
+                {logs.map((entry, index) => {
+                    const mapName = entry.map_id ? mapNames[entry.map_id] || 'Unknown' : '';
+                    const isAuto = entry.metadata?.is_auto;
+                    const mapNumber = entry.metadata?.map_number;
 
-                        {/* Text */}
-                        <div className="flex-1 leading-tight">
-                            <span className={`font-medium ${getTeamColor(entry.actor)}`}>
-                                {getTeamName(entry.actor)}
+                    return (
+                        <motion.div
+                            key={entry.id || index}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                            className="flex items-start gap-2 text-sm"
+                        >
+                            {/* Icon */}
+                            <span className="w-5 text-center flex-shrink-0 mt-0.5">
+                                {getIcon(entry.action_type, entry.side_choice || undefined)}
                             </span>
-                            <span className="text-white/60">
-                                {entry.type === 'ban' && ' bans '}
-                                {entry.type === 'pick' && ' picks '}
-                                {entry.type === 'side' && ' picks '}
-                                {entry.type === 'decider' && ''}
-                            </span>
-                            <span className="text-white font-medium">
-                                {entry.type === 'side' ? (
-                                    <span className={entry.side === 'attack' ? 'text-red-400' : 'text-blue-400'}>
-                                        {entry.side === 'attack' ? 'Attack' : 'Defense'}
-                                    </span>
-                                ) : entry.type === 'decider' ? (
-                                    <span className="text-purple-400">{entry.mapName}</span>
-                                ) : (
-                                    entry.mapName
+
+                            {/* Text */}
+                            <div className="flex-1 leading-tight break-words">
+                                <span className={`font-medium ${getTeamColor(entry.actor)} mr-1`}>
+                                    {getTeamName(entry.actor)}
+                                </span>
+                                
+                                {entry.action_type === 'ready_check' && (
+                                    <span className="text-white/60">is ready</span>
                                 )}
-                            </span>
-                            {entry.mapNumber && entry.type !== 'side' && (
-                                <span className="text-white/40 text-xs ml-1">
-                                    (Map {entry.mapNumber})
-                                </span>
-                            )}
-                            {entry.type === 'side' && entry.mapNumber && (
-                                <span className="text-white/40 text-xs">
-                                    {' '}for {entry.mapName} (Map {entry.mapNumber})
-                                </span>
-                            )}
-                            {entry.type === 'decider' && (
-                                <span className="text-white/40 text-xs">
-                                    {' '}is decider
-                                </span>
-                            )}
-                            {entry.isAuto && (
-                                <span className="text-yellow-400/80 text-xs font-semibold uppercase tracking-wider ml-1">
-                                    (Random)
-                                </span>
-                            )}
-                        </div>
-                    </motion.div>
-                ))}
+                                
+                                {entry.action_type === 'coin_toss' && (
+                                    <span className="text-white/60">won the coin toss {entry.metadata?.is_seeded ? '(seeded)' : ''}</span>
+                                )}
+
+                                {entry.action_type === 'position_choice' && (
+                                    <>
+                                        <span className="text-white/60">chooses </span>
+                                        <span className="text-white font-medium">{entry.metadata?.pick_first ? 'Team A (First)' : 'Team B (Second)'}</span>
+                                    </>
+                                )}
+                                
+                                {entry.action_type === 'ban' && (
+                                    <>
+                                        <span className="text-white/60">bans </span>
+                                        <span className="text-white font-medium">{mapName}</span>
+                                    </>
+                                )}
+                                
+                                {entry.action_type === 'pick' && (
+                                    <>
+                                        <span className="text-white/60">picks </span>
+                                        <span className="text-white font-medium">{mapName}</span>
+                                        {mapNumber && <span className="text-white/40 text-xs ml-1">(Map {mapNumber})</span>}
+                                    </>
+                                )}
+                                
+                                {entry.action_type === 'side' && (
+                                    <>
+                                        <span className="text-white/60">picks </span>
+                                        <span className={entry.side_choice === 'attack' ? 'text-red-400 font-medium' : 'text-blue-400 font-medium'}>
+                                            {entry.side_choice === 'attack' ? 'Attack' : 'Defense'}
+                                        </span>
+                                        <span className="text-white/60"> for {mapName}</span>
+                                        {mapNumber && <span className="text-white/40 text-xs ml-1">(Map {mapNumber})</span>}
+                                    </>
+                                )}
+                                
+                                {entry.action_type === 'decider' && (
+                                    <>
+                                        <span className="text-white/60">leaves </span>
+                                        <span className="text-purple-400 font-medium">{mapName}</span>
+                                        <span className="text-white/60"> as decider</span>
+                                        {mapNumber && <span className="text-white/40 text-xs ml-1">(Map {mapNumber})</span>}
+                                    </>
+                                )}
+                                
+                                {entry.action_type === 'admin_action' && (
+                                    <span className="text-yellow-400/80">{entry.metadata?.action_details || 'Admin action'}</span>
+                                )}
+
+                                {isAuto && (
+                                    <span className="text-yellow-400/80 text-xs font-semibold uppercase tracking-wider ml-1">
+                                        (Random)
+                                    </span>
+                                )}
+                            </div>
+                        </motion.div>
+                    );
+                })}
             </div>
         </div>
     );

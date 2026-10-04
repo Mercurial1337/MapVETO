@@ -14,7 +14,7 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
 
     // If no token or demo mode, let the client component handle the UI for it
     if (!token || token === 'demo-token') {
-        return <MatchClient matchId={matchId} token={token} initialData={{ match: null, state: null, maps: [], eventBranding: null, userRole: null }} />;
+        return <MatchClient matchId={matchId} token={token} initialData={{ match: null, state: null, maps: [], logs: [], eventBranding: null, userRole: null }} />;
     }
 
     const supabase = createServiceClient();
@@ -55,10 +55,23 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
         }
     }
 
+    let logsData = [];
+    if (matchData) {
+        const { data } = await supabase
+            .from('match_logs')
+            .select('*')
+            .eq('match_id', matchId)
+            .order('created_at', { ascending: true });
+        if (data) {
+            logsData = data;
+        }
+    }
+
     const initialData = {
         match: matchData || null,
         state: matchData?.match_state || null,
         maps: mapsData,
+        logs: logsData,
         eventBranding: matchData?.events || null,
         userRole: userRole,
     };
