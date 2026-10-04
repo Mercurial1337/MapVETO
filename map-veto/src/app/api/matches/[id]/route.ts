@@ -29,6 +29,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             );
         }
 
+        // Handle one-to-one mapping returned as array
+        if (Array.isArray(match.match_state)) {
+            match.match_state = match.match_state[0] || null;
+        }
+
         return NextResponse.json({ match });
     } catch (error) {
         console.error('Get match error:', error);

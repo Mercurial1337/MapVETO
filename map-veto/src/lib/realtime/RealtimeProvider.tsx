@@ -115,7 +115,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
             } else {
                 setEventBranding(null);
             }
-            setState(matchData.match_state);
+            setState(Array.isArray(matchData.match_state) ? matchData.match_state[0] : matchData.match_state);
 
             const { data: logsData } = await supabase
                 .from('match_logs')

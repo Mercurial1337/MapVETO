@@ -69,7 +69,7 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
 
     const initialData = {
         match: matchData || null,
-        state: matchData?.match_state || null,
+        state: Array.isArray(matchData?.match_state) ? matchData.match_state[0] : (matchData?.match_state || null),
         maps: mapsData,
         logs: logsData,
         eventBranding: matchData?.events || null,

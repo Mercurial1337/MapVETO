@@ -93,6 +93,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             }
         }
 
+        // Handle one-to-one mapping returned as array
+        if (Array.isArray((match as any).match_state)) {
+            (match as any).match_state = (match as any).match_state[0] || null;
+        }
+
         const state = (match as any).match_state;
         const template = (match as any).veto_templates;
 
