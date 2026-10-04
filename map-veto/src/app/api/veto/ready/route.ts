@@ -117,6 +117,14 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Log the ready action
+        await supabase.from('match_logs').insert({
+            match_id,
+            step_number: -2, // Pre-veto step
+            action_type: 'ready_check',
+            actor: actingTeam,
+        });
+
         let matchStatusUpdate = null;
 
         // If both teams are now ready, advance match status
