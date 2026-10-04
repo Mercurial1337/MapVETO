@@ -1,238 +1,38 @@
 'use client';
-
-import { useEffect, useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import type { VetoStep } from '@/types';
-
-interface TurnTimerProps {
-    /** The current veto step definition */
-    currentStep: VetoStep | null;
-    /** Server timestamp (ISO string) of when the last action happened */
-    stateUpdatedAt: string;
-    /** Displayed team A name */
-    teamAName: string;
-    /** Displayed team B name */
-    teamBName: string;
-    /** The match ID to trigger auto-action */
-    matchId?: string;
-    /** Whether the match is in progress */
-    isInProgress: boolean;
-    /** Whether the veto is complete */
-    isComplete: boolean;
+interface Props {
+ currentStep: VetoStep | null; stateUpdatedAt: string; teamAName: string; teamBName: string;
+ matchId?: string; token?: string; isInProgress: boolean; isComplete: boolean;
+ isPaused?: boolean; pausedRemainingSeconds?: number | null;
 }
-
-function formatTime(totalSeconds: number): string {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
-
-function getActionLabel(action: string): string {
-    switch (action) {
-        case 'ban': return 'BANNING';
-        case 'pick': return 'PICKING';
-        case 'side': return 'CHOOSING SIDE';
-        case 'decider': return 'DECIDER';
-        default: return action.toUpperCase();
-    }
-}
-
-function getActionColor(action: string): string {
-    switch (action) {
-        case 'ban': return '#ef4444';    // red
-        case 'pick': return '#22c55e';   // green
-        case 'side': return '#eab308';   // yellow
-        case 'decider': return '#a855f7'; // purple
-        default: return '#ffffff';
-    }
-}
-
-function getTeamColor(actor: string): string {
-    switch (actor) {
-        case 'team_a': return '#00FFFF'; // cyan — matches Team A label
-        case 'team_b': return '#CCFF00'; // lime — matches Team B label
-        default: return '#a855f7';       // purple for system
-    }
-}
-
-export function TurnTimer({
-    currentStep,
-    stateUpdatedAt,
-    teamAName,
-    teamBName,
-    isInProgress,
-    isComplete,
-    matchId,
-}: TurnTimerProps) {
-    const [timeLeft, setTimeLeft] = useState(60);
-    const [isTriggering, setIsTriggering] = useState(false);
-    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const triggeredRef = useRef(false);
-
-    // Calculate time left from the server timestamp, and tick every second
-    useEffect(() => {
-        if (!isInProgress || isComplete || !currentStep || !stateUpdatedAt) {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
-            setTimeLeft(60);
-            setIsTriggering(false);
-            triggeredRef.current = false;
-            return;
-        }
-
-        // Reset trigger state if step changes
-        setIsTriggering(false);
-        triggeredRef.current = false;
-
-        const updateTime = new Date(stateUpdatedAt).getTime();
-
-        const tick = () => {
-            const now = Date.now();
-            const elapsed = Math.floor((now - updateTime) / 1000);
-            const remaining = Math.max(0, 60 - elapsed);
-            setTimeLeft(remaining);
-            
-            if (remaining === 15 || remaining === 10) {
-                // We use a small timeout to avoid React state update collisions
-                // Also we need to make sure we don't spam if interval fires twice on the same second
-                if (!(window as any)[`_toast_fired_${remaining}_${updateTime}`]) {
-                    (window as any)[`_toast_fired_${remaining}_${updateTime}`] = true;
-                    import('sonner').then(({ toast }) => {
-                        toast.warning(`Hurry up! ${remaining} seconds remaining for ${actorName}'s turn!`);
-                    });
-                }
-            }
-
-            if (remaining === 0 && !triggeredRef.current && matchId) {
-                triggeredRef.current = true;
-                setIsTriggering(true);
-                
-                import('sonner').then(({ toast }) => {
-                    toast.error('Time is up! A random selection is being made.');
-                });
-
-                fetch('/api/veto/auto-action', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ match_id: matchId }),
-                }).then(async (res) => {
-                    if (!res.ok) {
-                        const data = await res.json().catch(() => ({}));
-                        console.error('Auto action failed:', data);
-                        // Reset trigger to try again on the next tick if it was a timing issue
-                        setTimeout(() => {
-                            triggeredRef.current = false;
-                            setIsTriggering(false);
-                        }, 1000);
-                    }
-                }).catch(err => {
-                    console.error('Failed to trigger auto action', err);
-                    triggeredRef.current = false;
-                    setIsTriggering(false);
-                });
-            }
-        };
-
-        // Set immediately, then tick every second
-        tick();
-        intervalRef.current = setInterval(tick, 1000);
-
-        return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-                intervalRef.current = null;
-            }
-        };
-    }, [isInProgress, isComplete, currentStep, stateUpdatedAt, matchId]);
-
-    if (!currentStep || !isInProgress || isComplete) {
-        return null;
-    }
-
-    const actorName =
-        currentStep.actor === 'team_a'
-            ? teamAName
-            : currentStep.actor === 'team_b'
-                ? teamBName
-                : 'System';
-
-    const actionLabel = getActionLabel(currentStep.action);
-    const actionColor = getActionColor(currentStep.action);
-    const teamColor = getTeamColor(currentStep.actor);
-
-    // Determine urgency level for visual feedback
-    const isUrgent = timeLeft <= 10;
-    const isCritical = timeLeft <= 5;
-
-    return (
-        <AnimatePresence>
-            <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="flex items-center gap-3 px-5 py-3 rounded-xl"
-                style={{
-                    background: 'rgba(0, 0, 0, 0.6)',
-                    backdropFilter: 'blur(12px)',
-                    border: `1px solid ${isCritical ? 'rgba(239, 68, 68, 0.4)' : isUrgent ? 'rgba(234, 179, 8, 0.3)' : 'rgba(255, 255, 255, 0.1)'}`,
-                }}
-            >
-                {/* Pulsing dot */}
-                <motion.div
-                    animate={{
-                        scale: [1, 1.3, 1],
-                        opacity: [1, 0.6, 1],
-                    }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{
-                        backgroundColor: isCritical ? '#ef4444' : isUrgent ? '#eab308' : '#22c55e',
-                        boxShadow: `0 0 8px ${isCritical ? 'rgba(239, 68, 68, 0.5)' : isUrgent ? 'rgba(234, 179, 8, 0.5)' : 'rgba(34, 197, 94, 0.5)'}`,
-                    }}
-                />
-
-                {/* Team + Action */}
-                <div className="flex items-center gap-2">
-                    <span
-                        className="text-sm font-bold"
-                        style={{ color: teamColor }}
-                    >
-                        {actorName}
-                    </span>
-                    <span className="text-white/40 text-xs">—</span>
-                    <span
-                        className="text-xs font-semibold uppercase tracking-wider"
-                        style={{ color: actionColor }}
-                    >
-                        {actionLabel}
-                    </span>
-                </div>
-
-                {/* Timer Display */}
-                <motion.div
-                    className="font-mono text-lg font-bold tabular-nums ml-2"
-                    style={{
-                        color: isCritical ? '#ef4444' : isUrgent ? '#eab308' : 'rgba(255, 255, 255, 0.9)',
-                    }}
-                    animate={isCritical ? { scale: [1, 1.1, 1] } : {}}
-                    transition={{ duration: 0.5, repeat: Infinity }}
-                >
-                    {isTriggering ? '0:00' : formatTime(timeLeft)}
-                </motion.div>
-
-                {/* Ref label */}
-                <div
-                    className="text-[10px] uppercase tracking-widest font-medium px-2 py-0.5 rounded-full ml-1"
-                    style={{
-                        background: 'rgba(255, 255, 255, 0.08)',
-                        color: 'rgba(255, 255, 255, 0.4)',
-                    }}
-                >
-                    REF
-                </div>
-            </motion.div>
-        </AnimatePresence>
-    );
+export function TurnTimer({currentStep,stateUpdatedAt,teamAName,teamBName,matchId,token,isInProgress,isComplete,isPaused,pausedRemainingSeconds}:Props) {
+ const [remaining,setRemaining]=useState(60);
+ const actorName=currentStep?.actor==='team_a'?teamAName:teamBName;
+ useEffect(()=>{
+  if(!isInProgress || isComplete || !currentStep || !stateUpdatedAt) return;
+  if(isPaused) {setRemaining(Math.ceil(pausedRemainingSeconds ?? 60));return;}
+  let cancelled=false, warned=false, pending=false, retryAt=0;
+  const tick=async()=>{
+   const seconds=Math.max(0,Math.ceil((Date.parse(stateUpdatedAt)+60000-Date.now())/1000));
+   setRemaining(seconds);
+   if(seconds>0 && seconds<=15 && !warned) {warned=true;toast.warning(`${actorName}: ${seconds} seconds remaining.`);}
+   if(seconds===0 && !pending && Date.now()>=retryAt && matchId && token) {
+    pending=true;
+    try {
+     await fetch('/api/veto/auto-action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,token,turn_started_at:stateUpdatedAt})});
+    } catch { /* retry until authoritative state advances */ }
+    finally {if(!cancelled){pending=false;retryAt=Date.now()+3000;}}
+   }
+  };
+  void tick(); const interval=setInterval(tick,1000);
+  return ()=>{cancelled=true;clearInterval(interval);};
+ },[currentStep?.action,currentStep?.step,stateUpdatedAt,matchId,token,isInProgress,isComplete,isPaused,pausedRemainingSeconds,actorName]);
+ if(!currentStep || !isInProgress || isComplete) return null;
+ return <div role="status" className="border border-white/20 bg-[#18181b] px-4 py-2 rounded flex items-center gap-3">
+  <span>{actorName} · {currentStep.description || currentStep.action}</span>
+  <strong className={`font-mono tabular-nums ${remaining<=15?'text-yellow-400':''}`}>{isPaused?'Paused':`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`}</strong>
+  {remaining<=15 && !isPaused && <span className="text-yellow-400 text-sm">Time is running out</span>}
+ </div>;
 }

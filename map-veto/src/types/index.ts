@@ -144,6 +144,8 @@ export interface MatchState {
   results: PickedMap[]; // Final ordered list
   is_complete: boolean;
   is_paused?: boolean;
+  turn_started_at?: string;
+  paused_remaining_seconds?: number | null;
   updated_at: string;
   team_a_ready: boolean;
   team_b_ready: boolean;

@@ -79,5 +79,18 @@ const auto=await rpc('veto_position',[seeded.id,null,false,true,expired]);
 assert.equal(auto.new_state.actor_mapping.team_b,'team_b');
 assert.equal((await db.query("SELECT metadata->>'timeout' timeout FROM match_logs WHERE match_id=$1 AND action_type='position_choice'",[seeded.id])).rows[0].timeout,'true');
 console.log('PASS selection: coin/seed entitlement, swapped roles, custom first actor, duplicate requests, 60-second timeout and audit');
+
+await rejects('process_veto_action',[f.id,f.admin,'ban',mapIds[0],null,false,null,null],/Observers/);
+await db.query("UPDATE match_links SET expires_at=NULL WHERE token=$1",[f.a]);
+await rejects('veto_timeout',[f.id,f.observer,pos.new_state.turn_started_at],/Timer/);
+await db.query("UPDATE match_state SET is_paused=true,turn_started_at=now()-interval '61 seconds' WHERE match_id=$1",[f.id]);
+await rejects('process_veto_action',[f.id,f.a,'ban',mapIds[0],null,false,null,null],/paused/);
+await rejects('veto_timeout',[f.id,f.observer,pos.new_state.turn_started_at],/active timer/);
+await db.query("UPDATE match_state SET is_paused=false WHERE match_id=$1",[f.id]);
+const clock=(await db.query('SELECT turn_started_at::text FROM match_state WHERE match_id=$1',[f.id])).rows[0].turn_started_at;
+const timeout=await rpc('veto_timeout',[f.id,f.observer,clock]);
+assert.equal(timeout.new_state.current_step,1); assert.equal(timeout.new_state.banned_maps.length,1);
+await rejects('veto_timeout',[f.id,f.observer,clock],/Timer/);
+console.log('PASS timer: no early action, pause enforcement, random ban, stale timeout rejection');
 await db.close();
 

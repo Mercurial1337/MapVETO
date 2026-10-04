@@ -177,8 +177,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     // Determine if it's user's turn based on their token role
     const isMyTurn = useCallback((turn: VetoActor | null) => {
         if (!userRole || userRole === 'observer') return false;
-        return turn === userRole;
-    }, [userRole]);
+        return !state?.is_paused && turn === userRole;
+    }, [userRole, state?.is_paused]);
 
     // Determine map states
     const mapStates = useMemo(() => {
@@ -231,7 +231,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
 
     // Handle map selection (first click = select, confirm button = execute)
     const handleMapSelect = (mapId: string) => {
-        if (!currentStepDef || isSubmitting) return;
+        if (!currentStepDef || isSubmitting || state?.is_paused) return;
         setSelectedMapId(prev => prev === mapId ? null : mapId);
     };
 
@@ -410,7 +410,10 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     {/* Turn Timer for all users */}
                     <TurnTimer
                         currentStep={currentStepDef}
-                        stateUpdatedAt={state?.updated_at ?? ''}
+                        stateUpdatedAt={state?.turn_started_at ?? state?.updated_at ?? ''}
+                        token={token}
+                        isPaused={state?.is_paused}
+                        pausedRemainingSeconds={state?.paused_remaining_seconds}
                         teamAName={displayedTeams.teamA}
                         teamBName={displayedTeams.teamB}
                         isInProgress={match.status === 'in_progress'}
