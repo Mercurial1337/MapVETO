@@ -9,7 +9,7 @@ interface PositionSelectionModalProps {
     teamAName: string;
     teamBName: string;
     coinTossWinner: VetoActor | null;
-    userRole: 'team_a' | 'team_b' | 'observer' | null;
+    userRole: 'team_a' | 'team_b' | 'observer' | 'admin' | null;
     token: string;
     matchId: string;
     isSeeded?: boolean;

@@ -10,7 +10,7 @@ interface ReadyCheckModalProps {
     teamBName: string;
     teamAReady: boolean;
     teamBReady: boolean;
-    userRole?: VetoActor | 'observer' | null;
+    userRole?: VetoActor | 'observer' | 'admin' | null;
     onReady: () => Promise<boolean | void>;
 }
 

@@ -41,7 +41,7 @@ interface CoinTossModalProps {
     onAnimationComplete?: () => void;
     coinImageA?: string | null;
     coinImageB?: string | null;
-    userRole?: VetoActor | 'observer' | null;
+    userRole?: VetoActor | 'observer' | 'admin' | null;
 }
 
 function cn(...classes: (string | boolean | undefined)[]) {
