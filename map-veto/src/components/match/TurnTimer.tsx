@@ -93,10 +93,26 @@ export function TurnTimer({
             const elapsed = Math.floor((now - updateTime) / 1000);
             const remaining = Math.max(0, 60 - elapsed);
             setTimeLeft(remaining);
+            
+            if (remaining === 15 || remaining === 10) {
+                // We use a small timeout to avoid React state update collisions
+                // Also we need to make sure we don't spam if interval fires twice on the same second
+                if (!(window as any)[`_toast_fired_${remaining}_${updateTime}`]) {
+                    (window as any)[`_toast_fired_${remaining}_${updateTime}`] = true;
+                    import('sonner').then(({ toast }) => {
+                        toast.warning(`Hurry up! ${remaining} seconds remaining for ${actorName}'s turn!`);
+                    });
+                }
+            }
 
             if (remaining === 0 && !triggeredRef.current && matchId) {
                 triggeredRef.current = true;
                 setIsTriggering(true);
+                
+                import('sonner').then(({ toast }) => {
+                    toast.error('Time is up! A random selection is being made.');
+                });
+
                 fetch('/api/veto/auto-action', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
