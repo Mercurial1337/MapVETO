@@ -547,6 +547,9 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             {/* Position Selection Modal */}
             <PositionSelectionModal
                 isOpen={showPositionSelection}
+                turnStartedAt={state?.turn_started_at}
+                isPaused={state?.is_paused}
+                pausedRemainingSeconds={state?.paused_remaining_seconds}
                 teamAName={match.team_a_name}
                 teamBName={match.team_b_name}
                 coinTossWinner={coinTossWinner || null}

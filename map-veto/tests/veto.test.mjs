@@ -92,5 +92,12 @@ const timeout=await rpc('veto_timeout',[f.id,f.observer,clock]);
 assert.equal(timeout.new_state.current_step,1); assert.equal(timeout.new_state.banned_maps.length,1);
 await rejects('veto_timeout',[f.id,f.observer,clock],/Timer/);
 console.log('PASS timer: no early action, pause enforcement, random ban, stale timeout rejection');
+
+const timedPosition=await fixture(true);await rpc('veto_ready',[timedPosition.id,timedPosition.a]);await rpc('veto_ready',[timedPosition.id,timedPosition.b]);
+await db.query("UPDATE match_state SET turn_started_at=now()-interval '61 seconds' WHERE match_id=$1",[timedPosition.id]);
+const positionClock=(await db.query('SELECT turn_started_at::text FROM match_state WHERE match_id=$1',[timedPosition.id])).rows[0].turn_started_at;
+const assigned=await rpc('veto_timeout',[timedPosition.id,timedPosition.observer,positionClock]);assert.equal(assigned.match.status,'in_progress');
+await rejects('veto_timeout',[timedPosition.id,timedPosition.observer,positionClock],/Timer/);
+console.log('PASS Team A/B clock: observer-triggered random assignment, new turn clock, duplicate denial');
 await db.close();
 
