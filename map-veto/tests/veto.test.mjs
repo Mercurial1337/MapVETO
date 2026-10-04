@@ -2,7 +2,17 @@ import { PGlite } from '@electric-sql/pglite';
 import { readFileSync, readdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
-const db = new PGlite();
+const remote=process.argv.includes('--remote');
+let db;
+if(remote) {
+ process.loadEnvFile('.env.local');
+ const {default:pg}=await import('pg');
+ db=new pg.Client({connectionString:process.env.SUPABASE_DB_URL,ssl:{rejectUnauthorized:true,ca:readFileSync('scripts/supabase-ca.crt','utf8')}});
+ await db.connect(); await db.query('BEGIN');
+ db.exec=(sql)=>db.query(sql);
+ db.close=async()=>{await db.query('ROLLBACK'); await db.end();};
+} else db=new PGlite();
+if(!remote) {
 await db.exec(`CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY); CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;`);
 let schema = readFileSync('supabase/schema.sql', 'utf8').split('-- Row Level Security')[0];
 schema = schema.replace(/CREATE EXTENSION[^;]+;/g, '').replaceAll('uuid_generate_v4()', 'gen_random_uuid()');
@@ -12,26 +22,31 @@ await db.exec(`ALTER TABLE matches ADD COLUMN custom_veto_sequence jsonb; ALTER 
 for (const file of readdirSync('supabase/migrations').filter(f => /^0(1[6-9]|2[0-9])_/.test(f)).sort()) {
   await db.exec(readFileSync(`supabase/migrations/${file}`, 'utf8'));
 }
+}
 const steps = [
  {action:'ban',actor:'team_b'}, {action:'pick',actor:'team_a',map_number:1},
  {action:'side',actor:'team_b',map_number:1}, {action:'ban',actor:'team_a'},
  {action:'decider',actor:'system',map_number:2}, {action:'side',actor:'team_b',map_number:2}
 ];
 const game = randomUUID(), template = randomUUID(), mapIds = Array.from({length:4}, () => randomUUID());
-await db.query(`INSERT INTO games(id,name,slug) VALUES($1,'Test game','test')`,[game]);
+await db.query(`INSERT INTO games(id,name,slug) VALUES($1,'Test game',$2)`,[game,randomUUID()]);
 await db.query(`INSERT INTO veto_templates(id,game_id,name,format,sequence) VALUES($1,$2,'Test','bo3',$3)`,[template,game,JSON.stringify({steps})]);
 for (let i=0;i<4;i++) await db.query(`INSERT INTO maps(id,game_id,name,slug,image_url) VALUES($1,$2,$3,$3,'/test.webp')`,[mapIds[i],game,`Map${i}`]);
 async function fixture(seeded=false) {
  const id=randomUUID(), a=randomUUID(), b=randomUUID(), admin=randomUUID(), observer=randomUUID();
  await db.query(`INSERT INTO matches(id,veto_template_id,team_a_name,team_b_name,format,status,coin_toss_forced,coin_toss_winner) VALUES($1,$2,'Alpha','Beta','bo3','ready_check',$3,$4)`,[id,template,seeded,seeded?'team_b':null]);
- await db.query(`INSERT INTO match_state(match_id,available_maps) VALUES($1,$2)`,[id,JSON.stringify(mapIds)]);
- for (const [role,token] of [['team_a',a],['team_b',b],['admin',admin],['observer',observer]]) await db.query(`INSERT INTO match_links(match_id,link_type,token) VALUES($1,$2,$3)`,[id,role,token]);
+ await db.query(`INSERT INTO match_state(match_id,available_maps) VALUES($1,$2) ON CONFLICT(match_id) DO UPDATE SET available_maps=EXCLUDED.available_maps`,[id,JSON.stringify(mapIds)]);
+ for (const [role,token] of [['team_a',a],['team_b',b],['admin',admin],['observer',observer]]) await db.query(`INSERT INTO match_links(match_id,link_type,token) VALUES($1,$2,$3) ON CONFLICT(match_id,link_type) DO UPDATE SET token=EXCLUDED.token`,[id,role,token]);
  return {id,a,b,admin,observer};
 }
 async function rpc(name,args) {
  const r=await db.query(`SELECT ${name}(${args.map((_,i)=>`$${i+1}`).join(',')}) AS result`,args); return r.rows[0].result;
 }
-async function rejects(name,args,message) {await assert.rejects(()=>rpc(name,args),message);}
+async function rejects(name,args,message) {
+ if(remote) await db.query('SAVEPOINT negative_test');
+ try { await assert.rejects(()=>rpc(name,args),message); }
+ finally { if(remote) await db.query('ROLLBACK TO SAVEPOINT negative_test'); }
+}
 const f=await fixture();
 await rejects('veto_ready',[f.id,f.observer],/team link/);
 await rejects('veto_ready',[f.id,f.admin],/team link/);
@@ -45,4 +60,24 @@ assert.equal((await rpc('veto_ready',[seeded.id,seeded.b])).match.status,'side_s
 await db.query(`UPDATE match_links SET expires_at=now()-interval '1 second' WHERE token=$1`,[f.a]);
 await rejects('veto_ready',[f.id,f.a],/team link/);
 console.log('PASS check-in: gate, exact timestamps, duplicate requests, seeded path, spectator/admin/expired-link denial');
+
+await rejects('veto_coin',[f.id,f.observer,null],/link required/);
+await rejects('veto_coin',[f.id,f.b,'team_a'],/Admin link/);
+const coin=await rpc('veto_coin',[f.id,f.admin,'team_b']); assert.equal(coin.winner,'team_b');
+await rejects('veto_coin',[f.id,f.admin,null],/not available/);
+await rejects('veto_position',[f.id,f.a,true,false,null],/selected team/);
+const pos=await rpc('veto_position',[f.id,f.b,true,false,null]);
+assert.deepEqual(pos.new_state.actor_mapping,{team_b:'team_a',team_a:'team_b'});
+assert.equal(pos.new_state.current_turn,'team_a'); // template starts with role B, not hardcoded A
+assert.equal(pos.match.status,'in_progress');
+await rejects('veto_position',[f.id,f.b,false,false,null],/not available/);
+await rejects('veto_position',[seeded.id,seeded.observer,true,false,null],/selected team/);
+await rejects('veto_position',[seeded.id,null,true,true,both.new_state.turn_started_at],/Timer/);
+await db.query("UPDATE match_state SET turn_started_at=now()-interval '61 seconds' WHERE match_id=$1",[seeded.id]);
+const expired=(await db.query('SELECT turn_started_at::text FROM match_state WHERE match_id=$1',[seeded.id])).rows[0].turn_started_at;
+const auto=await rpc('veto_position',[seeded.id,null,false,true,expired]);
+assert.equal(auto.new_state.actor_mapping.team_b,'team_b');
+assert.equal((await db.query("SELECT metadata->>'timeout' timeout FROM match_logs WHERE match_id=$1 AND action_type='position_choice'",[seeded.id])).rows[0].timeout,'true');
+console.log('PASS selection: coin/seed entitlement, swapped roles, custom first actor, duplicate requests, 60-second timeout and audit');
 await db.close();
+

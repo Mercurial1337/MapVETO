@@ -317,6 +317,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
                 body: JSON.stringify({
                     match_id: matchId,
                     forced_winner: forcedWinner,
+                    token,
                 }),
             });
 
@@ -327,12 +328,14 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
                 return null;
             }
 
-            return data.winner as VetoActor;
+            if (data.match) setMatch(prev => prev ? { ...prev, ...data.match } : data.match);
+            if (data.new_state) setState(data.new_state);
+            return data.match?.coin_toss_winner as VetoActor;
         } catch (err) {
             setError('Network error');
             return null;
         }
-    }, [matchId]);
+    }, [matchId, token]);
 
     // Perform ready check
     const performReady = useCallback(async (): Promise<boolean> => {
@@ -359,6 +362,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
 
             if (data.match) setMatch(prev => prev ? { ...prev, ...data.match } : data.match);
 
+            if (data.match) setMatch(prev => prev ? { ...prev, ...data.match } : data.match);
             return true;
         } catch (err) {
             setError('Network error');

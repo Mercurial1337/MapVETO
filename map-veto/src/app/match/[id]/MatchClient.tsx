@@ -250,20 +250,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     // === Coin Toss Modal Visibility ===
     // Managed by local state. Opens when match status is 'coin_toss'.
     // Stays open until CoinTossModal signals that the animation is complete.
-    const [coinTossModalOpen, setCoinTossModalOpen] = useState(false);
-
-    // Open modal when match status is 'coin_toss'
-    useEffect(() => {
-        if (match?.status === 'coin_toss') {
-            setCoinTossModalOpen(true);
-        }
-    }, [match?.status]);
-
-    // Called by CoinTossModal after the full animation sequence finishes
-    const handleCoinTossAnimationComplete = useCallback(() => {
-        setCoinTossModalOpen(false);
-    }, []);
-
+    const coinTossModalOpen = match?.status === 'coin_toss';
+    const handleCoinTossAnimationComplete = useCallback(() => {}, []);
     const showCoinToss = coinTossModalOpen;
 
     // Ready Check Modal
