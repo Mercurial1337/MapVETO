@@ -11,11 +11,11 @@ import { CoinTossModal } from '@/components/match/CoinTossModal';
 import { PositionSelectionModal } from '@/components/match/PositionSelectionModal';
 import { SideSelectionModal } from '@/components/match/SideSelectionModal';
 import { ReadyCheckModal } from '@/components/match/ReadyCheckModal';
-import { ActionLog } from '@/components/match/ActionLog';
+import { MatchActivity, TimeoutRequestButton } from '@/components/match/TimeoutRequests';
 import { AdminPanel } from '@/components/match/AdminPanel';
 import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus } from '@/lib/realtime';
 import { useActionSound } from '@/hooks';
-import type { MapCardState, VetoStep, VetoActor, Match, MatchState, VetoTemplate, GameMap } from '@/types';
+import type { MapCardState, VetoStep, VetoActor, Match, VetoTemplate } from '@/types';
 
 // Map name to local image fallback
 const MAP_IMAGE_FALLBACKS: Record<string, string> = {
@@ -45,7 +45,7 @@ interface MatchVetoInterfaceProps {
 }
 
 function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
-    const { match, state, maps, logs, eventBranding, isLoading, error, userRole } = useMatchData();
+    const { match, state, maps, eventBranding, isLoading, error, userRole } = useMatchData();
     const { banMap, pickMap, pickSide, coinToss, readyUp, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
     const [selectedMap, setSelectedMap] = useState<{id:string;clock:string | undefined} | null>(null);
@@ -462,15 +462,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
 
                 {/* Action Log Panel */}
                 <div className="w-full lg:w-64 glass rounded p-4 mt-4 lg:mt-0">
-                    <h3 className="text-sm font-semibold text-white/70 mb-3 uppercase tracking-wider">Action Log</h3>
-                    <ActionLog
-                        logs={logs || []}
-                        dbTeamAName={match.team_a_name}
-                        dbTeamBName={match.team_b_name}
-                        displayTeam1Name={displayedTeams.teamA}
-                        displayTeam2Name={displayedTeams.teamB}
-                        mapNames={mapNames}
-                    />
+                    <MatchActivity mapNames={mapNames} isAdmin={isAdmin} matchId={matchId} token={token}/>
                 </div>
             </div>
 
@@ -533,6 +525,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             />
 
             {state?.is_complete && <p role="status" className="border-t border-white/20 px-4 py-3 text-green-300">Veto complete. The final selections are shown above.</p>}
+            <TimeoutRequestButton matchId={matchId} token={token}/>
             {/* Admin Panel */}
             {isAdmin && match && (
                 <AdminPanel matchId={matchId} matchStatus={match.status} isPaused={state?.is_paused} token={token} />

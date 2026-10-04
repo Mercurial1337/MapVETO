@@ -44,6 +44,26 @@ console.log('PASS HTTP coin toss: both teams and observer denied random/forced t
 await post('/api/veto/position-choice',{match_id:id,token:tokens[coin.match.coin_toss_winner],pick_first:true});
 session=await post('/api/veto/session',{match_id:id,token:tokens.observer});assert.equal(session.match.status,'in_progress');
 console.log('PASS HTTP check-in: concurrent readiness, coin toss, role confirmation, coherent observer state');
+const requestId=randomUUID(),beforeRequest=session.state;
+for(const role of ['observer','admin']) await post('/api/veto/timeouts',{operation:'request',match_id:id,token:tokens[role],request_id:requestId,reason:'Game disconnected'},403);
+await post('/api/veto/timeouts',{operation:'request',match_id:id,token:tokens.team_a,request_id:requestId,reason:' '},400);
+await Promise.all([1,2].map(()=>post('/api/veto/timeouts',{operation:'request',match_id:id,token:tokens.team_a,request_id:requestId,reason:'Game disconnected'})));
+session=await post('/api/veto/session',{match_id:id,token:tokens.admin});
+assert.equal(session.state.is_paused,false);assert.equal(session.state.turn_started_at,beforeRequest.turn_started_at);
+assert.equal(session.logs.filter(log=>log.action_type==='timeout_request').length,1);
+await post('/api/veto/timeouts',{operation:'request',match_id:id,token:tokens.team_a,request_id:randomUUID(),reason:'Duplicate problem'},409);
+for(const role of ['team_a','team_b','observer']) await post('/api/veto/timeouts',{operation:'resolve',match_id:id,token:tokens[role],request_id:requestId,resolution:'Reconnected'},403);
+const paused=await post('/api/veto/admin/override',{match_id:id,token:tokens.admin,operation:'pause',reason:'Investigate team timeout'});
+const resolutionPayload={operation:'resolve',match_id:id,token:tokens.admin,request_id:requestId,resolution:'Connection restored'};
+await post('/api/veto/timeouts',resolutionPayload);await post('/api/veto/timeouts',resolutionPayload);
+session=await post('/api/veto/session',{match_id:id,token:tokens.team_a});
+assert.equal(session.state.is_paused,true);assert.equal(session.state.paused_remaining_seconds,paused.new_state.paused_remaining_seconds);
+assert.equal(session.logs.filter(log=>log.action_type==='timeout_resolved').length,1);
+assert.equal(session.logs.find(log=>log.action_type==='timeout_resolved').metadata.resolution,'Connection restored');
+const hiddenReports=await anon.from('veto_timeout_requests').select('*').eq('match_id',id);assert.equal(hiddenReports.data?.length || 0,0);
+const directRequest=await anon.rpc('veto_request_timeout',{p_match_id:id,p_token:tokens.team_b,p_request_id:randomUUID(),p_reason:'Bypass API'});assert.ok(directRequest.error);
+await post('/api/veto/admin/override',{match_id:id,token:tokens.admin,operation:'resume',reason:'Investigation finished'});
+console.log('PASS HTTP team timeouts: team report reaches referee, retries deduplicated, resolution protected/audited, referee controls pause/resume independently');
 for(let i=0;i<30;i++) {
  session=await post('/api/veto/session',{match_id:id,token:tokens.observer});
  if(session.state.is_complete) break;

@@ -172,5 +172,38 @@ for(const sequence of [BO1_STANDARD,BO3_STANDARD,BO5_GRAND_FINALS]) {
  assert.equal(new Set([...st.banned_maps.map(m=>m.map_id),...st.picked_maps.map(m=>m.map_id)]).size,7);
 }
 console.log('PASS formats: complete BO1/BO3/BO5 with swapped roles, random picks/bans/sides and deciders');
+const incident=await fixture(),requestId=randomUUID();
+const unchanged=(await db.query('SELECT to_jsonb(s) AS state FROM match_state s WHERE match_id=$1',[incident.id])).rows[0].state;
+for(const token of [incident.observer,incident.admin,f.a]) await rejects('veto_request_timeout',[incident.id,token,'Connection problem',requestId],/team link/);
+await rejects('veto_request_timeout',[incident.id,incident.a,'   ',requestId],/Describe/);
+await rejects('veto_request_timeout',[incident.id,incident.a,'x'.repeat(1001),requestId],/Describe/);
+await db.query("UPDATE match_links SET expires_at=now()-interval '1 second' WHERE token=$1",[incident.a]);
+await rejects('veto_request_timeout',[incident.id,incident.a,'Connection problem',requestId],/team link/);
+await db.query('UPDATE match_links SET expires_at=NULL WHERE token=$1',[incident.a]);
+const requested=await rpc('veto_request_timeout',[incident.id,incident.a,'Connection problem',requestId]);
+assert.deepEqual(requested.new_state,unchanged);assert.equal(requested.request.status,'open');
+const retried=await rpc('veto_request_timeout',[incident.id,incident.a,'Connection problem',requestId]);assert.equal(retried.request.id,requestId);
+await rejects('veto_request_timeout',[incident.id,incident.a,'Another issue',randomUUID()],/already has/);
+await rejects('veto_request_timeout',[incident.id,incident.b,'Steal request ID',requestId],/already used/);
+const otherReport=await rpc('veto_request_timeout',[incident.id,incident.b,'Game crashed',randomUUID()]);assert.equal(otherReport.request.actor,'team_b');
+for(const token of [incident.a,incident.b,incident.observer,f.admin]) await rejects('veto_resolve_timeout',[incident.id,token,requestId,'Reconnected'],/Admin link/);
+await rejects('veto_resolve_timeout',[incident.id,incident.admin,randomUUID(),'Reconnected'],/not found/);
+await rejects('veto_resolve_timeout',[incident.id,incident.admin,requestId,' '],/Describe/);
+await db.query('UPDATE match_state SET is_paused=true,paused_remaining_seconds=32 WHERE match_id=$1',[incident.id]);
+const resolved=await rpc('veto_resolve_timeout',[incident.id,incident.admin,requestId,'Connection restored']);
+assert.equal(resolved.request.status,'resolved');assert.ok(resolved.request.resolved_by);assert.equal(resolved.new_state.is_paused,true);assert.equal(resolved.new_state.paused_remaining_seconds,32);
+await rpc('veto_resolve_timeout',[incident.id,incident.admin,requestId,'Connection restored']);
+await rejects('veto_resolve_timeout',[incident.id,incident.admin,requestId,'Different resolution'],/already resolved/);
+const audit=(await db.query("SELECT * FROM match_logs WHERE match_id=$1 AND metadata->>'timeout_request_id'=$2 ORDER BY log_order",[incident.id,requestId])).rows;
+assert.deepEqual(audit.map(log=>log.action_type),['timeout_request','timeout_resolved']);assert.equal(audit[0].metadata.reason,'Connection problem');assert.equal(audit[1].metadata.resolution,'Connection restored');
+await rpc('veto_request_timeout',[incident.id,incident.a,'New issue after resolution',randomUUID()]);
+await db.query("UPDATE matches SET status='completed' WHERE id=$1",[incident.id]);
+await rpc('veto_resolve_timeout',[incident.id,incident.admin,otherReport.request.id,'Game restarted']);
+await rejects('veto_request_timeout',[incident.id,incident.b,'Too late',randomUUID()],/active veto/);
+for(const role of ['anon','authenticated']) {
+ assert.equal((await db.query("SELECT has_table_privilege($1,'veto_timeout_requests','SELECT') AS allowed",[role])).rows[0].allowed,false);
+ assert.equal((await db.query("SELECT has_function_privilege($1,'veto_request_timeout(uuid,uuid,text,uuid)','EXECUTE') AS allowed",[role])).rows[0].allowed,false);
+}
+console.log('PASS team timeout requests: scoped permissions, explanations, retry protection, one open per team, referee resolution, unchanged clocks/pauses and complete audit');
 await db.close();
 

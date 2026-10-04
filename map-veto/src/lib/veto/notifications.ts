@@ -19,5 +19,10 @@ export function matchNotices(previous:{match:Match|null;state:MatchState|null},c
 export function timeoutNotice(log:MatchLog,match:Match):VetoNotice|null {
  if(!log.metadata?.timeout || log.metadata?.superseded || log.metadata?.previous_session) return null;
  const team=log.actor==='team_a'?match.team_a_name:match.team_b_name;
- return {kind:'warning',message:`${team} ran out of time. A random ${log.action_type==='position_choice'?'Team A/B assignment':log.action_type==='side'?'side':log.action_type} was confirmed.`};
+ return {kind:'warning',message:`${team}'s move timer expired. A random ${log.action_type==='position_choice'?'Team A/B assignment':log.action_type==='side'?'side':log.action_type} was confirmed.`};
+}
+export function requestNotice(log:MatchLog,match:Match,role:LinkType|null,canAdmin=false):VetoNotice|null {
+ if(log.action_type==='timeout_request' && (role==='admin' || canAdmin)) return {kind:'warning',message:`${log.actor==='team_a'?match.team_a_name:match.team_b_name} requested a timeout. Open the Timeouts tab to review it.`};
+ if(log.action_type==='timeout_resolved' && role===log.metadata?.request_actor) return {kind:'success',message:`The referee resolved your timeout: ${String(log.metadata?.resolution || '')}`};
+ return null;
 }

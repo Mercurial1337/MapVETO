@@ -13,10 +13,12 @@ export function formatLog(entry: MatchLog, teams: Record<string,string>, maps: R
   case 'side':text=`${actor} confirmed ${entry.side_choice}: ${map}`;break;
   case 'decider':text=`Decider: ${map}`;break;
   case 'admin_action':text=`Referee ${metadata.action_details || 'override'}`;break;
+  case 'timeout_request':text=`${actor} requested a timeout: ${metadata.reason || ''}`;break;
+  case 'timeout_resolved':text=`Referee resolved ${teams[String(metadata.request_actor)] || 'the team'}'s timeout: ${metadata.resolution || ''}`;break;
   default:text=`${actor}: ${entry.action_type}`;
  }
  if(metadata.map_number) text+=` (map ${metadata.map_number})`;
- if(metadata.timeout) text+=' [timeout: random selection]';
+ if(metadata.timeout) text+=' [move timer expired: random selection]';
  else if(metadata.is_auto) text+=' [automatic]';
  if(metadata.admin_override) text+=' [referee override]';
  if(metadata.superseded) text+=' [superseded]';

@@ -12,7 +12,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { MatchState, Match, VetoActor, SideChoice, GameMap, MatchLog } from '@/types';
 import { toast } from 'sonner';
 import { useRef } from 'react';
-import { matchNotices, timeoutNotice } from '@/lib/veto/notifications';
+import { matchNotices, timeoutNotice, requestNotice } from '@/lib/veto/notifications';
 
 interface EventBranding {
     logo_url: string | null;
@@ -113,10 +113,10 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
         for(const log of logs) {
             if(seenLogs.current.has(log.id)) continue;
             seenLogs.current.add(log.id);
-            const notice=timeoutNotice(log,match);
+            const notice=timeoutNotice(log,match) || requestNotice(log,match,userRole,Boolean((match as Match & {can_admin?:boolean}).can_admin));
             if(notice) toast[notice.kind](notice.message);
         }
-    },[logs,match]);
+    },[logs,match,userRole]);
 
     // Read the authoritative snapshot after changes. Coalesce a transaction's
     // broadcasts into one request and recover missed events on reconnect/focus.

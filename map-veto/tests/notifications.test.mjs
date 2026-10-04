@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import {matchNotices,timeoutNotice} from '../src/lib/veto/notifications.ts';
+import {matchNotices,timeoutNotice,requestNotice} from '../src/lib/veto/notifications.ts';
+import {timeoutRequests} from '../src/lib/veto/timeoutRequests.ts';
+import {formatLog} from '../src/lib/veto/log.ts';
 const match={status:'ready_check',team_a_name:'Alpha',team_b_name:'Beta',coin_toss_winner:'team_a'};
 const state={team_a_ready:false,team_b_ready:false,current_step:0,current_turn:null,is_complete:false};
 const old={match,state};const ready={match:{...match,status:'coin_toss'},state:{...state,team_a_ready:true,team_b_ready:true}};
@@ -14,3 +16,17 @@ assert.equal(matchNotices(start,{...start,state:{...start.state,is_complete:true
 assert.ok(timeoutNotice({actor:'team_a',action_type:'pick',metadata:{timeout:true}},match).message.includes('random pick'));
 assert.equal(timeoutNotice({actor:'team_a',action_type:'pick',metadata:{admin_override:true}},match),null);
 console.log('PASS notifications: ready transitions, first and repeated team turns, spectator suppression, completion, confirmed timeout source');
+const report={id:'log1',action_type:'timeout_request',actor:'team_a',created_at:'2026-10-04T12:00:00Z',metadata:{timeout_request_id:'request1',reason:'Game crashed'}};
+const resolution={id:'log2',action_type:'timeout_resolved',actor:'admin',created_at:'2026-10-04T12:01:00Z',metadata:{timeout_request_id:'request1',request_actor:'team_a',resolution:'Game restarted'}};
+assert.equal(timeoutRequests([report])[0].resolvedAt,undefined);
+assert.equal(timeoutRequests([report,resolution])[0].resolution,'Game restarted');
+assert.ok(requestNotice(report,match,'admin').message.includes('Timeouts tab'));
+assert.ok(requestNotice(report,match,'observer',true));
+assert.equal(requestNotice(report,match,'team_b'),null);
+assert.ok(requestNotice(resolution,match,'team_a').message.includes('Game restarted'));
+assert.equal(requestNotice(resolution,match,'team_b'),null);
+assert.equal(timeoutNotice(report,match),null);
+assert.ok(formatLog(report,{team_a:'Alpha'},{}).includes('Alpha requested a timeout: Game crashed'));
+assert.ok(formatLog(resolution,{team_a:'Alpha'},{}).includes("Referee resolved Alpha's timeout: Game restarted"));
+assert.ok(formatLog({...report,action_type:'pick',metadata:{timeout:true}},{team_a:'Alpha'},{}).includes('move timer expired'));
+console.log('PASS timeout request view: open/resolved history, referee alert, team resolution notice and distinct timer-expiry labels');

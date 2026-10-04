@@ -17,7 +17,7 @@ Removed Framer Motion and its dependencies, animated coin assets, gradients, blu
 
 ## Supabase
 
-Migrations 016–025 are applied using verified TLS. The public CA certificate is in `scripts/supabase-ca.crt`; the connection string remains in ignored `.env.local`.
+Migrations 016–026 are applied using verified TLS. The public CA certificate is in `scripts/supabase-ca.crt`; the connection string remains in ignored `.env.local`.
 
 `map-veto-timeouts` runs every five seconds. New sessions opt into automatic deadlines when both teams check in. Existing abandoned sessions are not automatically advanced. Each action rejects late manual submissions at 60 seconds; the scheduled fallback runs on the next worker tick. Connected clients also request the authoritative fallback when the clock expires.
 
@@ -57,3 +57,14 @@ For browser testing, `node tests/http.test.mjs --keep` retains a labeled match a
 `61a1de1` readiness; `09fd920` role selection; `8bc1ebb` move timer; `b3e631b` role-choice timer; `a3879ba` audit; `cafe299` referee overrides; `8130511` observers; `bbb455b` notifications; `17614d5` background timeouts; `7855004` stale selection and format verification. Final commits add the flat UI, audit-order correction and reproducible test tooling.
 
 Admin-only coin toss correction: UI hides all toss controls from teams/observers; HTTP and PostgreSQL reject their random and forced toss requests. Local/remote database tests, HTTP integration, targeted ESLint, TypeScript and browser verification passed.
+
+## Team-requested timeouts
+
+A timeout is a team incident report for the referee. Both teams have a Request timeout button and a required explanation (up to 1000 characters). One open request is allowed per team; retries reuse the request ID and do not duplicate the audit.
+
+Referees receive a live notification and an open-request count. Open Referee controls → Timeouts, or the match activity Timeouts tab, to review the report and enter a required resolution note. The floating referee tab remains accessible during check-in, coin toss and role-choice dialogs. Teams can see the resolved report and receive its resolution notice.
+
+Requesting or resolving an incident does not pause, resume or restart the clock. The referee makes those decisions separately. The audit records the requesting team, explanation, timestamps, resolving admin and resolution. Move-clock expiration is labeled separately as “move timer expired: random selection.”
+
+Migration 026 provides service-only functions and a protected request table. Local and remote database tests cover permissions, expired/cross-match links, idempotence, duplicate open requests, immutable resolution and preserved clocks/pauses. HTTP tests exercise report delivery and protected resolution. Production build and targeted ESLint passed.
+Browser verification passed: a team submitted its explanation, the already-open referee Timeouts tab received it without reload, the referee resolved it, and both tabs showed the request and resolution in the audit. The labeled QA match was deleted afterward.
