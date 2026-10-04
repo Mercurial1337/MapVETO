@@ -114,5 +114,25 @@ assert.ok(sideLogs.every(log=>log.map_id && log.metadata.confirmed_at));
 assert.equal(sideLogs[0].metadata.map_number,1);
 const autoLog=(await db.query("SELECT * FROM match_logs WHERE match_id=$1 AND action_type='ban' ORDER BY log_order LIMIT 1",[f.id])).rows[0];assert.equal(autoLog.metadata.timeout,true);
 console.log('PASS audit: pick/ban/side confirmation times, timeout source, decider, complete ordered results');
+
+await rejects('veto_admin',[f.id,f.observer,'undo',null,null,'test',null],/Admin/);
+await rejects('veto_admin',[f.id,f.a,'undo',null,null,'test',null],/Admin/);
+await rejects('veto_admin',[f.id,f.admin,'undo',null,null,'',null],/reason/);
+const reopened=await rpc('veto_admin',[f.id,f.admin,'undo',null,null,'Disputed side',null]);
+assert.equal(reopened.match.status,'in_progress');assert.equal(reopened.new_state.current_step,5);assert.equal(reopened.new_state.picked_maps[1].side,null);
+const corrected=await rpc('veto_admin',[f.id,f.admin,'force',null,'attack','Correct side',null]);assert.equal(corrected.new_state.is_complete,true);assert.equal(corrected.new_state.results[1].side,'attack');
+await rpc('veto_admin',[f.id,f.admin,'undo',null,null,'Reopen side',null]);
+const unwind=await rpc('veto_admin',[f.id,f.admin,'undo',null,null,'Reopen ban and decider',null]);assert.equal(unwind.new_state.current_step,3);assert.equal(unwind.new_state.picked_maps.length,1);assert.equal(unwind.new_state.available_maps.length,2);
+await db.query("UPDATE match_state SET turn_started_at=now()-interval '15 seconds' WHERE match_id=$1",[f.id]);
+const paused=await rpc('veto_admin',[f.id,f.admin,'pause',null,null,'Technical issue',null]);assert.equal(paused.new_state.is_paused,true);assert.ok(Math.abs(paused.new_state.paused_remaining_seconds-45)<1);
+const resumed=await rpc('veto_admin',[f.id,f.admin,'resume',null,null,'Issue resolved',null]);assert.equal(resumed.new_state.is_paused,false);
+await rpc('veto_admin',[f.id,f.admin,'restart',null,null,'Restart move',null]);
+await rpc('veto_admin',[f.id,f.admin,'force',unwind.new_state.available_maps[0],null,'Force chosen ban',null]);
+const correction=await rpc('veto_admin',[f.id,f.admin,'correct',unwind.new_state.available_maps[1],null,'Correct ban',null]);assert.equal(correction.new_state.banned_maps.at(-1).map_id,unwind.new_state.available_maps[1]);
+const logCount=(await db.query('SELECT count(*)::int n FROM match_logs WHERE match_id=$1',[f.id])).rows[0].n;
+const reset=await rpc('veto_admin',[f.id,f.admin,'reset',null,null,'Restart match',null]);assert.equal(reset.match.status,'ready_check');assert.equal(reset.new_state.available_maps.length,4);assert.equal(reset.new_state.is_paused,false);
+assert.equal((await db.query('SELECT count(*)::int n FROM match_logs WHERE match_id=$1',[f.id])).rows[0].n,logCount+1);
+assert.ok((await db.query("SELECT * FROM match_logs WHERE match_id=$1 AND metadata->>'superseded'='true'",[f.id])).rows.length>0);
+console.log('PASS referee: authorization, reopen completed veto, unwind decider, preserve paused time, force/correct exact map and side, reset retains pool and history');
 await db.close();
 

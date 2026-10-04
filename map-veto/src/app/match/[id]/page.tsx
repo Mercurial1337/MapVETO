@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import MatchClient from './MatchClient';
+import { matchAdminToken } from '@/lib/auth/matchAdmin';
 
 interface MatchPageProps {
     params: Promise<{ id: string }>;
@@ -68,7 +69,7 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
     }
 
     const initialData = {
-        match: matchData || null,
+        match: matchData ? { ...matchData, can_admin: !!await matchAdminToken(matchId, token) } : null,
         state: Array.isArray(matchData?.match_state) ? matchData.match_state[0] : (matchData?.match_state || null),
         maps: mapsData,
         logs: logsData,

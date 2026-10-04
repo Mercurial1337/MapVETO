@@ -1,122 +1,39 @@
 'use client';
-
 import { useState } from 'react';
-import { Settings, RefreshCw, Dices } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-
-interface AdminPanelProps {
-    matchId: string;
-    matchStatus: string;
-    isPaused?: boolean;
-    token: string;
-}
-
-export function AdminPanel({ matchId, matchStatus, isPaused, token }: AdminPanelProps) {
-    const [isOpen, setIsOpen] = useState(false);
-    const [isForcing, setIsForcing] = useState(false);
-    const [isResetting, setIsResetting] = useState(false);
-
-    const handleForceAction = async () => {
-        if (!confirm('Force a random action for the current turn?')) return;
-        setIsForcing(true);
-        try {
-            const res = await fetch('/api/veto/admin/force-action', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ match_id: matchId, token })
-            });
-            if (!res.ok) {
-                const data = await res.json();
-                alert('Error forcing action: ' + (data.error || 'Unknown error'));
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Failed to force action');
-        }
-        setIsForcing(false);
-        setIsOpen(false);
-    };
-
-    const handleResetVeto = async () => {
-        if (!confirm('Are you sure you want to completely restart this veto? All progress will be lost.')) return;
-        setIsResetting(true);
-        try {
-            const res = await fetch('/api/veto/admin/reset-veto', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ match_id: matchId, token })
-            });
-            if (!res.ok) {
-                const data = await res.json();
-                alert('Error resetting veto: ' + (data.error || 'Unknown error'));
-            }
-        } catch (e) {
-            console.error(e);
-            alert('Failed to reset veto');
-        }
-        setIsResetting(false);
-        setIsOpen(false);
-    };
-
-    return (
-        <div className="fixed bottom-4 right-4 z-50">
-            <AnimatePresence>
-                {isOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 20, scale: 0.95 }}
-                        className="absolute bottom-16 right-0 w-64 glass-dark border border-yellow-500/30 rounded-xl p-4 shadow-2xl flex flex-col gap-3"
-                    >
-                        <h3 className="text-yellow-400 font-bold text-sm uppercase tracking-wider mb-2 border-b border-yellow-500/20 pb-2">
-                            Admin Controls
-                        </h3>
-                        
-                        <button
-                            onClick={handleForceAction}
-                            disabled={isForcing || matchStatus !== 'in_progress'}
-                            className="flex items-center gap-2 text-sm bg-white/5 hover:bg-white/10 p-2 rounded transition-colors disabled:opacity-50"
-                        >
-                            <Dices size={16} className="text-purple-400" />
-                            {isForcing ? 'Forcing...' : 'Force Random Action'}
-                        </button>
-
-                        <button
-                            onClick={async () => {
-                                setIsForcing(true);
-                                await fetch('/api/veto/admin/pause-veto', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ match_id: matchId, is_paused: !isPaused, token })
-                                });
-                                setIsForcing(false);
-                            }}
-                            className="flex items-center gap-2 text-sm bg-white/5 hover:bg-white/10 p-2 rounded transition-colors disabled:opacity-50 text-orange-300"
-                        >
-                            <Settings size={16} />
-                            {isPaused ? 'Resume Veto' : 'Pause Veto'}
-                        </button>
-
-                        <button
-                            onClick={handleResetVeto}
-                            disabled={isResetting}
-                            className="flex items-center gap-2 text-sm bg-red-500/10 hover:bg-red-500/20 p-2 rounded transition-colors text-red-400 disabled:opacity-50"
-                        >
-                            <RefreshCw size={16} />
-                            {isResetting ? 'Resetting...' : 'Restart Veto entirely'}
-                        </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-            
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className={`p-3 rounded-full shadow-lg transition-colors flex items-center justify-center ${
-                    isOpen ? 'bg-yellow-500 text-black' : 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 backdrop-blur-md'
-                }`}
-            >
-                <Settings size={24} />
-            </button>
-        </div>
-    );
+import { useRealtime } from '@/lib/realtime';
+interface Props {matchId:string;matchStatus:string;isPaused?:boolean;token:string;}
+export function AdminPanel({matchId,matchStatus,isPaused,token}:Props) {
+ const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [reason,setReason]=useState(''),[mapId,setMapId]=useState(''),[side,setSide]=useState<'attack'|'defense'>('attack');
+ const {state,maps,refresh}=useRealtime();
+ async function action(operation:string) {
+  if(busy) return;
+  if(!reason.trim()) {setError('Enter a reason for the audit log.');return;}
+  if(operation==='reset' && !confirm('Restart this veto? Selections will be cleared and the history retained.')) return;
+  setBusy(true);setError('');
+  try {
+   const response=await fetch('/api/veto/admin/override',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,token,operation,reason,map_id:mapId || undefined,side,turn_started_at:state?.turn_started_at})});
+   const data=await response.json();
+   if(!response.ok) {setError(data.error || 'Override failed');return;}
+   await refresh();
+  } catch {setError('Connection failed. Please retry.');}
+  finally {setBusy(false);}
+ }
+ return <aside className="fixed bottom-4 right-4 z-[60]">
+  {open && <section aria-label="Referee override controls" className="mb-2 p-4 w-80 max-h-[75vh] overflow-auto bg-[#18181b] border border-white/30 rounded">
+   <h2 className="font-bold mb-3">Referee override</h2>
+   <label className="block text-sm">Reason<textarea className="w-full bg-black border border-white/30 p-2 mt-1" maxLength={500} value={reason} onChange={e=>setReason(e.target.value)}/></label>
+   {error && <p role="alert" className="text-red-400 my-2">{error}</p>}
+   <div className="flex flex-wrap gap-2 my-3">
+    <button className="btn-secondary p-2" disabled={busy || !['in_progress','side_selection','coin_toss'].includes(matchStatus)} onClick={()=>action(isPaused?'resume':'pause')}>{isPaused?'Resume':'Pause'}</button>
+    <button className="btn-secondary p-2" disabled={busy || !['in_progress','side_selection'].includes(matchStatus)} onClick={()=>action('restart')}>Restart current timer</button>
+    <button className="btn-secondary p-2" disabled={busy} onClick={()=>action('undo')}>Reopen last selection</button>
+   </div>
+   <label className="block text-sm">Map to force or correct<select className="w-full bg-black border border-white/30 p-2 mt-1" value={mapId} onChange={e=>setMapId(e.target.value)}><option value="">Choose a map</option>{maps.map(map=><option key={map.id} value={map.id}>{map.name}{state?.available_maps.includes(map.id)?' (available)':''}</option>)}</select></label>
+   <label className="block text-sm mt-2">Side to force or correct<select className="w-full bg-black border border-white/30 p-2 mt-1" value={side} onChange={e=>setSide(e.target.value as 'attack'|'defense')}><option value="attack">Attack</option><option value="defense">Defense</option></select></label>
+   <div className="flex flex-wrap gap-2 my-3"><button className="btn-secondary p-2" disabled={busy || matchStatus!=='in_progress'} onClick={()=>action('force')}>Force current selection</button><button className="btn-secondary p-2" disabled={busy} onClick={()=>action('correct')}>Correct last selection</button></div>
+   <button className="btn-secondary p-2 text-red-400" disabled={busy} onClick={()=>action('reset')}>Restart entire veto</button>
+  </section>}
+  <button aria-expanded={open} className="btn-secondary px-4 py-2" onClick={()=>setOpen(!open)}>Referee controls</button>
+ </aside>;
 }

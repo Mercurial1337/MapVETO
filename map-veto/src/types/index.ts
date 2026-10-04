@@ -183,7 +183,8 @@ export interface MatchLog {
   match_id: string;
   step_number: number;
   action_type: VetoAction | 'coin_toss' | 'ready_check' | 'admin_action' | 'position_choice';
-  actor: VetoActor;
+  actor: VetoActor | 'admin';
+  log_order?: number;
   map_id: string | null;
   side_choice: SideChoice | null;
   created_at: string;

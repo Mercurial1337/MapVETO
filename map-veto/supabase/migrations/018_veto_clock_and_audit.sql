@@ -47,7 +47,7 @@ BEGIN
     -- 1. Validate token and get team identity
     SELECT link_type INTO v_link_type
     FROM match_links
-    WHERE match_id = p_match_id AND token = p_token AND (expires_at IS NULL OR expires_at > now());
+    WHERE match_id = p_match_id AND token = p_token AND (expires_at IS NULL OR expires_at > now() OR p_is_auto OR p_admin_token IS NOT NULL);
 
     IF v_link_type IS NULL THEN
         RAISE EXCEPTION 'Invalid or expired token';
