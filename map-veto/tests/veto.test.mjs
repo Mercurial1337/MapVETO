@@ -99,5 +99,20 @@ const positionClock=(await db.query('SELECT turn_started_at::text FROM match_sta
 const assigned=await rpc('veto_timeout',[timedPosition.id,timedPosition.observer,positionClock]);assert.equal(assigned.match.status,'in_progress');
 await rejects('veto_timeout',[timedPosition.id,timedPosition.observer,positionClock],/Timer/);
 console.log('PASS Team A/B clock: observer-triggered random assignment, new turn clock, duplicate denial');
+
+const picked=await rpc('process_veto_action',[f.id,f.b,'pick',timeout.new_state.available_maps[0],null,false,null,null]);
+assert.equal(picked.current_step,2);
+await rejects('process_veto_action',[f.id,f.a,'side',null,'invalid',false,null,null],/required/);
+const side=await rpc('process_veto_action',[f.id,f.a,'side',null,'attack',false,null,null]);
+assert.equal(side.picked_maps[0].side,'attack');
+await rpc('process_veto_action',[f.id,f.b,'ban',side.available_maps[0],null,false,null,null]);
+const decider=(await db.query("SELECT * FROM match_logs WHERE match_id=$1 AND action_type='decider'",[f.id])).rows[0];assert.ok(decider.map_id);assert.equal(decider.metadata.map_number,2);
+const complete=await rpc('process_veto_action',[f.id,f.a,'side',null,'defense',false,null,null]);
+assert.equal(complete.is_complete,true);assert.equal(complete.results.length,2);
+const sideLogs=(await db.query("SELECT * FROM match_logs WHERE match_id=$1 AND action_type='side' ORDER BY log_order",[f.id])).rows;
+assert.ok(sideLogs.every(log=>log.map_id && log.metadata.confirmed_at));
+assert.equal(sideLogs[0].metadata.map_number,1);
+const autoLog=(await db.query("SELECT * FROM match_logs WHERE match_id=$1 AND action_type='ban' ORDER BY log_order LIMIT 1",[f.id])).rows[0];assert.equal(autoLog.metadata.timeout,true);
+console.log('PASS audit: pick/ban/side confirmation times, timeout source, decider, complete ordered results');
 await db.close();
 
