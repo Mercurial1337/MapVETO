@@ -1,3 +1,4 @@
+ALTER TABLE match_state ADD COLUMN IF NOT EXISTS automation_enabled boolean NOT NULL DEFAULT false;
 ALTER TABLE match_state ADD COLUMN IF NOT EXISTS turn_started_at timestamptz NOT NULL DEFAULT now();
 -- Atomic check-in: lock the state before reading readiness or match status.
 CREATE OR REPLACE FUNCTION veto_ready(p_match_id uuid, p_token uuid)
@@ -25,7 +26,7 @@ BEGIN
   IF s.team_a_ready AND s.team_b_ready THEN
     UPDATE matches SET status = CASE WHEN coin_toss_forced AND coin_toss_winner IS NOT NULL
       THEN 'side_selection' ELSE 'coin_toss' END WHERE id = p_match_id RETURNING * INTO m;
-    UPDATE match_state SET turn_started_at=now(), current_turn=m.coin_toss_winner WHERE match_id=p_match_id RETURNING * INTO s;
+    UPDATE match_state SET automation_enabled=true, turn_started_at=now(), current_turn=m.coin_toss_winner WHERE match_id=p_match_id RETURNING * INTO s;
     IF m.status = 'side_selection' THEN
       INSERT INTO match_logs(match_id, step_number, action_type, actor, metadata)
         VALUES(p_match_id, -1, 'coin_toss', m.coin_toss_winner,

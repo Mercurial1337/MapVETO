@@ -19,7 +19,7 @@ schema = schema.replace(/CREATE EXTENSION[^;]+;/g, '').replaceAll('uuid_generate
 await db.exec(schema);
 await db.exec(readFileSync('supabase/migrations/011_ready_check.sql', 'utf8'));
 await db.exec(`ALTER TABLE matches ADD COLUMN custom_veto_sequence jsonb; ALTER TABLE match_state ADD COLUMN is_paused boolean DEFAULT false; ALTER TABLE match_logs ADD COLUMN metadata jsonb; ALTER TABLE match_links DROP CONSTRAINT match_links_link_type_check;`);
-for (const file of readdirSync('supabase/migrations').filter(f => /^0(1[6-9]|2[0-9])_/.test(f)).sort()) {
+for (const file of readdirSync('supabase/migrations').filter(f => /^0(1[6-9]|2[0-9])_/.test(f) && !f.includes('scheduler')).sort()) {
   await db.exec(readFileSync(`supabase/migrations/${file}`, 'utf8'));
 }
 }
@@ -134,5 +134,11 @@ const reset=await rpc('veto_admin',[f.id,f.admin,'reset',null,null,'Restart matc
 assert.equal((await db.query('SELECT count(*)::int n FROM match_logs WHERE match_id=$1',[f.id])).rows[0].n,logCount+1);
 assert.ok((await db.query("SELECT * FROM match_logs WHERE match_id=$1 AND metadata->>'superseded'='true'",[f.id])).rows.length>0);
 console.log('PASS referee: authorization, reopen completed veto, unwind decider, preserve paused time, force/correct exact map and side, reset retains pool and history');
+
+const background=await fixture(true);await rpc('veto_ready',[background.id,background.a]);await rpc('veto_ready',[background.id,background.b]);
+await db.query("UPDATE match_state SET turn_started_at=now()-interval '61 seconds' WHERE match_id=$1",[background.id]);
+const count=await rpc('veto_expired_turns',[]);assert.ok(count>=1);
+assert.equal((await db.query('SELECT status FROM matches WHERE id=$1',[background.id])).rows[0].status,'in_progress');
+console.log('PASS background timer: expired role choice advances with no connected browser');
 await db.close();
 
