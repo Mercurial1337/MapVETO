@@ -1,34 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { z } from 'zod';
-import { cookies } from 'next/headers';
-import { verify } from 'jsonwebtoken';
 
 const ActionSchema = z.object({
     match_id: z.string().uuid(),
+    token: z.string().uuid(),
 });
 
 export async function POST(request: NextRequest) {
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get('mapveto_admin_token');
-        if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-        const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-for-dev';
-        try {
-            verify(token.value, JWT_SECRET);
-        } catch (e) {
-            return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-        }
-
         const body = await request.json();
         const validationResult = ActionSchema.safeParse(body);
         if (!validationResult.success) {
             return NextResponse.json({ error: validationResult.error.issues[0].message }, { status: 400 });
         }
 
-        const { match_id } = validationResult.data;
+        const { match_id, token } = validationResult.data;
         const supabase = createServiceClient();
+
+        // 1. Verify Admin Link Token
+        const { data: linkData, error: linkError } = await supabase
+            .from('match_links')
+            .select('link_type')
+            .eq('match_id', match_id)
+            .eq('token', token)
+            .single();
+
+        if (linkError || linkData?.link_type !== 'admin') {
+            return NextResponse.json({ error: 'Unauthorized: Admin link required' }, { status: 401 });
+        }
 
         // Broadcast to clients to reload the page! 
         // Real rollback is very complex in SQL. It is safer to trigger a full recalculation. 

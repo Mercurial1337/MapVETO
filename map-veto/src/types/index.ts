@@ -143,6 +143,7 @@ export interface MatchState {
   picked_maps: PickedMap[];
   results: PickedMap[]; // Final ordered list
   is_complete: boolean;
+  is_paused?: boolean;
   updated_at: string;
   team_a_ready: boolean;
   team_b_ready: boolean;
@@ -160,7 +161,7 @@ export interface MatchState {
 // Access Control Types
 // ============================================
 
-export type LinkType = 'team_a' | 'team_b' | 'observer';
+export type LinkType = 'team_a' | 'team_b' | 'observer' | 'admin';
 
 export interface MatchLink {
   id: string;

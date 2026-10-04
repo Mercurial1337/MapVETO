@@ -48,8 +48,9 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     const { match, state, maps, logs, eventBranding, isLoading, error, userRole } = useMatchData();
     const { banMap, pickMap, pickSide, coinToss, readyUp, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
-    const [isAdmin, setIsAdmin] = useState(false);
+    const [isGlobalAdmin, setIsGlobalAdmin] = useState(false);
     const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
+    const isAdmin = isGlobalAdmin || userRole === 'admin';
 
     // Play notification sounds on state changes (turn changes, completion)
     useActionSound({
@@ -58,13 +59,12 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
         isInProgress: match?.status === 'in_progress',
     });
 
-    // Check if current user is an admin
-    // Check if current user is an admin
+    // Check if current user is a global admin
     useEffect(() => {
         const checkAdmin = async () => {
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
-            setIsAdmin(!!user);
+            setIsGlobalAdmin(!!user);
         };
         checkAdmin();
     }, []);
@@ -589,7 +589,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
 
             {/* Admin Panel */}
             {isAdmin && match && (
-                <AdminPanel matchId={matchId} matchStatus={match.status} isPaused={state?.is_paused} />
+                <AdminPanel matchId={matchId} matchStatus={match.status} isPaused={state?.is_paused} token={token} />
             )}
         </div>
     );

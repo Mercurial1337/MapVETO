@@ -21,7 +21,7 @@ interface EventBranding {
     custom_font_name: string | null;
 }
 
-type UserRole = 'team_a' | 'team_b' | 'observer' | null;
+type UserRole = 'team_a' | 'team_b' | 'observer' | 'admin' | null;
 
 interface RealtimeContextValue {
     // Match data

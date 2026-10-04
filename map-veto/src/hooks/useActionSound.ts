@@ -7,7 +7,7 @@ interface UseActionSoundOptions {
     /** Current match state from realtime */
     state: MatchState | null;
     /** The current user's role */
-    userRole: 'team_a' | 'team_b' | 'observer' | null;
+    userRole: 'team_a' | 'team_b' | 'observer' | 'admin' | null;
     /** Whether the match is actively in progress */
     isInProgress: boolean;
 }
@@ -168,6 +168,7 @@ export function useActionSound({ state, userRole, isInProgress }: UseActionSound
             // - For observers: play on every step change
             const shouldPlay =
                 userRole === 'observer' ||
+                userRole === 'admin' ||
                 userRole === null ||
                 state.current_turn === userRole;
 

@@ -4,20 +4,11 @@ import { z } from 'zod';
 
 const ResetVetoSchema = z.object({
     match_id: z.string().uuid(),
+    token: z.string().uuid(),
 });
 
 export async function POST(request: NextRequest) {
     try {
-        const userClient = await createClient();
-        const { data: { user } } = await userClient.auth.getUser();
-
-        if (!user) {
-            return NextResponse.json(
-                { error: 'Admin authentication required' },
-                { status: 401 }
-            );
-        }
-
         const body = await request.json();
         const validationResult = ResetVetoSchema.safeParse(body);
         if (!validationResult.success) {
@@ -27,8 +18,20 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { match_id } = validationResult.data;
+        const { match_id, token } = validationResult.data;
         const supabase = createServiceClient();
+
+        // 1. Verify Admin Link Token
+        const { data: linkData, error: linkError } = await supabase
+            .from('match_links')
+            .select('link_type')
+            .eq('match_id', match_id)
+            .eq('token', token)
+            .single();
+
+        if (linkError || linkData?.link_type !== 'admin') {
+            return NextResponse.json({ error: 'Unauthorized: Admin link required' }, { status: 401 });
+        }
 
         // Check if match exists
         const { data: matchData, error: matchError } = await supabase

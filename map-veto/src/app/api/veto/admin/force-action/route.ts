@@ -5,20 +5,11 @@ import type { MatchState, VetoStep } from '@/types';
 
 const ForceActionSchema = z.object({
     match_id: z.string().uuid(),
+    token: z.string().uuid(),
 });
 
 export async function POST(request: NextRequest) {
     try {
-        const userClient = await createClient();
-        const { data: { user } } = await userClient.auth.getUser();
-
-        if (!user) {
-            return NextResponse.json(
-                { error: 'Admin authentication required' },
-                { status: 401 }
-            );
-        }
-
         const body = await request.json();
         const validationResult = ForceActionSchema.safeParse(body);
         if (!validationResult.success) {
@@ -28,8 +19,20 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { match_id } = validationResult.data;
+        const { match_id, token } = validationResult.data;
         const supabase = createServiceClient();
+
+        // 1. Verify Admin Link Token
+        const { data: linkData, error: linkError } = await supabase
+            .from('match_links')
+            .select('link_type')
+            .eq('match_id', match_id)
+            .eq('token', token)
+            .single();
+
+        if (linkError || linkData?.link_type !== 'admin') {
+            return NextResponse.json({ error: 'Unauthorized: Admin link required' }, { status: 401 });
+        }
 
         // 1. Get current match and state
         const { data: matchData, error: matchError } = await supabase
@@ -82,18 +85,18 @@ export async function POST(request: NextRequest) {
         }
 
         // Get token for the team whose turn it is
-        const { data: linkData, error: linkError } = await supabase
+        const { data: teamLinkData, error: teamLinkError } = await supabase
             .from('match_links')
             .select('token')
             .eq('match_id', match_id)
             .eq('link_type', currentTurn)
             .single();
 
-        if (linkError || !linkData) {
+        if (teamLinkError || !teamLinkData) {
             return NextResponse.json({ error: 'Could not find team token' }, { status: 500 });
         }
 
-        const token = linkData.token;
+        const teamToken = teamLinkData.token;
 
         let map_id = null;
         let side_choice = null;
@@ -114,7 +117,7 @@ export async function POST(request: NextRequest) {
         // 4. Execute action via RPC
         const { data: newState, error: rpcError } = await supabase.rpc('process_veto_action', {
             p_match_id: match_id,
-            p_token: token,
+            p_token: teamToken,
             p_action: action,
             p_map_id: map_id,
             p_side_choice: side_choice,

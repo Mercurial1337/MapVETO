@@ -8,9 +8,10 @@ interface AdminPanelProps {
     matchId: string;
     matchStatus: string;
     isPaused?: boolean;
+    token: string;
 }
 
-export function AdminPanel({ matchId, matchStatus, isPaused }: AdminPanelProps) {
+export function AdminPanel({ matchId, matchStatus, isPaused, token }: AdminPanelProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [isForcing, setIsForcing] = useState(false);
     const [isResetting, setIsResetting] = useState(false);
@@ -22,7 +23,7 @@ export function AdminPanel({ matchId, matchStatus, isPaused }: AdminPanelProps) 
             const res = await fetch('/api/veto/admin/force-action', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ match_id: matchId })
+                body: JSON.stringify({ match_id: matchId, token })
             });
             if (!res.ok) {
                 const data = await res.json();
@@ -43,7 +44,7 @@ export function AdminPanel({ matchId, matchStatus, isPaused }: AdminPanelProps) 
             const res = await fetch('/api/veto/admin/reset-veto', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ match_id: matchId })
+                body: JSON.stringify({ match_id: matchId, token })
             });
             if (!res.ok) {
                 const data = await res.json();
@@ -86,7 +87,7 @@ export function AdminPanel({ matchId, matchStatus, isPaused }: AdminPanelProps) 
                                 await fetch('/api/veto/admin/pause-veto', {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ match_id: matchId, is_paused: !isPaused })
+                                    body: JSON.stringify({ match_id: matchId, is_paused: !isPaused, token })
                                 });
                                 setIsForcing(false);
                             }}

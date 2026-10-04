@@ -30,6 +30,7 @@ interface MatchLinks {
     team_a: string;
     team_b: string;
     observer: string;
+    admin: string;
 }
 
 type SortOrder = 'newest' | 'oldest';
@@ -180,12 +181,14 @@ export default function MatchesPage() {
                 team_a: '',
                 team_b: '',
                 observer: '',
+                admin: '',
             };
             data.forEach(link => {
                 const url = `${baseUrl}/match/${matchId}?token=${link.token}`;
                 if (link.link_type === 'team_a') links.team_a = url;
                 else if (link.link_type === 'team_b') links.team_b = url;
                 else if (link.link_type === 'observer') links.observer = url;
+                else if (link.link_type === 'admin') links.admin = url;
             });
             setSelectedMatchLinks({ matchId, links });
         }
@@ -395,6 +398,7 @@ export default function MatchesPage() {
                                     { label: match?.team_a_name || 'Team 1', key: 'team_a' as const, color: 'red' as const },
                                     { label: match?.team_b_name || 'Team 2', key: 'team_b' as const, color: 'blue' as const },
                                     { label: 'Observer', key: 'observer' as const, color: 'purple' as const },
+                                    { label: 'Admin', key: 'admin' as const, color: 'purple' as const },
                                 ].map(({ label, key, color }) => {
                                     const styles = colorStyles[color];
                                     return (
