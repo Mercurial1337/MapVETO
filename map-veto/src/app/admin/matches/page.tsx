@@ -8,6 +8,7 @@ import { FileSpreadsheet, Trash2 } from 'lucide-react';
 import { ExportModal } from '@/components/admin/ExportModal';
 import { BulkMatchImport } from '@/components/admin/BulkMatchImport';
 import type { MatchStatus } from '@/types';
+import { copyText, matchLinkUrls } from '@/lib/clipboard';
 interface ImportBatch {id:string;file_name:string;match_count:number;format:string;created_at:string;}
 
 interface Event {
@@ -213,20 +214,7 @@ export default function MatchesPage() {
             const response = await fetch(`/api/matches/${matchId}`, { method: 'POST' });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Could not load match links.');
-            const baseUrl = window.location.origin;
-            const links: MatchLinks = {
-                team_a: '',
-                team_b: '',
-                observer: '',
-                admin: '',
-            };
-            Object.entries(data.links as Record<string, {token: string}>).forEach(([link_type, link]) => {
-                const url = `${baseUrl}/match/${matchId}?token=${link.token}`;
-                if (link_type === 'team_a') links.team_a = url;
-                else if (link_type === 'team_b') links.team_b = url;
-                else if (link_type === 'observer') links.observer = url;
-                else if (link_type === 'admin') links.admin = url;
-            });
+            const links = matchLinkUrls(data.links, window.location.origin, matchId);
             setSelectedMatchLinks({ matchId, links });
         } catch (error) {
             alert(error instanceof Error ? error.message : 'Could not load match links.');
@@ -236,8 +224,12 @@ export default function MatchesPage() {
     };
 
     const copyToClipboard = async (text: string, label: string) => {
-        await navigator.clipboard.writeText(text);
-        alert(`${label} link copied!`);
+        try {
+            await copyText(text);
+            alert(`${label} link copied!`);
+        } catch (error) {
+            alert(error instanceof Error ? error.message : 'Copy failed. Select the link and copy it manually.');
+        }
     };
 
     const deleteMatch = async (matchId: string, teamA: string, teamB: string) => {

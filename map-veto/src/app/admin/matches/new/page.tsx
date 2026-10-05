@@ -1,4 +1,5 @@
 'use client';
+import { copyText } from '@/lib/clipboard';
 import { Fragment } from 'react';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
@@ -260,16 +261,10 @@ function NewMatchContent() {
 
     const copyToClipboard = async (text: string, label: string) => {
         try {
-            await navigator.clipboard.writeText(text);
+            await copyText(text);
             alert(`${label} link copied!`);
-        } catch {
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-            alert(`${label} link copied!`);
+        } catch (error) {
+            alert(error instanceof Error ? error.message : 'Copy failed. Select the link and copy it manually.');
         }
     };
 

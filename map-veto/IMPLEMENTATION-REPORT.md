@@ -87,3 +87,11 @@ The Bulk creation file filter appears when an event is selected. It filters the 
 Validation: parser tests, local and rolled-back remote PostgreSQL tests, authenticated HTTP tests against Supabase, production build/TypeScript and ESLint passed. HTTP coverage includes owner/admin/outsider access, malformed/oversized uploads, atomicity, retry protection, private batch listings, concurrent automatic C tosses, A/B entitlement, seven-map initialization, four links, same-name imports and a 25-match filtered second page. Browser checks cover invalid-file feedback, preview, actual import, automatic batch selection, links and pagination. Temporary QA accounts, events and matches are removed after testing.
 
 Run `npm run test:bulk-http` against a local app at port 3001 (or set `TEST_APP_URL`). `node tests/bulk-http.test.mjs --keep` retains disposable browser fixtures in ignored `.qa-bulk-session.json`; `node tests/bulk-http.test.mjs --cleanup` removes those exact fixtures.
+
+## Dashboard link copying
+
+The legacy dashboard read tokens directly through authenticated table access. Protected link-table policies could return no rows, leaving four empty strings; copying an empty string still resolved successfully and showed “copied.” Bulk creation switched this retrieval to the authorized match API. The dashboard now additionally requires four valid tokens before opening the links dialog, so missing links produce an explicit error.
+
+Dashboard and create-match copying share a small helper that refuses empty content, tries the native Clipboard API, and falls back to selection copying if native access is unavailable or denied. The fallback must return success; a failure displays a manual-copy instruction instead of a false success message. Temporary selection elements are removed and prior focus is restored.
+
+Validation: targeted clipboard tests cover complete URLs, missing/empty links, exact written contents, unavailable/denied native API access, fallback failure and cleanup. The production build, TypeScript, targeted ESLint (zero errors), existing local regression suites and authenticated bulk HTTP tests passed. In the browser, all four dashboard Copy buttons were clicked and the actual clipboard was read and compared against the displayed URL; every comparison matched. Disposable QA accounts, event and matches were removed.
