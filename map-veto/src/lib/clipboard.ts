@@ -16,7 +16,7 @@ export async function copyText(text: string): Promise<void> {
         try {
             textarea.focus();
             textarea.select();
-            if (!document.execCommand('copy')) throw new Error('Copy failed. Select the link and copy it manually.');
+            if (!document.execCommand('copy')) throw new Error('Copy failed. Check your browser clipboard permissions and try again.');
         } finally {
             textarea.remove();
             if (previousFocus instanceof HTMLElement) previousFocus.focus();

@@ -228,7 +228,7 @@ export default function MatchesPage() {
             await copyText(text);
             alert(`${label} link copied!`);
         } catch (error) {
-            alert(error instanceof Error ? error.message : 'Copy failed. Select the link and copy it manually.');
+            alert(error instanceof Error ? error.message : 'Copy failed. Please try again.');
         }
     };
 
@@ -438,7 +438,7 @@ export default function MatchesPage() {
                                     const styles = colorStyles[color];
                                     return (
                                         <div key={key} className={`p-3 ${styles.container} border rounded-lg`}>
-                                            <div className="flex items-center justify-between mb-1">
+                                            <div className="flex items-center justify-between">
                                                 <span className={`${styles.label} font-medium text-sm`}>{label}</span>
                                                 <button
                                                     onClick={() => copyToClipboard(selectedMatchLinks.links[key], label)}
@@ -447,9 +447,6 @@ export default function MatchesPage() {
                                                     Copy
                                                 </button>
                                             </div>
-                                            <p className="text-xs text-white/40 font-mono break-all">
-                                                {selectedMatchLinks.links[key]}
-                                            </p>
                                         </div>
                                     );
                                 });
