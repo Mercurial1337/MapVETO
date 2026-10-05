@@ -1,6 +1,6 @@
 'use client';
-import { useEffect, useState, useRef } from 'react';
-import { toast } from 'sonner';
+import { useEffect, useState } from 'react';
+import { useCountdownSound } from '@/hooks/useCountdownSound';
 import type { VetoStep } from '@/types';
 interface Props {
  currentStep: VetoStep | null; stateUpdatedAt: string; teamAName: string; teamBName: string;
@@ -9,16 +9,17 @@ interface Props {
 }
 export function TurnTimer({currentStep,stateUpdatedAt,teamAName,teamBName,matchId,token,isInProgress,isComplete,isPaused,pausedRemainingSeconds}:Props) {
  const [remaining,setRemaining]=useState(60);
- const warnedClock=useRef<string | null>(null);
+ const {tick:playTick,stop:stopSound}=useCountdownSound();
  const actorName=currentStep?.actor==='team_a'?teamAName:teamBName;
  useEffect(()=>{
+  stopSound();
   if(!isInProgress || isComplete || !currentStep || !stateUpdatedAt) return;
   if(isPaused) {setRemaining(Math.ceil(pausedRemainingSeconds ?? 60));return;}
   let cancelled=false, pending=false, retryAt=0;
   const tick=async()=>{
    const seconds=Math.max(0,Math.ceil((Date.parse(stateUpdatedAt)+60000-Date.now())/1000));
    setRemaining(seconds);
-   if(seconds>0 && seconds<=15 && warnedClock.current!==stateUpdatedAt) {warnedClock.current=stateUpdatedAt;toast.warning(`${actorName}: ${seconds} seconds remaining.`);}
+   playTick(stateUpdatedAt,seconds);
    if(seconds===0 && !pending && Date.now()>=retryAt && matchId && token) {
     pending=true;
     try {
@@ -28,8 +29,8 @@ export function TurnTimer({currentStep,stateUpdatedAt,teamAName,teamBName,matchI
    }
   };
   void tick(); const interval=setInterval(tick,1000);
-  return ()=>{cancelled=true;clearInterval(interval);};
- },[currentStep,stateUpdatedAt,matchId,token,isInProgress,isComplete,isPaused,pausedRemainingSeconds,actorName]);
+  return ()=>{cancelled=true;clearInterval(interval);stopSound();};
+ },[currentStep,stateUpdatedAt,matchId,token,isInProgress,isComplete,isPaused,pausedRemainingSeconds,actorName,playTick,stopSound]);
  if(!currentStep || !isInProgress || isComplete) return null;
  return <div role="status" className="border border-white/20 bg-[#18181b] px-4 py-2 rounded flex items-center gap-3">
   <span>{actorName} · {currentStep.description || currentStep.action}</span>

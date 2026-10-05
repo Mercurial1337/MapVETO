@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node tests/clipboard.test.mjs && node tests/bulk.test.mjs && node tests/notifications.test.mjs && node tests/veto.test.mjs",
+    "test": "node tests/countdown-sound.test.mjs && node tests/clipboard.test.mjs && node tests/bulk.test.mjs && node tests/notifications.test.mjs && node tests/veto.test.mjs",
     "test:remote": "node tests/veto.test.mjs --remote",
     "test:http": "node tests/http.test.mjs",
     "test:scheduler": "node tests/scheduler.test.mjs",

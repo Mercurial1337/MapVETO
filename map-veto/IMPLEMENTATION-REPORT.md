@@ -95,3 +95,9 @@ The legacy dashboard read tokens directly through authenticated table access. Pr
 Dashboard and create-match copying share a small helper that refuses empty content, tries the native Clipboard API, and falls back to selection copying if native access is unavailable or denied. The fallback must return success; a failure displays a manual-copy instruction instead of a false success message. Temporary selection elements are removed and prior focus is restored.
 
 Validation: targeted clipboard tests cover complete URLs, missing/empty links, exact written contents, unavailable/denied native API access, fallback failure and cleanup. The production build, TypeScript, targeted ESLint (zero errors), existing local regression suites and authenticated bulk HTTP tests passed. In the browser, all four dashboard Copy buttons were clicked and the actual clipboard was read and compared against the displayed URL; every comparison matched. Disposable QA accounts, event and matches were removed.
+
+## Final-15-second ticking warning
+
+The one-off 15-second warning toast is replaced with a short synthesized tick/tock once per remaining second from 15 through 1. The final five ticks are slightly stronger. The visible countdown and “Time is running out” text remain. The same timer supplies role-choice and veto-turn warnings. No downloaded audio, dependency, additional network request or server timer is added.
+
+Audio is unlocked by user interaction, respecting browser autoplay restrictions. Duplicate state refreshes cannot play a tick twice for the same clock/second. Pausing, ending/changing the turn and unmounting stop active voices; audio contexts and gesture listeners are cleaned up on unmount. Suspended audio does not accumulate delayed ticks. Targeted audio tests cover thresholds, deduplication, urgency, gesture unlocking, stopped voices and disposal; notification regressions, targeted lint and production build/TypeScript are checked before commit.
