@@ -14,9 +14,14 @@ if(remote) {
 } else db=new PGlite();
 if(!remote) {
 await db.exec(`CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY); CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;`);
+await db.exec(`CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS 'SELECT NULL::uuid'; CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql AS 'SELECT current_user::text';`);
 let schema = readFileSync('supabase/schema.sql', 'utf8').split('-- Row Level Security')[0];
 schema = schema.replace(/CREATE EXTENSION[^;]+;/g, '').replaceAll('uuid_generate_v4()', 'gen_random_uuid()');
 await db.exec(schema);
+for(const file of ['008_add_event_teams.sql','015_add_admin_link.sql']) {
+ await db.exec(readFileSync(`supabase/migrations/${file}`,'utf8').replaceAll('uuid_generate_v4()','gen_random_uuid()'));
+}
+await db.exec('CREATE TRIGGER trigger_create_match_state_and_links AFTER INSERT ON matches FOR EACH ROW EXECUTE FUNCTION create_match_state_and_links();');
 await db.exec(readFileSync('supabase/migrations/011_ready_check.sql', 'utf8'));
 await db.exec(`ALTER TABLE matches ADD COLUMN custom_veto_sequence jsonb; ALTER TABLE match_state ADD COLUMN is_paused boolean DEFAULT false; ALTER TABLE match_logs ADD COLUMN metadata jsonb; ALTER TABLE match_links DROP CONSTRAINT match_links_link_type_check;`);
 for (const file of readdirSync('supabase/migrations').filter(f => /^0(1[6-9]|2[0-9])_/.test(f) && !f.includes('scheduler')).sort()) {
@@ -205,5 +210,39 @@ for(const role of ['anon','authenticated']) {
  assert.equal((await db.query("SELECT has_function_privilege($1,'veto_request_timeout(uuid,uuid,text,uuid)','EXECUTE') AS allowed",[role])).rows[0].allowed,false);
 }
 console.log('PASS team timeout requests: scoped permissions, explanations, retry protection, one open per team, referee resolution, unchanged clocks/pauses and complete audit');
+const owner=randomUUID(),eventAdmin=randomUUID(),outsider=randomUUID(),event=randomUUID(),batch=randomUUID();
+for(const id of [owner,eventAdmin,outsider])await db.query('INSERT INTO auth.users(id) VALUES($1)',[id]);
+await db.query("INSERT INTO events(id,name,created_by) VALUES($1,'Codex bulk QA',$2)",[event,owner]);
+await db.query('INSERT INTO event_admins(event_id,user_id) VALUES($1,$2)',[event,eventAdmin]);
+const bulkRows=[{match_number:1,team_a_name:'Fnatic',team_b_name:'Sentinels',selection:'A'},{match_number:2,team_a_name:'Paper Rex',team_b_name:'LOUD',selection:'B'},{match_number:3,team_a_name:'G2',team_b_name:'Liquid',selection:'C'}];
+const bulkArgs=[event,owner,batch,'matches.csv',template,JSON.stringify(bulkRows),mapIds];
+await rejects('bulk_create_matches',[event,outsider,...bulkArgs.slice(2)],/administrator/);
+const imported=await rpc('bulk_create_matches',bulkArgs);assert.equal(imported.match_count,3);
+assert.deepEqual((await rpc('bulk_create_matches',bulkArgs)).match_ids,imported.match_ids);
+await rejects('bulk_create_matches',[...bulkArgs.slice(0,3),'different.csv',...bulkArgs.slice(4)],/different data/);
+assert.equal((await db.query('SELECT count(*)::int n FROM matches WHERE bulk_batch_id=$1',[batch])).rows[0].n,3);
+assert.equal((await db.query('SELECT count(*)::int n FROM event_teams WHERE event_id=$1',[event])).rows[0].n,6);
+for(const [index,id] of imported.match_ids.entries()) {
+ const links=(await db.query('SELECT link_type,token FROM match_links WHERE match_id=$1',[id])).rows;assert.equal(links.length,4);
+ const tokens=Object.fromEntries(links.map(link=>[link.link_type,link.token]));
+ assert.equal((await rpc('veto_ready',[id,tokens.team_a])).match.status,'ready_check');
+ const ready=await rpc('veto_ready',[id,tokens.team_b]);assert.equal(ready.match.status,'side_selection');
+ const expected=index===0?'team_a':index===1?'team_b':ready.match.coin_toss_winner;
+ assert.equal(ready.match.coin_toss_winner,expected);assert.ok(['team_a','team_b'].includes(expected));
+ const again=await rpc('veto_ready',[id,tokens.team_a]);assert.equal(again.match.coin_toss_winner,expected);
+ const tossLogs=(await db.query("SELECT metadata FROM match_logs WHERE match_id=$1 AND action_type='coin_toss'",[id])).rows;
+ assert.equal(tossLogs.length,1);assert.equal(index===2?tossLogs[0].metadata.automatic_coin_toss:tossLogs[0].metadata.is_seeded,true);
+ await rejects('veto_position',[id,tokens[expected==='team_a'?'team_b':'team_a'],true,false,null],/selected team/);
+ assert.equal((await rpc('veto_position',[id,tokens[expected],false,false,null])).new_state.actor_mapping[expected],'team_b');
+}
+const badBatch=randomUUID();
+await rejects('bulk_create_matches',[event,owner,badBatch,'bad.csv',template,JSON.stringify([...bulkRows,{...bulkRows[0],match_number:4,selection:'X'}]),mapIds],/Invalid match row/);
+assert.equal((await db.query('SELECT count(*)::int n FROM match_import_batches WHERE id=$1',[badBatch])).rows[0].n,0);
+assert.equal((await db.query('SELECT count(*)::int n FROM matches WHERE bulk_batch_id=$1',[badBatch])).rows[0].n,0);
+const second=await rpc('bulk_create_matches',[event,eventAdmin,randomUUID(),'matches.csv',template,JSON.stringify(Array.from({length:25},(_,i)=>({...bulkRows[i%3],match_number:i+1}))),mapIds]);
+assert.equal(second.match_count,25);assert.notEqual(second.batch_id,batch);
+const page2=(await db.query('SELECT match_number FROM matches WHERE event_id=$1 AND bulk_batch_id=$2 ORDER BY match_number LIMIT 20 OFFSET 20',[event,second.batch_id])).rows;assert.deepEqual(page2.map(row=>row.match_number),[21,22,23,24,25]);
+const privilege=(await db.query("SELECT has_function_privilege('authenticated','bulk_create_matches(uuid,uuid,uuid,text,uuid,jsonb,uuid[])','EXECUTE') allowed")).rows[0];assert.equal(privilege.allowed,false);
+console.log('PASS bulk creation: event permissions, atomic rollback, four links and map pool, roster, A/B higher seed, automatic C toss once, idempotent retry, separate same-name batches and pagination');
 await db.close();
 

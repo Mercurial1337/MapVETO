@@ -7,10 +7,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node tests/notifications.test.mjs && node tests/veto.test.mjs",
+    "test": "node tests/bulk.test.mjs && node tests/notifications.test.mjs && node tests/veto.test.mjs",
     "test:remote": "node tests/veto.test.mjs --remote",
     "test:http": "node tests/http.test.mjs",
-    "test:scheduler": "node tests/scheduler.test.mjs"
+    "test:scheduler": "node tests/scheduler.test.mjs",
+    "test:bulk-http": "node tests/bulk-http.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

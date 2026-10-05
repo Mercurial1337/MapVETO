@@ -6,7 +6,7 @@ export function formatLog(entry: MatchLog, teams: Record<string,string>, maps: R
  let text:string;
  switch(entry.action_type) {
   case 'ready_check':text=`${actor} confirmed ready`;break;
-  case 'coin_toss':text=metadata.is_seeded?`${actor} has the higher seed`:`${actor} won the coin toss${metadata.forced_by_admin?' (referee result)':''}`;break;
+  case 'coin_toss':text=metadata.is_seeded?`${actor} has the higher seed`:`${actor} won the coin toss${metadata.automatic_coin_toss?' (automatic toss)':metadata.forced_by_admin?' (referee result)':''}`;break;
   case 'position_choice':text=`${actor} confirmed Team ${metadata.pick_first?'A':'B'}`;break;
   case 'ban':text=`${actor} confirmed ban: ${map}`;break;
   case 'pick':text=`${actor} confirmed pick: ${map}`;break;

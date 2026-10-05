@@ -17,7 +17,7 @@ Removed Framer Motion and its dependencies, animated coin assets, gradients, blu
 
 ## Supabase
 
-Migrations 016–026 are applied using verified TLS. The public CA certificate is in `scripts/supabase-ca.crt`; the connection string remains in ignored `.env.local`.
+Migrations 016–027 are applied using verified TLS. The public CA certificate is in `scripts/supabase-ca.crt`; the connection string remains in ignored `.env.local`.
 
 `map-veto-timeouts` runs every five seconds. New sessions opt into automatic deadlines when both teams check in. Existing abandoned sessions are not automatically advanced. Each action rejects late manual submissions at 60 seconds; the scheduled fallback runs on the next worker tick. Connected clients also request the authoritative fallback when the clock expires.
 
@@ -73,3 +73,17 @@ Browser verification passed: a team submitted its explanation, the already-open 
 
 The 30 legacy lint errors were fixed without disabling rules: typed public API/log data and form choices, derived simulation state, conditional route/event state adjustments and a cancellable export initialization request. Repository-wide ESLint reports zero errors; 40 existing non-blocking warnings remain.
 Lint-cleanup verification: production webpack build and TypeScript passed, notification/PostgreSQL regression suites passed, and HTTP tests passed against the production build, including ordered public veto actions, completed-match discovery and rendered public logs. Test fixtures were deleted.
+
+## Bulk match creation
+
+Open an event's Matches dashboard and choose Bulk create. Upload a comma-separated TXT or CSV file with the four columns `Match Number, Team A, Team B, Higher Seed (A/B) or Coin Flip (C)`. The provided header is optional; quoted names may contain commas. Preview and validation happen before creation. Each file supports up to 500 matches and 1 MB, with unique positive match numbers within that file. Choose one BO1/BO3/BO5 format for the file; imported matches use the competitive seven-map pool.
+
+A and B identify the higher-seeded real team, which chooses Team A/B when both teams check in. C automatically tosses when the second team checks in, and the winner chooses Team A/B. This supersedes the earlier manual-trigger rule for bulk C imports. Individual matches retain their existing referee-triggered toss. Concurrent readiness and retries cannot toss twice. The audit marks automatic tosses.
+
+Migration 027 creates protected import metadata, per-match batch/number/automatic-toss fields, and a service-only atomic import function. Owners and event admins can import. Each transaction creates the entire batch, match state, four magic links, and event roster entries; failures leave no partial batch. Retrying the same request does not duplicate matches. Separate imports can share a filename and have distinct IDs and timestamps.
+
+The Bulk creation file filter appears when an event is selected. It filters the database query before pagination, and the imported file is selected automatically after creation. Match numbers and source filenames appear in the rows. Live insert notifications are coalesced, and stale fetches cannot overwrite newer filter/page results. The Links button uses the authorized match API to retrieve all four links.
+
+Validation: parser tests, local and rolled-back remote PostgreSQL tests, authenticated HTTP tests against Supabase, production build/TypeScript and ESLint passed. HTTP coverage includes owner/admin/outsider access, malformed/oversized uploads, atomicity, retry protection, private batch listings, concurrent automatic C tosses, A/B entitlement, seven-map initialization, four links, same-name imports and a 25-match filtered second page. Browser checks cover invalid-file feedback, preview, actual import, automatic batch selection, links and pagination. Temporary QA accounts, events and matches are removed after testing.
+
+Run `npm run test:bulk-http` against a local app at port 3001 (or set `TEST_APP_URL`). `node tests/bulk-http.test.mjs --keep` retains disposable browser fixtures in ignored `.qa-bulk-session.json`; `node tests/bulk-http.test.mjs --cleanup` removes those exact fixtures.

@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { FileSpreadsheet, Trash2 } from 'lucide-react';
 import { ExportModal } from '@/components/admin/ExportModal';
+import { BulkMatchImport } from '@/components/admin/BulkMatchImport';
+import type { MatchStatus } from '@/types';
+interface ImportBatch {id:string;file_name:string;match_count:number;format:string;created_at:string;}
 
 interface Event {
     id: string;
@@ -18,7 +20,9 @@ interface Match {
     team_a_name: string;
     team_b_name: string;
     format: string;
-    status: 'pending' | 'coin_toss' | 'in_progress' | 'completed' | 'cancelled';
+    status: MatchStatus;
+    bulk_batch_id: string | null;
+    match_number: number | null;
     scheduled_at: string | null;
     created_at: string;
     event_id: string | null;
@@ -43,6 +47,12 @@ export default function MatchesPage() {
     const [filter, setFilter] = useState<string>('all');
     const [formatFilter, setFormatFilter] = useState<string>('all');
     const [eventFilterLocal, setEventFilterLocal] = useState<string>('all');
+    const [batchFilter,setBatchFilter]=useState(searchParams.get('batch') || 'all');
+    const [batches,setBatches]=useState<ImportBatch[]>([]);
+    const [batchReload,setBatchReload]=useState(0);
+    const [batchError,setBatchError]=useState('');
+    const [bulkOpen,setBulkOpen]=useState(false);
+    const effectiveEvent=eventFilter || (eventFilterLocal!=='all' && eventFilterLocal!=='none'?eventFilterLocal:null);
     const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMatchLinks, setSelectedMatchLinks] = useState<{ matchId: string; links: MatchLinks } | null>(null);
@@ -75,10 +85,18 @@ export default function MatchesPage() {
     }, [supabase]);
 
     const [page, setPage] = useState(1);
+    const [previousEventUrl, setPreviousEventUrl] = useState(eventFilter);
+    if (previousEventUrl !== eventFilter) {
+        setPreviousEventUrl(eventFilter);
+        setBatchFilter(searchParams.get('batch') || 'all');
+        setPage(1);
+    }
     const [totalPages, setTotalPages] = useState(1);
     const pageSize = 20;
+    const matchRequest = useRef(0);
 
     const fetchMatches = useCallback(async (userId: string, currentPage = page) => {
+        const requestId = ++matchRequest.current;
         setIsLoading(true);
 
         try {
@@ -110,12 +128,14 @@ export default function MatchesPage() {
                 .order('created_at', { ascending: sortOrder === 'oldest' })
                 .range((currentPage - 1) * pageSize, currentPage * pageSize - 1);
 
-            if (eventFilter) {
-                query = query.eq('event_id', eventFilter);
-            }
+            if (effectiveEvent) query=query.eq('event_id',effectiveEvent);
+            else if(eventFilterLocal==='none') query=query.is('event_id',null);
+            if(batchFilter!=='all') query=query.eq('bulk_batch_id',batchFilter).order('match_number',{ascending:true});
+            else query=query.order('id');
 
             const { data, count, error } = await query;
 
+            if (requestId !== matchRequest.current) return;
             if (!error && data) {
                 setMatches(data as Match[]);
                 if (count !== null) {
@@ -126,14 +146,17 @@ export default function MatchesPage() {
             console.error('Error fetching matches:', error);
         }
 
-        setIsLoading(false);
-    }, [supabase, eventFilter, sortOrder, page]);
+        if (requestId === matchRequest.current) setIsLoading(false);
+    }, [supabase, effectiveEvent, eventFilterLocal, batchFilter, sortOrder, page]);
 
     useEffect(() => {
         let channel: ReturnType<typeof supabase.channel> | null = null;
+        let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+        let disposed = false;
 
         const initUser = async () => {
             const { data: { user: currentUser } } = await supabase.auth.getUser();
+            if (disposed) return;
             if (currentUser) {
                 setUser(currentUser);
                 fetchMatches(currentUser.id);
@@ -151,7 +174,8 @@ export default function MatchesPage() {
                             filter: `created_by=eq.${currentUser.id}`,
                         },
                         () => {
-                            fetchMatches(currentUser.id);
+                            if (refreshTimer) clearTimeout(refreshTimer);
+                            refreshTimer = setTimeout(() => { void fetchMatches(currentUser.id); }, 200);
                         }
                     )
                     .subscribe();
@@ -161,20 +185,34 @@ export default function MatchesPage() {
         initUser();
 
         return () => {
+            disposed = true;
+            if (refreshTimer) clearTimeout(refreshTimer);
             if (channel) {
                 supabase.removeChannel(channel);
             }
         };
-    }, [supabase, fetchMatches]);
+    }, [supabase, fetchMatches, fetchEvents]);
+
+    useEffect(()=>{
+        const controller=new AbortController();
+        async function loadBatches() {
+            if(!effectiveEvent){setBatches([]);return;}
+            try {
+                const response=await fetch('/api/events/'+effectiveEvent+'/bulk-matches',{signal:controller.signal});
+                const data=await response.json();
+                if(!response.ok)throw new Error(data.error || 'Could not load bulk imports.');
+                if(!controller.signal.aborted){setBatches(data.batches);setBatchError('');}
+            } catch(error){if(!controller.signal.aborted)setBatchError(error instanceof Error?error.message:'Could not load bulk imports.');}
+        }
+        void loadBatches();return ()=>controller.abort();
+    },[effectiveEvent,batchReload]);
 
     const fetchMatchLinks = async (matchId: string) => {
         setLoadingLinks(matchId);
-        const { data, error } = await supabase
-            .from('match_links')
-            .select('link_type, token')
-            .eq('match_id', matchId);
-
-        if (!error && data) {
+        try {
+            const response = await fetch(`/api/matches/${matchId}`, { method: 'POST' });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Could not load match links.');
             const baseUrl = window.location.origin;
             const links: MatchLinks = {
                 team_a: '',
@@ -182,16 +220,19 @@ export default function MatchesPage() {
                 observer: '',
                 admin: '',
             };
-            data.forEach(link => {
+            Object.entries(data.links as Record<string, {token: string}>).forEach(([link_type, link]) => {
                 const url = `${baseUrl}/match/${matchId}?token=${link.token}`;
-                if (link.link_type === 'team_a') links.team_a = url;
-                else if (link.link_type === 'team_b') links.team_b = url;
-                else if (link.link_type === 'observer') links.observer = url;
-                else if (link.link_type === 'admin') links.admin = url;
+                if (link_type === 'team_a') links.team_a = url;
+                else if (link_type === 'team_b') links.team_b = url;
+                else if (link_type === 'observer') links.observer = url;
+                else if (link_type === 'admin') links.admin = url;
             });
             setSelectedMatchLinks({ matchId, links });
+        } catch (error) {
+            alert(error instanceof Error ? error.message : 'Could not load match links.');
+        } finally {
+            setLoadingLinks(null);
         }
-        setLoadingLinks(null);
     };
 
     const copyToClipboard = async (text: string, label: string) => {
@@ -231,7 +272,7 @@ export default function MatchesPage() {
         // Format filter
         if (formatFilter !== 'all' && match.format !== formatFilter) return false;
         // Event filter (local dropdown, separate from URL param)
-        if (eventFilterLocal !== 'all') {
+        if (!eventFilter && eventFilterLocal !== 'all') {
             if (eventFilterLocal === 'none' && match.event_id !== null) return false;
             if (eventFilterLocal !== 'none' && match.event_id !== eventFilterLocal) return false;
         }
@@ -248,6 +289,8 @@ export default function MatchesPage() {
     const getStatusBadge = (status: Match['status']) => {
         const styles = {
             pending: 'bg-gray-500/20 text-gray-400',
+            ready_check: 'bg-gray-500/20 text-gray-400',
+            side_selection: 'bg-yellow-500/20 text-yellow-400',
             coin_toss: 'bg-yellow-500/20 text-yellow-400',
             in_progress: 'bg-green-500/20 text-green-400 ',
             completed: 'bg-blue-500/20 text-blue-400',
@@ -260,7 +303,7 @@ export default function MatchesPage() {
         );
     };
 
-    if (isLoading) {
+    if (isLoading && matches.length === 0 && !bulkOpen) {
         return (
             <div className="flex items-center justify-center py-20">
                 <div
@@ -274,20 +317,22 @@ export default function MatchesPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-white">Matches</h1>
+                <div className="flex gap-2"><button className="btn-secondary px-4 py-2 rounded text-sm" onClick={()=>setBulkOpen(true)}>Bulk create</button>
                 <button
                     onClick={() => setIsExportModalOpen(true)}
                     className="btn-secondary px-4 py-2 rounded text-sm flex items-center gap-2"
                 >
                     <FileSpreadsheet size={18} />
                     Export
-                </button>
+                </button></div>
             </div>
 
+            {batchError && <p role="alert" className="text-red-400">{batchError}</p>}
             {/* Filters */}
             <div className="glass rounded p-4 space-y-4">
                 {/* Status Filter Buttons */}
                 <div className="flex flex-wrap gap-2">
-                    {['all', 'pending', 'coin_toss', 'in_progress', 'completed', 'cancelled'].map((status) => (
+                    {['all', 'ready_check', 'pending', 'coin_toss', 'side_selection', 'in_progress', 'completed', 'cancelled'].map((status) => (
                         <button
                             key={status}
                             onClick={() => setFilter(status)}
@@ -317,8 +362,9 @@ export default function MatchesPage() {
 
                     {/* Event Filter */}
                     <select
-                        value={eventFilterLocal}
-                        onChange={(e) => setEventFilterLocal(e.target.value)}
+                        value={eventFilter || eventFilterLocal}
+                        disabled={!!eventFilter}
+                        onChange={(e) => {setEventFilterLocal(e.target.value);setBatchFilter('all');setPage(1);}}
                         className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm focus:outline-none focus:border-purple-500/50 cursor-pointer min-w-[140px]"
                     >
                         <option value="all" className="bg-gray-900">All Events</option>
@@ -330,6 +376,10 @@ export default function MatchesPage() {
                         ))}
                     </select>
 
+                    <label className="text-sm">Bulk creation file<select aria-label="Bulk creation file" value={batchFilter} disabled={!effectiveEvent} onChange={e=>{setBatchFilter(e.target.value);setPage(1);}} className="ml-2 px-3 py-2 bg-black border border-white/20 rounded">
+                        <option value="all">All imports and manual matches</option>
+                        {batches.map(batch=><option key={batch.id} value={batch.id}>{batch.file_name} · {new Date(batch.created_at).toLocaleString()} · {batch.match_count} matches · {batch.id.slice(0,8)}</option>)}
+                    </select></label>
                     {/* Sort Order */}
                     <select
                         value={sortOrder}
@@ -443,6 +493,7 @@ export default function MatchesPage() {
                                 className="border-b border-white/5 hover:bg-white/5"
                             >
                                 <td className="px-6 py-4">
+                                    {match.match_number && <p className="text-xs text-white/50 mb-1">Match #{match.match_number}{batches.find(batch=>batch.id===match.bulk_batch_id)?.file_name?' · '+batches.find(batch=>batch.id===match.bulk_batch_id)?.file_name:''}</p>}
                                     <div className="flex items-center gap-2">
                                         <span className="text-white font-medium">{match.team_a_name}</span>
                                         <span className="text-white/40">vs</span>
@@ -540,6 +591,7 @@ export default function MatchesPage() {
                 </div>
             )}
 
+            {bulkOpen && <BulkMatchImport events={events} eventId={effectiveEvent} onClose={()=>setBulkOpen(false)} onImported={(importEvent,batchId)=>{setBulkOpen(false);setEventFilterLocal(importEvent);setBatchFilter(batchId);setPage(1);setBatchReload(value=>value+1);}}/>}
             {/* Export Modal */}
             <ExportModal
                 isOpen={isExportModalOpen}

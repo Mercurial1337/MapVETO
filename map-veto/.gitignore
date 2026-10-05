@@ -44,3 +44,4 @@ next-env.d.ts
 /public/sound-demo.html
 
 /.qa-session.json
+/.qa-bulk-session.json
