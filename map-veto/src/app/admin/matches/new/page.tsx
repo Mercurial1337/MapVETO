@@ -51,6 +51,7 @@ interface CreatedMatch {
         team_b: { token: string; url: string };
         observer: { token: string; url: string };
         admin: { token: string; url: string };
+        referee: { token: string; url: string };
     };
     isSeeded: boolean;
     seededTeam: 'team_a' | 'team_b' | null;
@@ -111,7 +112,7 @@ function NewMatchContent() {
                 const response = await fetch('/api/events');
                 if (response.ok) {
                     const data = await response.json();
-                    setEvents(data.events || []);
+                    setEvents((data.events || []).filter((event: {role?:string}) => event.role !== 'referee'));
                 }
             } catch (err) {
                 console.error('Error fetching events:', err);
@@ -440,9 +441,9 @@ function NewMatchContent() {
                         {/* Admin Link */}
                         <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded">
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-yellow-400">Admin</span>
+                                <span className="text-sm font-medium text-yellow-400">Head Admin</span>
                                 <button
-                                    onClick={() => copyToClipboard(createdMatch.links.admin.url, 'Admin')}
+                                    onClick={() => copyToClipboard(createdMatch.links.admin.url, 'Head Admin')}
                                     className="text-xs px-3 py-1 bg-yellow-500/20 hover:bg-yellow-500/30 rounded-lg text-yellow-300 transition-colors"
                                 >
                                     Copy
@@ -450,6 +451,8 @@ function NewMatchContent() {
                             </div>
                         </div>
                     </div>
+
+                    <div className="mt-3 p-4 border border-white/20 rounded flex items-center justify-between"><span>Referee</span><button className="btn-secondary px-3 py-1" onClick={()=>copyToClipboard(createdMatch.links.referee.url,'Referee')}>Copy</button></div>
 
                     {/* Coin Flip Section */}
                     <div className="mt-8 p-6 bg-white/5 rounded border border-white/10">

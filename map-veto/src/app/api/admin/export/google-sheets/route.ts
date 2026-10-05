@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { createServiceClient, createClient } from '@/lib/supabase/server';
+import { getEventRole } from '@/lib/auth/eventAuth';
 
 interface MatchData {
     id: string;
@@ -23,6 +24,11 @@ export async function POST(req: NextRequest) {
         }
 
         const serviceClient = createServiceClient();
+        if (event_id && !['all','standalone'].includes(event_id) && await getEventRole(user.id,event_id) === 'referee') {
+            return NextResponse.json({error:'Head Admin access required'}, {status:403});
+        }
+        const {data:refereeEvents,error:roleError} = await serviceClient.from('event_admins').select('event_id').eq('user_id',user.id).eq('role','referee');
+        if (roleError) throw roleError;
 
         // 1. Fetch matches based on criteria - use created_at to match website display
         let query = serviceClient
@@ -53,7 +59,8 @@ export async function POST(req: NextRequest) {
             query = query.eq('event_id', event_id);
         }
 
-        const { data: matches, error: fetchError } = await query;
+        const { data: matchRows, error: fetchError } = await query;
+        const matches = matchRows?.filter(match => !refereeEvents?.some(event => event.event_id === match.event_id));
 
         if (fetchError) throw fetchError;
         if (!matches || matches.length === 0) {

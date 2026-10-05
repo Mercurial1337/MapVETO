@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
-import { matchAdminToken } from '@/lib/auth/matchAdmin';
+import { matchAdminToken,matchStaffAccess } from '@/lib/auth/matchAdmin';
 import { adminAction } from '@/lib/veto/adminAction';
 
 interface RouteParams {
@@ -50,7 +50,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function POST(request: NextRequest, { params }: RouteParams) {
     try {
         const { id: matchId } = await params;
-        if(!await matchAdminToken(matchId)) return NextResponse.json({error:'Match administrator required'},{status:403});
+        const staff=await matchStaffAccess(matchId);
+        if(!staff) return NextResponse.json({error:'Match staff access required'},{status:403});
         const supabase = createServiceClient();
 
         // Verify match exists
@@ -85,11 +86,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         const magicLinks: Record<string, { token: string; url: string; label: string }> = {};
 
         for (const link of links || []) {
+            if(staff.role==='referee' && link.link_type!=='referee')continue;
             const label = link.link_type === 'team_a'
                 ? match.team_a_name
                 : link.link_type === 'team_b'
                     ? match.team_b_name
-                    : 'Observer';
+                      : link.link_type==='admin'?'Head Admin':link.link_type==='referee'?'Referee':'Observer';
 
             magicLinks[link.link_type] = {
                 token: link.token,
@@ -100,6 +102,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         return NextResponse.json({
             match_id: matchId,
+            staff_role: staff.role,
             links: magicLinks,
         });
     } catch (error) {

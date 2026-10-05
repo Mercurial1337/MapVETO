@@ -1,6 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import MatchClient from './MatchClient';
-import { matchAdminToken } from '@/lib/auth/matchAdmin';
+import { matchStaffAccess } from '@/lib/auth/matchAdmin';
 import { validateToken } from '@/lib/auth/token';
 
 interface MatchPageProps {
@@ -75,8 +75,10 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
         }
     }
 
+    const staff=await matchStaffAccess(matchId,token);
+    const {data:resetRequest}=await supabase.from('veto_reset_requests').select('id,match_id,reason,status,team_a_approved_at,team_b_approved_at,created_at,resolved_at').eq('match_id',matchId).eq('status','pending').maybeSingle();
     const initialData = {
-        match: matchData ? { ...matchData, can_admin: !!await matchAdminToken(matchId, token) } : null,
+        match: matchData ? { ...matchData, can_admin: staff?.role==='admin',can_referee:staff?.role==='referee',reset_request:resetRequest } : null,
         state: Array.isArray(matchData?.match_state) ? matchData.match_state[0] : (matchData?.match_state || null),
         maps: mapsData,
         logs: logsData,

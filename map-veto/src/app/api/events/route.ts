@@ -49,7 +49,7 @@ export async function GET() {
         // Fetch events the user is an admin of
         const { data: adminEntries } = await supabase
             .from('event_admins')
-            .select('event_id')
+            .select('event_id,role')
             .eq('user_id', user.id);
 
         const adminEventIds = (adminEntries || []).map(e => e.event_id);
@@ -76,7 +76,7 @@ export async function GET() {
         // Combine and tag with role
         const events = [
             ...(ownedEvents || []).map(e => ({ ...e, role: 'owner' as const })),
-            ...(adminEvents || []).map(e => ({ ...e, role: 'admin' as const })),
+            ...(adminEvents || []).map(e => ({ ...e, role: adminEntries?.find(member=>member.event_id===e.id)?.role || 'admin' })),
         ];
 
         return NextResponse.json({ events });

@@ -68,10 +68,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         const role = await getEventRole(user.id, id);
-        if (!role) {
+        if (role !== 'owner' && role !== 'admin') {
             return NextResponse.json(
-                { error: 'Event not found or no access' },
-                { status: 404 }
+                { error: 'Head Admin access required' },
+                { status: 403 }
             );
         }
 

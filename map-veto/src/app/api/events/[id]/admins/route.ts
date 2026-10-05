@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 const AddAdminSchema = z.object({
     email: z.string().email(),
+    role: z.enum(['admin','referee']).default('admin'),
 });
 
 interface RouteParams {
@@ -84,18 +85,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             );
         }
 
-        const { email } = validationResult.data;
+        const { email,role:staffRole } = validationResult.data;
         const supabase = createServiceClient();
 
         // Look up the user by email
-        const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
-
-        if (listError) {
-            console.error('Error listing users:', listError);
-            return NextResponse.json({ error: 'Failed to look up user' }, { status: 500 });
+        let targetUser: {id:string;email?:string} | undefined;
+        for (let page=1; !targetUser; page++) {
+            const {data:{users},error:listError} = await supabase.auth.admin.listUsers({page,perPage:1000});
+            if (listError) return NextResponse.json({error:'Failed to look up user'}, {status:500});
+            targetUser = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+            if (users.length < 1000) break;
         }
-
-        const targetUser = users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
 
         if (!targetUser) {
             return NextResponse.json(
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             .insert({
                 event_id: eventId,
                 user_id: targetUser.id,
-                role: 'admin',
+                role: staffRole,
                 added_by: user.id,
             })
             .select()

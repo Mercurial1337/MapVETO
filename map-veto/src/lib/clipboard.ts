@@ -24,14 +24,14 @@ export async function copyText(text: string): Promise<void> {
     }
 }
 
-export const MATCH_LINK_ROLES = ['team_a', 'team_b', 'observer', 'admin'] as const;
+export const MATCH_LINK_ROLES = ['team_a', 'team_b', 'observer', 'admin', 'referee'] as const;
 
 /** The dashboard must never open a successful-looking dialog containing empty links. */
-export function matchLinkUrls(data: unknown, origin: string, matchId: string): Record<typeof MATCH_LINK_ROLES[number], string> {
+export function matchLinkUrls(data: unknown, origin: string, matchId: string, roles: readonly typeof MATCH_LINK_ROLES[number][] = MATCH_LINK_ROLES): Record<typeof MATCH_LINK_ROLES[number], string> {
     if (!data || typeof data !== 'object') throw new Error('Match links are unavailable. Please retry.');
     const links = data as Record<string, unknown>;
     const result = {} as Record<typeof MATCH_LINK_ROLES[number], string>;
-    for (const role of MATCH_LINK_ROLES) {
+    for (const role of roles) {
         const link = links[role];
         if (!link || typeof link !== 'object' || !('token' in link) || typeof link.token !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(link.token)) {
             throw new Error('Some match links are unavailable. Please retry.');

@@ -12,7 +12,7 @@ export function matchNotices(previous:{match:Match|null;state:MatchState|null},c
  if(oldMatch.status!=='side_selection' && match.status==='side_selection' && role===match.coin_toss_winner) notices.push({kind:'info',message:'Choose Team A or Team B within 60 seconds.'});
  if(match.status==='in_progress' && !state.is_complete && state.current_turn===role && (starts || old.current_step!==state.current_step || old.current_turn!==state.current_turn)) notices.push({kind:'info',message:'Your turn. Confirm your selection within 60 seconds.'});
  if(!old.is_complete && state.is_complete) notices.push({kind:'success',message:'The veto is complete.'});
- if(!old.is_paused && state.is_paused) notices.push({kind:'warning',message:'The referee paused the veto.'});
+ if(!old.is_paused && state.is_paused) notices.push({kind:'warning',message:'The Head Admin paused the veto.'});
  if(old.is_paused && !state.is_paused) notices.push({kind:'info',message:'The veto resumed.'});
  return notices;
 }
@@ -23,6 +23,6 @@ export function timeoutNotice(log:MatchLog,match:Match):VetoNotice|null {
 }
 export function requestNotice(log:MatchLog,match:Match,role:LinkType|null,canAdmin=false):VetoNotice|null {
  if(log.action_type==='timeout_request' && (role==='admin' || canAdmin)) return {kind:'warning',message:`${log.actor==='team_a'?match.team_a_name:match.team_b_name} requested a timeout. Open the Timeouts tab to review it.`};
- if(log.action_type==='timeout_resolved' && role===log.metadata?.request_actor) return {kind:'success',message:`The referee resolved your timeout: ${String(log.metadata?.resolution || '')}`};
+ if(log.action_type==='timeout_resolved' && role===log.metadata?.request_actor) return {kind:'success',message:`The Head Admin resolved your timeout: ${String(log.metadata?.resolution || '')}`};
  return null;
 }

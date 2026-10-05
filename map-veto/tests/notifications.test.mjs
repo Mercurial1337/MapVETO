@@ -27,6 +27,6 @@ assert.ok(requestNotice(resolution,match,'team_a').message.includes('Game restar
 assert.equal(requestNotice(resolution,match,'team_b'),null);
 assert.equal(timeoutNotice(report,match),null);
 assert.ok(formatLog(report,{team_a:'Alpha'},{}).includes('Alpha requested a timeout: Game crashed'));
-assert.ok(formatLog(resolution,{team_a:'Alpha'},{}).includes("Referee resolved Alpha's timeout: Game restarted"));
+assert.ok(formatLog(resolution,{team_a:'Alpha'},{}).includes("Head Admin resolved Alpha's timeout: Game restarted"));
 assert.ok(formatLog({...report,action_type:'pick',metadata:{timeout:true}},{team_a:'Alpha'},{}).includes('move timer expired'));
 console.log('PASS timeout request view: open/resolved history, referee alert, team resolution notice and distinct timer-expiry labels');

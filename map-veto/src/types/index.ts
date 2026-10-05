@@ -108,6 +108,9 @@ export interface Match {
   status: MatchStatus;
   coin_toss_winner: VetoActor | null;
   coin_toss_forced: boolean;
+  can_admin?: boolean;
+  can_referee?: boolean;
+  reset_request?: ResetRequest | null;
   scheduled_at: string | null;
   started_at: string | null;
   completed_at: string | null;
@@ -164,7 +167,13 @@ export interface MatchState {
 // Access Control Types
 // ============================================
 
-export type LinkType = 'team_a' | 'team_b' | 'observer' | 'admin';
+export interface ResetRequest {
+  id: string; match_id: string; reason: string;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  team_a_approved_at: string | null; team_b_approved_at: string | null;
+  created_at: string; resolved_at: string | null;
+}
+export type LinkType = 'team_a' | 'team_b' | 'observer' | 'admin' | 'referee';
 
 export interface MatchLink {
   id: string;
@@ -183,7 +192,7 @@ export interface MatchLog {
   id: string;
   match_id: string;
   step_number: number;
-  action_type: VetoAction | 'coin_toss' | 'ready_check' | 'admin_action' | 'position_choice' | 'timeout_request' | 'timeout_resolved';
+  action_type: VetoAction | 'coin_toss' | 'ready_check' | 'admin_action' | 'position_choice' | 'timeout_request' | 'timeout_resolved' | 'reset_request' | 'reset_answer';
   actor: VetoActor | 'admin';
   log_order?: number;
   map_id: string | null;

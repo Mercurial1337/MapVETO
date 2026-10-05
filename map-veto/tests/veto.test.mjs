@@ -146,7 +146,7 @@ const logCount=(await db.query('SELECT count(*)::int n FROM match_logs WHERE mat
 const reset=await rpc('veto_admin',[f.id,f.admin,'reset',null,null,'Restart match',null]);assert.equal(reset.match.status,'ready_check');assert.equal(reset.new_state.available_maps.length,4);assert.equal(reset.new_state.is_paused,false);
 assert.equal((await db.query('SELECT count(*)::int n FROM match_logs WHERE match_id=$1',[f.id])).rows[0].n,logCount+1);
 assert.ok((await db.query("SELECT * FROM match_logs WHERE match_id=$1 AND metadata->>'superseded'='true'",[f.id])).rows.length>0);
-console.log('PASS referee: authorization, reopen completed veto, unwind decider, preserve paused time, force/correct exact map and side, reset retains pool and history');
+console.log('PASS Head Admin: authorization, reopen completed veto, unwind decider, preserve paused time, force/correct exact map and side, reset retains pool and history');
 
 const background=await fixture(true);await rpc('veto_ready',[background.id,background.a]);await rpc('veto_ready',[background.id,background.b]);
 await db.query("UPDATE match_state SET turn_started_at=now()-interval '61 seconds' WHERE match_id=$1",[background.id]);
@@ -223,7 +223,7 @@ await rejects('bulk_create_matches',[...bulkArgs.slice(0,3),'different.csv',...b
 assert.equal((await db.query('SELECT count(*)::int n FROM matches WHERE bulk_batch_id=$1',[batch])).rows[0].n,3);
 assert.equal((await db.query('SELECT count(*)::int n FROM event_teams WHERE event_id=$1',[event])).rows[0].n,6);
 for(const [index,id] of imported.match_ids.entries()) {
- const links=(await db.query('SELECT link_type,token FROM match_links WHERE match_id=$1',[id])).rows;assert.equal(links.length,4);
+ const links=(await db.query('SELECT link_type,token FROM match_links WHERE match_id=$1',[id])).rows;assert.equal(links.length,5);
  const tokens=Object.fromEntries(links.map(link=>[link.link_type,link.token]));
  assert.equal((await rpc('veto_ready',[id,tokens.team_a])).match.status,'ready_check');
  const ready=await rpc('veto_ready',[id,tokens.team_b]);assert.equal(ready.match.status,'side_selection');
@@ -243,6 +243,33 @@ const second=await rpc('bulk_create_matches',[event,eventAdmin,randomUUID(),'mat
 assert.equal(second.match_count,25);assert.notEqual(second.batch_id,batch);
 const page2=(await db.query('SELECT match_number FROM matches WHERE event_id=$1 AND bulk_batch_id=$2 ORDER BY match_number LIMIT 20 OFFSET 20',[event,second.batch_id])).rows;assert.deepEqual(page2.map(row=>row.match_number),[21,22,23,24,25]);
 const privilege=(await db.query("SELECT has_function_privilege('authenticated','bulk_create_matches(uuid,uuid,uuid,text,uuid,jsonb,uuid[])','EXECUTE') allowed")).rows[0];assert.equal(privilege.allowed,false);
-console.log('PASS bulk creation: event permissions, atomic rollback, four links and map pool, roster, A/B higher seed, automatic C toss once, idempotent retry, separate same-name batches and pagination');
+console.log('PASS bulk creation: event permissions, atomic rollback, five links and map pool, roster, A/B higher seed, automatic C toss once, idempotent retry, separate same-name batches and pagination');
+const approval=await fixture(true);
+const referee=(await db.query("SELECT token FROM match_links WHERE match_id=$1 AND link_type='referee'",[approval.id])).rows[0].token;
+for(const op of ['pause','resume','restart','undo','correct','force','reset'])await rejects('veto_admin',[approval.id,referee,op,null,null,'Not allowed',null],/Admin link/);
+await rejects('veto_coin',[approval.id,referee,null],/Admin link/);
+await rpc('veto_ready',[approval.id,approval.a]);await rpc('veto_ready',[approval.id,approval.b]);await rpc('veto_position',[approval.id,approval.b,true,false,null]);
+const before=(await db.query('SELECT * FROM match_state WHERE match_id=$1',[approval.id])).rows[0];
+const resetId=randomUUID();
+for(const token of [approval.a,approval.b,approval.admin,approval.observer,f.admin])await rejects('veto_request_reset',[approval.id,token,resetId,'Wrong team lineup'],/Referee link/);
+await db.query("UPDATE match_links SET expires_at=now()-interval '1 second' WHERE token=$1",[referee]);await rejects('veto_request_reset',[approval.id,referee,resetId,'Wrong team lineup'],/Referee link/);await db.query('UPDATE match_links SET expires_at=NULL WHERE token=$1',[referee]);
+await rpc('veto_request_reset',[approval.id,referee,resetId,'Wrong team lineup']);await rpc('veto_request_reset',[approval.id,referee,resetId,'Wrong team lineup']);
+await rejects('veto_request_reset',[approval.id,referee,randomUUID(),'Another problem'],/already pending/);
+for(const token of [referee,approval.admin,approval.observer,f.a])await rejects('veto_answer_reset',[approval.id,token,resetId,true],/team link/);
+await rpc('veto_answer_reset',[approval.id,approval.a,resetId,true]);await rpc('veto_answer_reset',[approval.id,approval.a,resetId,true]);
+const oneApproval=(await db.query('SELECT * FROM match_state WHERE match_id=$1',[approval.id])).rows[0];assert.equal(oneApproval.is_paused,before.is_paused);assert.equal(String(oneApproval.turn_started_at),String(before.turn_started_at));
+assert.equal((await db.query('SELECT status FROM matches WHERE id=$1',[approval.id])).rows[0].status,'in_progress');
+await rpc('veto_answer_reset',[approval.id,approval.b,resetId,true]);await rpc('veto_answer_reset',[approval.id,approval.b,resetId,true]);
+const after=(await db.query('SELECT * FROM match_state WHERE match_id=$1',[approval.id])).rows[0];assert.equal(after.team_a_ready,false);assert.equal(after.team_b_ready,false);assert.equal(after.current_turn,null);assert.equal(after.is_paused,false);assert.equal(after.available_maps.length,4);assert.deepEqual(after.results,[]);
+assert.equal((await db.query('SELECT status FROM matches WHERE id=$1',[approval.id])).rows[0].status,'ready_check');
+const resetLogs=(await db.query('SELECT * FROM match_logs WHERE match_id=$1 ORDER BY log_order',[approval.id])).rows;
+assert.equal(resetLogs.filter(log=>log.action_type==='reset_request').length,1);assert.equal(resetLogs.filter(log=>log.action_type==='reset_answer').length,2);assert.equal(resetLogs.filter(log=>log.metadata?.team_approved).length,1);
+const declined=randomUUID();await rpc('veto_request_reset',[approval.id,referee,declined,'Decline scenario']);await rpc('veto_answer_reset',[approval.id,approval.a,declined,false]);
+assert.equal((await rpc('veto_answer_reset',[approval.id,approval.b,declined,true])).status,'rejected');
+const stale=randomUUID();await rpc('veto_request_reset',[approval.id,referee,stale,'Head Admin cancellation']);await rpc('veto_answer_reset',[approval.id,approval.a,stale,true]);await rpc('veto_admin',[approval.id,approval.admin,'reset',null,null,'Head Admin independent reset',null]);
+assert.equal((await rpc('veto_answer_reset',[approval.id,approval.b,stale,true])).status,'cancelled');
+await db.query("INSERT INTO event_admins(event_id,user_id,role) VALUES($1,$2,'referee')",[event,outsider]);await rejects('bulk_create_matches',[event,outsider,randomUUID(),'denied.csv',template,JSON.stringify(bulkRows),mapIds],/administrator/);
+for(const fn of ['veto_request_reset(uuid,uuid,uuid,text)','veto_answer_reset(uuid,uuid,uuid,boolean)','veto_admin_internal(uuid,uuid,text,uuid,text,text,timestamptz)'])assert.equal((await db.query("SELECT has_function_privilege('authenticated',$1,'EXECUTE') allowed",[fn])).rows[0].allowed,false);
+console.log('PASS staff/reset approval: referee overrides denied, scoped/expired access denied, one request and vote per team, first approval preserves clock, both reset once to check-in, decline, Head Admin cancellation and importer/RPC restrictions');
 await db.close();
 

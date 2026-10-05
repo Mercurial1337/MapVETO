@@ -8,6 +8,7 @@ interface Event {
     id: string;
     name: string;
     google_sheet_id: string | null;
+    role?: string;
 }
 
 interface ExportModalProps {
@@ -40,7 +41,7 @@ export function ExportModal({ isOpen, onClose, preselectedEventId }: ExportModal
                 if (!response.ok) return;
                 const data: { events?: Event[] } = await response.json();
                 if (controller.signal.aborted) return;
-                loaded = data.events || [];
+                loaded = (data.events || []).filter(event => event.role !== 'referee');
                 setEvents(loaded);
             } catch (error) {
                 if (!controller.signal.aborted) console.error('Error fetching events:', error);

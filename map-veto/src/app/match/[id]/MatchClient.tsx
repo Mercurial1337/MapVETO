@@ -13,6 +13,7 @@ import { SideSelectionModal } from '@/components/match/SideSelectionModal';
 import { ReadyCheckModal } from '@/components/match/ReadyCheckModal';
 import { MatchActivity, TimeoutRequestButton } from '@/components/match/TimeoutRequests';
 import { AdminPanel } from '@/components/match/AdminPanel';
+import {RefereePanel,ResetApproval} from '@/components/match/ResetApproval';
 import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus } from '@/lib/realtime';
 import { useActionSound } from '@/hooks';
 import type { MapCardState, VetoStep, VetoActor, Match, VetoTemplate } from '@/types';
@@ -51,6 +52,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     const [selectedMap, setSelectedMap] = useState<{id:string;clock:string | undefined} | null>(null);
     const selectedMapId=selectedMap?.clock===state?.turn_started_at ? selectedMap?.id ?? null : null;
     const isAdmin = userRole === 'admin' || Boolean((match as (Match & { can_admin?: boolean }) | null)?.can_admin);
+    const isReferee = userRole === 'referee' || Boolean(match?.can_referee);
 
     // Play notification sounds on state changes (turn changes, completion)
     useActionSound({
@@ -341,7 +343,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 </div>
             </header>
 
-            {(userRole==='observer' || userRole==='admin') && <p role="status" className="px-4 py-2 border-b border-white/20 text-sm text-white/70">Read-only view{isAdmin?' · Use Referee controls to make changes.':''}</p>}
+            {(userRole==='observer' || userRole==='admin' || userRole==='referee') && <p role="status" className="px-4 py-2 border-b border-white/20 text-sm text-white/70">Read-only view{isAdmin?' · Head Admin controls available.':isReferee?' · Referee: reset requests only.':''}</p>}
             {/* Teams Banner */}
             <div className="bg-black/40 border-b border-white/5 px-4 md:px-6 py-4 md:py-6">
                 <div className="max-w-4xl mx-auto flex items-center justify-center gap-4 md:gap-8">
@@ -526,6 +528,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
 
             {state?.is_complete && <p role="status" className="border-t border-white/20 px-4 py-3 text-green-300">Veto complete. The final selections are shown above.</p>}
             <TimeoutRequestButton matchId={matchId} token={token}/>
+            <ResetApproval matchId={matchId} token={token}/>
+            {isReferee && !isAdmin && <RefereePanel matchId={matchId} token={token}/>}
             {/* Admin Panel */}
             {isAdmin && match && (
                 <AdminPanel matchId={matchId} matchStatus={match.status} isPaused={state?.is_paused} token={token} />

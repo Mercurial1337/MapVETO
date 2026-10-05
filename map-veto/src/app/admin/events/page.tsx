@@ -19,7 +19,7 @@ interface Event {
     is_active: boolean;
     created_at: string;
     matches: { count: number }[];
-    role: 'owner' | 'admin';
+    role: 'owner' | 'admin' | 'referee';
 }
 
 export default function EventsPage() {
@@ -150,7 +150,7 @@ export default function EventsPage() {
                                 ) : (
                                     <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 flex items-center gap-1">
                                         <Shield size={10} />
-                                        Admin
+                                        {event.role==='referee'?'Referee':'Head Admin'}
                                     </span>
                                 )}
                             </div>

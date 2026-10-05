@@ -20,4 +20,4 @@ navigator.clipboard.writeText=async()=>{throw new Error('Permission denied');};
 await copyText(links.team_a);assert.equal(clipboard,links.team_a);assert.ok(appended && removed && selected && focused);
 fallbackResult=false;removed=false;await assert.rejects(copyText(links.admin),/Copy failed/);assert.ok(removed);
 delete navigator.clipboard;fallbackResult=true;await copyText(links.observer);assert.equal(clipboard,links.observer);
-console.log('PASS clipboard: all four full links, missing/empty links rejected, exact contents, denied/unavailable API fallback, failed copy reported and focus restored');
+console.log('PASS clipboard: all five full links, missing/empty links rejected, exact contents, denied/unavailable API fallback, failed copy reported and focus restored');

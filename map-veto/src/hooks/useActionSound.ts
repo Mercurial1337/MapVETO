@@ -7,7 +7,7 @@ interface UseActionSoundOptions {
     /** Current match state from realtime */
     state: MatchState | null;
     /** The current user's role */
-    userRole: 'team_a' | 'team_b' | 'observer' | 'admin' | null;
+    userRole: 'team_a' | 'team_b' | 'observer' | 'admin' | 'referee' | null;
     /** Whether the match is actively in progress */
     isInProgress: boolean;
 }

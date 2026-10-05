@@ -14,6 +14,7 @@ interface ImportBatch {id:string;file_name:string;match_count:number;format:stri
 interface Event {
     id: string;
     name: string;
+    role?: 'owner'|'admin'|'referee';
 }
 
 interface Match {
@@ -35,6 +36,7 @@ interface MatchLinks {
     team_b: string;
     observer: string;
     admin: string;
+    referee: string;
 }
 
 type SortOrder = 'newest' | 'oldest';
@@ -70,7 +72,7 @@ export default function MatchesPage() {
             const response = await fetch('/api/events');
             if (response.ok) {
                 const data = await response.json();
-                const eventsList = (data.events || []).map((e: { id: string; name: string }) => ({ id: e.id, name: e.name }));
+                const eventsList = (data.events || []).map((e: Event) => ({ id: e.id, name: e.name,role:e.role }));
                 setEvents(eventsList);
             }
         } catch (error) {
@@ -93,6 +95,8 @@ export default function MatchesPage() {
         setPage(1);
     }
     const [totalPages, setTotalPages] = useState(1);
+    const refereeEvent = events.some(event=>event.id===effectiveEvent && event.role==='referee');
+    const headEvents = events.filter(event=>event.role!=='referee');
     const pageSize = 20;
     const matchRequest = useRef(0);
 
@@ -197,7 +201,7 @@ export default function MatchesPage() {
     useEffect(()=>{
         const controller=new AbortController();
         async function loadBatches() {
-            if(!effectiveEvent){setBatches([]);return;}
+            if(!effectiveEvent || refereeEvent){setBatches([]);setBatchError('');return;}
             try {
                 const response=await fetch('/api/events/'+effectiveEvent+'/bulk-matches',{signal:controller.signal});
                 const data=await response.json();
@@ -206,7 +210,7 @@ export default function MatchesPage() {
             } catch(error){if(!controller.signal.aborted)setBatchError(error instanceof Error?error.message:'Could not load bulk imports.');}
         }
         void loadBatches();return ()=>controller.abort();
-    },[effectiveEvent,batchReload]);
+    },[effectiveEvent,batchReload,refereeEvent]);
 
     const fetchMatchLinks = async (matchId: string) => {
         setLoadingLinks(matchId);
@@ -214,7 +218,7 @@ export default function MatchesPage() {
             const response = await fetch(`/api/matches/${matchId}`, { method: 'POST' });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Could not load match links.');
-            const links = matchLinkUrls(data.links, window.location.origin, matchId);
+            const links = matchLinkUrls(data.links, window.location.origin, matchId, data.staff_role==='referee'?['referee']:undefined);
             setSelectedMatchLinks({ matchId, links });
         } catch (error) {
             alert(error instanceof Error ? error.message : 'Could not load match links.');
@@ -309,9 +313,10 @@ export default function MatchesPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold text-white">Matches</h1>
-                <div className="flex gap-2"><button className="btn-secondary px-4 py-2 rounded text-sm" onClick={()=>setBulkOpen(true)}>Bulk create</button>
+                <div className="flex gap-2"><button disabled={refereeEvent || !headEvents.length} className="btn-secondary px-4 py-2 rounded text-sm" onClick={()=>setBulkOpen(true)}>Bulk create</button>
                 <button
                     onClick={() => setIsExportModalOpen(true)}
+                    disabled={refereeEvent}
                     className="btn-secondary px-4 py-2 rounded text-sm flex items-center gap-2"
                 >
                     <FileSpreadsheet size={18} />
@@ -368,7 +373,7 @@ export default function MatchesPage() {
                         ))}
                     </select>
 
-                    <label className="text-sm">Bulk creation file<select aria-label="Bulk creation file" value={batchFilter} disabled={!effectiveEvent} onChange={e=>{setBatchFilter(e.target.value);setPage(1);}} className="ml-2 px-3 py-2 bg-black border border-white/20 rounded">
+                    <label className="text-sm">Bulk creation file<select aria-label="Bulk creation file" value={batchFilter} disabled={!effectiveEvent || refereeEvent} onChange={e=>{setBatchFilter(e.target.value);setPage(1);}} className="ml-2 px-3 py-2 bg-black border border-white/20 rounded">
                         <option value="all">All imports and manual matches</option>
                         {batches.map(batch=><option key={batch.id} value={batch.id}>{batch.file_name} · {new Date(batch.created_at).toLocaleString()} · {batch.match_count} matches · {batch.id.slice(0,8)}</option>)}
                     </select></label>
@@ -433,8 +438,9 @@ export default function MatchesPage() {
                                     { label: match?.team_a_name || 'Team 1', key: 'team_a' as const, color: 'red' as const },
                                     { label: match?.team_b_name || 'Team 2', key: 'team_b' as const, color: 'blue' as const },
                                     { label: 'Observer', key: 'observer' as const, color: 'purple' as const },
-                                    { label: 'Admin', key: 'admin' as const, color: 'purple' as const },
-                                ].map(({ label, key, color }) => {
+                                    { label: 'Head Admin', key: 'admin' as const, color: 'purple' as const },
+                                    { label: 'Referee', key: 'referee' as const, color: 'purple' as const },
+                                ].filter(({key})=>Boolean(selectedMatchLinks.links[key])).map(({ label, key, color }) => {
                                     const styles = colorStyles[color];
                                     return (
                                         <div key={key} className={`p-3 ${styles.container} border rounded-lg`}>
@@ -527,7 +533,7 @@ export default function MatchesPage() {
                                         )}
                                         <button
                                             onClick={() => deleteMatch(match.id, match.team_a_name, match.team_b_name)}
-                                            disabled={deletingMatch === match.id}
+                                            disabled={deletingMatch === match.id || events.some(event => event.id === match.event_id && event.role === 'referee')}
                                             className="px-2 py-1 text-xs bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors disabled:opacity-50"
                                             title="Delete match"
                                         >
@@ -580,7 +586,7 @@ export default function MatchesPage() {
                 </div>
             )}
 
-            {bulkOpen && <BulkMatchImport events={events} eventId={effectiveEvent} onClose={()=>setBulkOpen(false)} onImported={(importEvent,batchId)=>{setBulkOpen(false);setEventFilterLocal(importEvent);setBatchFilter(batchId);setPage(1);setBatchReload(value=>value+1);}}/>}
+            {bulkOpen && <BulkMatchImport events={headEvents} eventId={effectiveEvent} onClose={()=>setBulkOpen(false)} onImported={(importEvent,batchId)=>{setBulkOpen(false);setEventFilterLocal(importEvent);setBatchFilter(batchId);setPage(1);setBatchReload(value=>value+1);}}/>}
             {/* Export Modal */}
             <ExportModal
                 isOpen={isExportModalOpen}

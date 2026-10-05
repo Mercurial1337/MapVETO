@@ -44,11 +44,12 @@ export default function EditEventPage({ params }: PageProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [uploading, setUploading] = useState<string | null>(null);
-    const [userRole, setUserRole] = useState<'owner' | 'admin' | null>(null);
+    const [userRole, setUserRole] = useState<'owner' | 'admin' | 'referee' | null>(null);
 
     // Admin management state
     const [admins, setAdmins] = useState<EventAdmin[]>([]);
     const [adminEmail, setAdminEmail] = useState('');
+    const [staffRole,setStaffRole]=useState<'admin'|'referee'>('admin');
     const [adminError, setAdminError] = useState('');
     const [adminSuccess, setAdminSuccess] = useState('');
     const [isAddingAdmin, setIsAddingAdmin] = useState(false);
@@ -111,7 +112,7 @@ export default function EditEventPage({ params }: PageProps) {
             const response = await fetch(`/api/events/${id}/admins`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: adminEmail.trim() }),
+                body: JSON.stringify({ email: adminEmail.trim(),role:staffRole }),
             });
 
             const data = await response.json();
@@ -119,7 +120,7 @@ export default function EditEventPage({ params }: PageProps) {
             if (!response.ok) {
                 setAdminError(data.error || 'Failed to add admin');
             } else {
-                setAdminSuccess(`${adminEmail.trim()} has been added as an admin`);
+                setAdminSuccess(`${adminEmail.trim()} has been added as ${staffRole==='referee'?'Referee':'Head Admin'}`);
                 setAdminEmail('');
                 fetchAdmins();
                 // Clear success message after 3s
@@ -318,7 +319,7 @@ export default function EditEventPage({ params }: PageProps) {
     }
 
     // If user is an admin (not owner), they shouldn't be on this page
-    if (userRole === 'admin') {
+    if (userRole === 'admin' || userRole==='referee') {
         return (
             <div className="max-w-2xl mx-auto">
                 <div className="flex items-center gap-4 mb-6">
@@ -450,14 +451,15 @@ export default function EditEventPage({ params }: PageProps) {
                 <div className="mt-8 space-y-4">
                     <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                         <Shield size={20} className="text-blue-400" />
-                        Manage Event Admins
+                        Manage Event Staff
                     </h2>
                     <p className="text-sm text-white/50">
-                        Event admins can view this event, manage matches, and export data. They cannot edit branding or delete the event.
+                        Head Admins can manage matches, export data and use all overrides. Referees can only request a veto reset, which requires approval from both teams. Only the event owner can edit branding or manage staff.
                     </p>
 
                     {/* Add Admin Form */}
                     <div className="glass rounded p-4">
+                        <label className="block text-sm mb-2">Staff role<select className="ml-3 bg-black border border-white/30 p-2" value={staffRole} onChange={e=>setStaffRole(e.target.value as 'admin'|'referee')}><option value="admin">Head Admin</option><option value="referee">Referee</option></select></label>
                         <div className="flex gap-2">
                             <input
                                 type="email"
@@ -511,6 +513,7 @@ export default function EditEventPage({ params }: PageProps) {
                                         </div>
                                         <div>
                                             <p className="text-sm text-white">{admin.email}</p>
+                                            <p className="text-sm text-white/70">{admin.role==='referee'?'Referee':'Head Admin'}</p>
                                             <p className="text-xs text-white/40">
                                                 Added {new Date(admin.created_at).toLocaleDateString()}
                                             </p>

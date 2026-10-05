@@ -5,7 +5,7 @@ import { TurnTimer } from './TurnTimer';
 import { useRealtime } from '@/lib/realtime';
 interface Props {
  isOpen:boolean;teamAName:string;teamBName:string;coinTossWinner:VetoActor|null;
- userRole:'team_a'|'team_b'|'observer'|'admin'|null;token:string;matchId:string;
+ userRole:'team_a'|'team_b'|'observer'|'admin'|'referee'|null;token:string;matchId:string;
  isSeeded?:boolean;onComplete?:()=>void;turnStartedAt?:string;isPaused?:boolean;pausedRemainingSeconds?:number|null;
 }
 const positionStep={step:-1,action:'side' as const,actor:'team_a' as const,description:'Choose Team A or Team B'};
