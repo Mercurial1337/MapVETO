@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {NotificationSound} from '../src/lib/veto/notificationSound.ts';
+let created=0,closed=0;
+const voices=[];
+const param=()=>({values:[],setValueAtTime(value){this.values.push(value);},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}});
+const context={state:'suspended',currentTime:0,destination:{},resume(){this.state='running';return Promise.resolve();},close(){closed++;return Promise.resolve();},createOscillator(){const voice={frequency:param(),connect(){},disconnect(){this.disconnected=true;},start(){},stop(){this.stopped=true;}};voices.push(voice);return voice;},createGain(){return {gain:param(),connect(){},disconnect(){}};}};
+const sound=new NotificationSound(()=>{created++;return context;});
+sound.play('turn');assert.equal(created,0);assert.equal(voices.length,0);
+sound.unlock();sound.unlock();assert.equal(created,1);
+sound.play('ready');assert.deepEqual(voices.map(v=>v.frequency.values[0]),[660,880]);
+sound.play('turn');assert.deepEqual(voices.slice(2).map(v=>v.frequency.values[0]),[1500,2000]);
+sound.play('complete');assert.deepEqual(voices.slice(4).map(v=>v.frequency.values[0]),[880,1320,1760]);
+sound.play('attention');assert.equal(voices.length,8);
+voices[0].onended();assert.equal(voices[0].disconnected,true);
+context.state='suspended';sound.play('complete');assert.equal(voices.length,8);
+sound.dispose();assert.ok(voices.every(v=>v.stopped));assert.equal(closed,1);
+sound.unlock();sound.play('turn');assert.equal(created,1);assert.equal(voices.length,8);
+console.log('PASS player audio: gesture unlock, one context, distinct ready/turn/completion/attention cues, no suspended replay, voice cleanup and unmount disposal');

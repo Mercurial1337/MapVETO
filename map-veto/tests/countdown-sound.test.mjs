@@ -11,6 +11,7 @@ for(const seconds of [60,16,0,-1,NaN,1.5])sound.tick('turn-1',seconds);
 sound.tick('',15);assert.equal(oscillators.length,0);
 for(let seconds=15;seconds>=1;seconds--){sound.tick('turn-1',seconds);sound.tick('turn-1',seconds);}
 assert.equal(oscillators.length,30,'exactly one two-tone tick per second, despite duplicate updates');
+assert.ok(oscillators[0].frequency.values[0]<1000,'the selected deeper click uses a lower primary pitch');
 assert.ok(gains[20].gain.values[1]>gains[0].gain.values[1],'last five seconds are slightly more urgent');
 sound.stop();assert.ok(oscillators.every(oscillator=>oscillator.stops===2),'pause/turn cleanup stops all active voices');
 context.state='suspended';sound.tick('turn-2',15);assert.equal(oscillators.length,30,'no queued audio when suspended');

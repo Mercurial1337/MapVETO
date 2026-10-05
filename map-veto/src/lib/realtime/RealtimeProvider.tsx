@@ -12,7 +12,8 @@ import { createClient } from '@/lib/supabase/client';
 import type { MatchState, Match, VetoActor, SideChoice, GameMap, MatchLog } from '@/types';
 import { toast } from 'sonner';
 import { useRef } from 'react';
-import { matchNotices, timeoutNotice, requestNotice } from '@/lib/veto/notifications';
+import { matchNotices, timeoutNotice, requestNotice, noticeDelivery, strongestCue } from '@/lib/veto/notifications';
+import { useNotificationSound } from '@/hooks/useNotificationSound';
 
 interface EventBranding {
     logo_url: string | null;
@@ -103,20 +104,24 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
     const prevStateRef = useRef<MatchState | null>(initialData.state);
 
     const seenLogs = useRef(new Set(initialData.logs.map(log=>log.id)));
+    const delivery = noticeDelivery(userRole);
+    const playSound = useNotificationSound(delivery==='sound');
     useEffect(() => {
         const notices=matchNotices({match:prevMatchRef.current,state:prevStateRef.current},{match,state},userRole);
-        for(const notice of notices) toast[notice.kind](notice.message);
+        if (delivery==='toast') for(const notice of notices) toast[notice.kind](notice.message);
+        if (delivery==='sound') {const cue=strongestCue(notices);if(cue)playSound(cue);}
         prevMatchRef.current=match;prevStateRef.current=state;
-    },[match,state,userRole]);
+    },[match,state,userRole,delivery,playSound]);
     useEffect(()=>{
         if(!match) return;
         for(const log of logs) {
             if(seenLogs.current.has(log.id)) continue;
             seenLogs.current.add(log.id);
             const notice=timeoutNotice(log,match) || requestNotice(log,match,userRole,Boolean((match as Match & {can_admin?:boolean}).can_admin));
-            if(notice) toast[notice.kind](notice.message);
+            if(notice && delivery==='toast') toast[notice.kind](notice.message);
+            if(notice && delivery==='sound') playSound(notice.cue || 'attention');
         }
-    },[logs,match,userRole]);
+    },[logs,match,userRole,delivery,playSound]);
 
     // Read the authoritative snapshot after changes. Coalesce a transaction's
     // broadcasts into one request and recover missed events on reconnect/focus.

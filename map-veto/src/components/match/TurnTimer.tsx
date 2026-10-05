@@ -6,10 +6,11 @@ interface Props {
  currentStep: VetoStep | null; stateUpdatedAt: string; teamAName: string; teamBName: string;
  matchId?: string; token?: string; isInProgress: boolean; isComplete: boolean;
  isPaused?: boolean; pausedRemainingSeconds?: number | null;
+ soundEnabled?: boolean;
 }
-export function TurnTimer({currentStep,stateUpdatedAt,teamAName,teamBName,matchId,token,isInProgress,isComplete,isPaused,pausedRemainingSeconds}:Props) {
+export function TurnTimer({currentStep,stateUpdatedAt,teamAName,teamBName,matchId,token,isInProgress,isComplete,isPaused,pausedRemainingSeconds,soundEnabled=false}:Props) {
  const [remaining,setRemaining]=useState(60);
- const {tick:playTick,stop:stopSound}=useCountdownSound();
+ const {tick:playTick,stop:stopSound}=useCountdownSound(soundEnabled);
  const actorName=currentStep?.actor==='team_a'?teamAName:teamBName;
  useEffect(()=>{
   stopSound();

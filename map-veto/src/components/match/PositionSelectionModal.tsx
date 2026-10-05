@@ -29,7 +29,7 @@ export function PositionSelectionModal({isOpen,teamAName,teamBName,coinTossWinne
   <section role="dialog" aria-modal="true" aria-labelledby="position-title" className="w-full max-w-lg bg-[#18181b] border border-white/20 p-6 rounded">
    <h2 id="position-title" className="text-xl font-bold mb-3">{winnerName} chooses Team A or Team B</h2>
    <p className="mb-4 text-white/70">{isSeeded?'Higher seed':'Coin toss winner'} · confirm your role within 60 seconds.</p>
-   <TurnTimer currentStep={positionStep} stateUpdatedAt={turnStartedAt || ''} teamAName={winnerName} teamBName={winnerName} matchId={matchId} token={token} isInProgress={isOpen} isComplete={false} isPaused={isPaused} pausedRemainingSeconds={pausedRemainingSeconds}/>
+   <TurnTimer soundEnabled={userRole==='team_a' || userRole==='team_b'} currentStep={positionStep} stateUpdatedAt={turnStartedAt || ''} teamAName={winnerName} teamBName={winnerName} matchId={matchId} token={token} isInProgress={isOpen} isComplete={false} isPaused={isPaused} pausedRemainingSeconds={pausedRemainingSeconds}/>
    {error && <p role="alert" className="text-red-400 mt-3">{error}</p>}
    {userRole===coinTossWinner ? <div className="flex gap-3 mt-4"><button disabled={busy || isPaused} className="btn-primary px-4 py-2" onClick={()=>choose(true)}>Confirm Team A</button><button disabled={busy || isPaused} className="btn-secondary px-4 py-2" onClick={()=>choose(false)}>Confirm Team B</button></div> : <p className="mt-4">Waiting for {winnerName} to choose.</p>}
   </section>

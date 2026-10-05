@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {matchNotices,timeoutNotice,requestNotice} from '../src/lib/veto/notifications.ts';
+import {matchNotices,timeoutNotice,requestNotice,noticeDelivery,strongestCue} from '../src/lib/veto/notifications.ts';
 import {timeoutRequests} from '../src/lib/veto/timeoutRequests.ts';
 import {formatLog} from '../src/lib/veto/log.ts';
 const match={status:'ready_check',team_a_name:'Alpha',team_b_name:'Beta',coin_toss_winner:'team_a'};
@@ -12,7 +12,7 @@ assert.ok(matchNotices(ready,start,'team_a').some(n=>n.message.startsWith('Your 
 const sameTeamNext={...start,state:{...start.state,current_step:1}};
 assert.ok(matchNotices(start,sameTeamNext,'team_a').some(n=>n.message.startsWith('Your turn')));
 assert.ok(!matchNotices(start,sameTeamNext,'observer').some(n=>n.message.startsWith('Your turn')));
-assert.equal(matchNotices(start,{...start,state:{...start.state,is_complete:true}},'team_a')[0].message,'The veto is complete.');
+assert.ok(matchNotices(start,{...start,state:{...start.state,is_complete:true}},'team_a')[0].message.startsWith('The veto is complete.'));
 assert.ok(timeoutNotice({actor:'team_a',action_type:'pick',metadata:{timeout:true}},match).message.includes('random pick'));
 assert.equal(timeoutNotice({actor:'team_a',action_type:'pick',metadata:{admin_override:true}},match),null);
 console.log('PASS notifications: ready transitions, first and repeated team turns, spectator suppression, completion, confirmed timeout source');
@@ -30,3 +30,12 @@ assert.ok(formatLog(report,{team_a:'Alpha'},{}).includes('Alpha requested a time
 assert.ok(formatLog(resolution,{team_a:'Alpha'},{}).includes("Head Admin resolved Alpha's timeout: Game restarted"));
 assert.ok(formatLog({...report,action_type:'pick',metadata:{timeout:true}},{team_a:'Alpha'},{}).includes('move timer expired'));
 console.log('PASS timeout request view: open/resolved history, referee alert, team resolution notice and distinct timer-expiry labels');
+assert.equal(noticeDelivery('team_a'),'sound');assert.equal(noticeDelivery('team_b'),'sound');
+assert.equal(noticeDelivery('admin'),'toast');assert.equal(noticeDelivery('referee'),'toast');
+assert.equal(noticeDelivery('observer'),'none');assert.equal(noticeDelivery(null),'none');
+assert.equal(strongestCue(matchNotices(old,ready,'team_a')),'ready');
+assert.equal(strongestCue(matchNotices(ready,start,'team_a')),'turn');
+assert.equal(strongestCue(matchNotices(start,{...start,state:{...start.state,is_complete:true}},'team_a')),'complete');
+assert.equal(strongestCue([]),null);
+assert.ok(requestNotice(report,match,'referee'));
+console.log('PASS notification audience: players receive coalesced sound cues, staff get notices, observers stay silent, completion cue survives match status completion');

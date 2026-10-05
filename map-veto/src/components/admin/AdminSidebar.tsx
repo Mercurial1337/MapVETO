@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import {StaffNotifications} from './StaffNotifications';
 import type { User } from '@supabase/supabase-js';
 import { LayoutDashboard, Gamepad2, PlusCircle, Monitor, LogOut, Menu, X, Calendar } from 'lucide-react';
 
@@ -146,6 +147,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col min-h-0">
+                <div className="flex justify-end px-4 py-2 border-b border-white/10"><StaffNotifications/></div>
                 {/* Top Bar (desktop only) */}
                 <header className="hidden md:flex h-16 border-b border-white/10 px-6 items-center justify-between bg-black/20">
                     <div className="flex items-center gap-4">

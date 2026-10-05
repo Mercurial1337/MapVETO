@@ -1,4 +1,4 @@
-/** Short, synthesized tick/tock: no audio download or additional network requests. */
+/** Short, lower-pitched click selected from the audio previews; no downloads. */
 export class CountdownSound {
     private context: AudioContext | null = null;
     private lastTick = '';
@@ -26,16 +26,16 @@ export class CountdownSound {
         this.lastTick = key;
         const ctx = this.context;
         const now = ctx.currentTime;
-        const pitch = seconds % 2 ? 1850 : 1450;
-        for (const harmonic of [1, 1.8]) {
+        const pitch = seconds % 2 ? 650 : 520;
+        for (const harmonic of [1, 1.48]) {
             const oscillator = ctx.createOscillator();
             const gain = ctx.createGain();
             oscillator.type = 'triangle';
             oscillator.frequency.setValueAtTime(pitch * harmonic, now);
-            oscillator.frequency.exponentialRampToValueAtTime(pitch * harmonic * 0.6, now + 0.045);
+            oscillator.frequency.exponentialRampToValueAtTime(pitch * harmonic * 0.75, now + 0.06);
             gain.gain.setValueAtTime(0, now);
-            gain.gain.linearRampToValueAtTime((seconds <= 5 ? 0.09 : 0.06) / harmonic, now + 0.002);
-            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.055);
+            gain.gain.linearRampToValueAtTime((seconds <= 5 ? 0.1125 : 0.09) / harmonic, now + 0.001);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.035);
             oscillator.connect(gain);
             gain.connect(ctx.destination);
             this.voices.add(oscillator);
@@ -45,7 +45,7 @@ export class CountdownSound {
                 this.voices.delete(oscillator);
             };
             oscillator.start(now);
-            oscillator.stop(now + 0.06);
+            oscillator.stop(now + 0.1);
         }
     }
 

@@ -15,7 +15,6 @@ import { MatchActivity, TimeoutRequestButton } from '@/components/match/TimeoutR
 import { AdminPanel } from '@/components/match/AdminPanel';
 import {RefereePanel,ResetApproval} from '@/components/match/ResetApproval';
 import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus } from '@/lib/realtime';
-import { useActionSound } from '@/hooks';
 import type { MapCardState, VetoStep, VetoActor, Match, VetoTemplate } from '@/types';
 
 // Map name to local image fallback
@@ -53,13 +52,6 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     const selectedMapId=selectedMap?.clock===state?.turn_started_at ? selectedMap?.id ?? null : null;
     const isAdmin = userRole === 'admin' || Boolean((match as (Match & { can_admin?: boolean }) | null)?.can_admin);
     const isReferee = userRole === 'referee' || Boolean(match?.can_referee);
-
-    // Play notification sounds on state changes (turn changes, completion)
-    useActionSound({
-        state: state ?? null,
-        userRole,
-        isInProgress: match?.status === 'in_progress',
-    });
 
     // Load custom font if event has one
     useEffect(() => {
@@ -388,6 +380,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     />
                     {/* Turn Timer for all users */}
                     <TurnTimer
+                        soundEnabled={userRole==='team_a' || userRole==='team_b'}
                         currentStep={currentStepDef}
                         stateUpdatedAt={state?.turn_started_at ?? state?.updated_at ?? ''}
                         token={token}

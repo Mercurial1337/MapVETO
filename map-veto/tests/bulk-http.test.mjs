@@ -117,6 +117,24 @@ try {
  await post('/api/veto/admin/override',{match_id:matchId,token:tokens.admin,operation:'pause',reason:'Head Admin QA'});
  await post('/api/veto/admin/override',{match_id:matchId,token:tokens.admin,operation:'resume',reason:'Head Admin QA'});
  console.log('PASS HTTP staff roles: owner assignment, referee-only links, override/coin/delete/export/import/roster denial, pending reset continues unchanged, both approvals reset once, concurrent approvals, Head Admin controls retained');
+ const finishedId=matches[1].id;
+ const {data:finishedLinks}=await db.from('match_links').select('link_type,token').eq('match_id',finishedId);
+ const finishedTokens=Object.fromEntries(finishedLinks.map(link=>[link.link_type,link.token]));
+ for(let i=0;i<20;i++) {
+  const current=await post('/api/veto/session',{match_id:finishedId,token:finishedTokens.observer});
+  if(current.state.is_complete)break;
+  const step=current.match.veto_templates.sequence.steps[current.state.current_step];
+  await post('/api/veto/admin/override',{match_id:finishedId,token:finishedTokens.admin,operation:'force',reason:'Notification completion QA',map_id:['ban','pick'].includes(step.action)?current.state.available_maps[0]:undefined,side:step.action==='side'?'attack':undefined});
+ }
+ assert.equal((await fetch(`${base}/api/admin/notifications`)).status,401);
+ for(const staff of [owner,admin,outsider]) {
+  const response=await fetch(`${base}/api/admin/notifications`,{headers:{Cookie:staff.cookie}});assert.equal(response.status,200);
+  const notice=(await response.json()).notifications.find(item=>item.id===finishedId);assert.ok(notice);assert.ok(Number.isFinite(Date.parse(notice.completed_at)));assert.equal(notice.token,undefined);
+ }
+ const unrelated=await account();
+ const unrelatedResponse=await fetch(`${base}/api/admin/notifications`,{headers:{Cookie:unrelated.cookie}});assert.equal(unrelatedResponse.status,200);assert.equal((await unrelatedResponse.json()).notifications.length,0);
+ console.log('PASS staff completion notifications: authenticated ownership/membership scope, Head Admin and Referee access, persisted completion timestamp, no magic-link exposure, unrelated account isolation');
+ await post('/api/veto/admin/override',{match_id:matchId,token:tokens.admin,operation:'reset',reason:'Browser notification QA check-in'});
  if(keep){writeFileSync('.qa-bulk-session.json',JSON.stringify({base,eventId,userIds:users,owner,referee:outsider,matchId,tokens,batchId,secondBatchId:second.batch_id},(key,value)=>key==='client'||key==='cookie'?undefined:value));retained=true;console.log('QA fixtures retained for browser testing');}
 } finally {
  if(!retained) {
