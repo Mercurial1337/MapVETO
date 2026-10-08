@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, createClient } from '@/lib/supabase/server';
 import { getEventRole } from '@/lib/auth/eventAuth';
 import { z } from 'zod';
+import { optionalSpreadsheetId } from '@/lib/sheets/input';
 
 // Request validation schema for updating an event
 const UpdateEventSchema = z.object({
@@ -10,7 +11,7 @@ const UpdateEventSchema = z.object({
     coin_image_url: z.string().url().optional().nullable(),
     custom_font_url: z.string().url().optional().nullable(),
     custom_font_name: z.string().max(100).optional().nullable(),
-    google_sheet_id: z.string().max(100).optional().nullable(),
+    google_sheet_id: optionalSpreadsheetId,
     is_active: z.boolean().optional(),
 });
 
@@ -127,7 +128,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             console.error('Event update error:', error);
             return NextResponse.json(
                 { error: `Failed to update event: ${error.message}` },
-                { status: 500 }
+                { status: error.code === '23514' ? 409 : 500 }
             );
         }
 

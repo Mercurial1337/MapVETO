@@ -2,6 +2,8 @@
 
 Open Events → Sheet matches. Connect a workbook URL, choose a day tab, check the desired matches, choose A/B/C, and confirm. Ready pairings create vetoes immediately; approved unresolved pairings create later. Unchecked pairings stay excluded until another confirmation selects them.
 
+A workbook entered when creating or editing an event is connected automatically. The Sheet matches page loads its day tabs without requiring the URL again. Migration 037 carries over saved event sheet IDs and preserves existing import connections and approvals. Entering a URL is normalized to its spreadsheet ID. Linking alone does not approve or create matches.
+
 ## Workbook contract
 
 - Day tabs use names such as `D1 - Matches`.

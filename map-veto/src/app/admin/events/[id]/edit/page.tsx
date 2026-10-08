@@ -405,8 +405,8 @@ export default function EditEventPage({ params }: PageProps) {
 
                 {/* Google Sheets Integration */}
                 <div className="glass rounded p-6">
-                    <h2 className="text-lg font-semibold text-white mb-4">Google Sheets Export (Optional)</h2>
-                    <label className="block text-sm text-white/60 mb-2">Default Google Sheet ID</label>
+                    <h2 className="text-lg font-semibold text-white mb-4">Google Sheets (Optional)</h2>
+                    <label className="block text-sm text-white/60 mb-2">Google Sheets URL or ID</label>
                     <input
                         type="text"
                         value={formData.google_sheet_id}
@@ -415,7 +415,7 @@ export default function EditEventPage({ params }: PageProps) {
                         className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded text-white placeholder-white/30 focus:outline-none focus:border-purple-500/50"
                     />
                     <p className="text-xs text-white/30 mt-2">
-                        When exporting matches from this event, this Sheet ID will be used by default.
+                        This sheet is saved for match imports and exports. Open Sheet matches to choose a day and approve matches. A connected workbook cannot be replaced on this event.
                     </p>
                 </div>
 

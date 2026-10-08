@@ -34,7 +34,8 @@ export async function POST(request:NextRequest,{params}:Context){
    const sheet=spreadsheetId(body.sheet),tabs=await listTabs(sheet);
    const {data:current}=await db.from('event_sheet_connections').select('spreadsheet_id').eq('event_id',id).maybeSingle();
    if(current && current.spreadsheet_id!==sheet)return NextResponse.json({error:'This event already has a different sheet connected. Use a new event for another workbook.'},{status:409});
-   const {error}=current?await db.from('event_sheet_connections').update({connected_by:auth.user!.id}).eq('event_id',id):await db.from('event_sheet_connections').insert({event_id:id,spreadsheet_id:sheet,connected_by:auth.user!.id});if(error)throw new Error(error.message);
+   const {error:eventError}=await db.from('events').update({google_sheet_id:sheet}).eq('id',id);if(eventError)throw new Error(eventError.message);
+   const {error}=await db.from('event_sheet_connections').update({connected_by:auth.user!.id}).eq('event_id',id);if(error)throw new Error(error.message);
    return json({success:true,tabs,backgroundSync:await configureWorker()});
   }
   if(body.operation==='confirm'){

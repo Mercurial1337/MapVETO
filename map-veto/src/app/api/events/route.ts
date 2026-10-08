@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { optionalSpreadsheetId } from '@/lib/sheets/input';
 
 // Request validation schema for creating an event
 const CreateEventSchema = z.object({
@@ -9,7 +10,7 @@ const CreateEventSchema = z.object({
     coin_image_url: z.string().url().optional().nullable(),
     custom_font_url: z.string().url().optional().nullable(),
     custom_font_name: z.string().max(100).optional().nullable(),
-    google_sheet_id: z.string().max(100).optional().nullable(),
+    google_sheet_id: optionalSpreadsheetId,
 });
 
 // GET: List events for current user (owned + admin)
