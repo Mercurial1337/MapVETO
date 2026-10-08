@@ -1,18 +1,16 @@
 'use client';
 import { useCallback,useMemo,useState } from 'react';
 import { useRealtime } from '@/lib/realtime';
-import { TimeoutsPanel } from './TimeoutRequests';
 import { timeoutRequests } from '@/lib/veto/timeoutRequests';
 import {TimeoutBrowserAlerts} from '@/components/admin/TimeoutBrowserAlerts';
 interface Props {matchId:string;matchStatus:string;isPaused?:boolean;token:string;}
 export function AdminPanel({matchId,matchStatus,isPaused,token}:Props) {
- const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const [open,setOpen]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [reason,setReason]=useState('');
  const {state,logs,match,refresh}=useRealtime();
- const [tab,setTab]=useState<'controls'|'timeouts'>('controls');
  const pending=timeoutRequests(logs).filter(report=>!report.resolvedAt).length;
  const alerts=useMemo(()=>match?timeoutRequests(logs).filter(report=>!report.resolvedAt).map(report=>({id:report.id,matchId,teamA:match.team_a_name,teamB:match.team_b_name,requestedBy:report.actor==='team_a'?match.team_a_name:match.team_b_name})):[],[match,logs,matchId]);
- const openTimeouts=useCallback(()=>{setOpen(true);setTab('timeouts');window.dispatchEvent(new Event('veto-open-timeouts'));},[]);
+ const openTimeouts=useCallback(()=>window.dispatchEvent(new Event('veto-open-timeouts')),[]);
  async function action(operation:string) {
   if(busy) return;
   if(!reason.trim()) {setError('Enter a reason for the audit log.');return;}
@@ -26,26 +24,20 @@ export function AdminPanel({matchId,matchStatus,isPaused,token}:Props) {
   } catch {setError('Connection failed. Please retry.');}
   finally {setBusy(false);}
  }
- return <aside className="fixed bottom-4 right-4 z-[60]">
-  <TimeoutBrowserAlerts requests={alerts} onSelect={openTimeouts}/>
-  {open && <section aria-label="Head Admin override controls" className="mb-2 p-4 w-80 max-h-[75vh] overflow-auto bg-[#18181b] border border-white/30 rounded">
-   <h2 className="font-bold mb-3">Head Admin override</h2>
-   <div role="tablist" aria-label="Head Admin tools" className="flex gap-2 mb-3">
-    <button role="tab" id="head-admin-controls-tab" aria-controls="head-admin-controls-panel" aria-selected={tab==='controls'} className="btn-secondary p-2" onClick={()=>setTab('controls')}>Controls</button>
-    <button role="tab" id="head-admin-timeouts-tab" aria-controls="head-admin-timeouts-panel" aria-selected={tab==='timeouts'} className="btn-secondary p-2" onClick={()=>setTab('timeouts')}>Timeouts{pending?` (${pending})`:''}</button>
-   </div>
-   {tab==='timeouts' ? <div role="tabpanel" id="head-admin-timeouts-panel" aria-labelledby="head-admin-timeouts-tab"><TimeoutsPanel isAdmin matchId={matchId} token={token}/></div> : <div role="tabpanel" id="head-admin-controls-panel" aria-labelledby="head-admin-controls-tab">
-   <label className="block text-sm">Reason<textarea className="w-full bg-black border border-white/30 p-2 mt-1" maxLength={500} value={reason} onChange={e=>setReason(e.target.value)}/></label>
+ return <section aria-label="Head Admin override controls" className="match-panel space-y-4">
+  <div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Head Admin controls</h2><button aria-expanded={open} aria-controls="head-admin-controls-panel" className="btn-secondary px-3 py-2 text-xs" onClick={()=>setOpen(!open)}>{open?'Hide':'Show'}</button></div>
+  {open && <div id="head-admin-controls-panel" className="space-y-3">
+   <label className="block text-sm text-white/70">Reason for the action<textarea rows={3} className="match-input mt-2" maxLength={500} value={reason} onChange={e=>setReason(e.target.value)}/></label>
    {error && <p role="alert" className="text-red-400 my-2">{error}</p>}
-   <div className="flex flex-wrap gap-2 my-3">
-    <button className="btn-secondary p-2" disabled={busy || !['in_progress','side_selection','coin_toss'].includes(matchStatus)} onClick={()=>action(isPaused?'resume':'pause')}>{isPaused?'Resume':'Pause'}</button>
-    <button className="btn-secondary p-2" disabled={busy || !['in_progress','side_selection'].includes(matchStatus)} onClick={()=>action('restart')}>Restart current timer</button>
-    <button className="btn-secondary p-2" disabled={busy} onClick={()=>action('undo')}>Reopen last selection</button>
+   <div className="grid grid-cols-2 gap-2">
+    <button className="btn-secondary min-h-11 px-3 py-2 text-sm" disabled={busy || !['in_progress','side_selection','coin_toss'].includes(matchStatus)} onClick={()=>action(isPaused?'resume':'pause')}>{isPaused?'Resume veto':'Pause veto'}</button>
+    <button className="btn-secondary min-h-11 px-3 py-2 text-sm" disabled={busy || !['in_progress','side_selection'].includes(matchStatus)} onClick={()=>action('restart')}>Restart timer</button>
+    <button className="btn-secondary min-h-11 px-3 py-2 text-sm col-span-2" disabled={busy} onClick={()=>action('undo')}>Reopen last selection</button>
    </div>
    <p className="text-sm text-white/70 mb-3">To reopen an earlier selection, choose its step in the veto step row.</p>
-   <button className="btn-secondary p-2 text-red-400" disabled={busy} onClick={()=>action('reset')}>Restart entire veto</button>
+   <div className="border-t border-white/10 pt-3"><button className="btn-secondary btn-danger min-h-11 w-full px-3 py-2 text-sm" disabled={busy} onClick={()=>action('reset')}>Restart entire veto</button></div>
    </div>}
-  </section>}
-  <button aria-expanded={open} className="btn-secondary px-4 py-2" onClick={()=>setOpen(!open)}>Head Admin controls{pending?` · ${pending} timeout${pending===1?'':'s'}`:''}</button>
- </aside>;
+  {pending>0 && <button className="btn-secondary w-full px-3 py-2 text-sm" onClick={openTimeouts}>View {pending} pending timeout{pending===1?'':'s'}</button>}
+  <div className="border-t border-white/10 pt-2 text-white/60"><TimeoutBrowserAlerts requests={alerts} onSelect={openTimeouts}/></div>
+ </section>;
 }

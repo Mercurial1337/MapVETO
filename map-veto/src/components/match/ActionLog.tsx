@@ -16,9 +16,9 @@ export function ActionLog({logs,dbTeamAName,dbTeamBName,mapNames}:Props) {
   const link=document.createElement('a');link.href=url;link.download='veto-action-log.txt';link.click();URL.revokeObjectURL(url);
  }
  return <div className="flex flex-col max-h-[480px]">
-  <div className="flex gap-2 mb-3"><button className="btn-secondary px-2 py-1 text-xs" onClick={copy}>{copied?'Copied':'Copy log'}</button><button className="btn-secondary px-2 py-1 text-xs" onClick={download}>Download log</button></div>
+  <div className="grid grid-cols-2 gap-2 mb-3"><button className="btn-secondary min-h-9 px-2 py-2 text-xs" onClick={copy}>{copied?'Copied':'Copy log'}</button><button className="btn-secondary min-h-9 px-2 py-2 text-xs" onClick={download}>Download log</button></div>
   {error && <p role="alert">{error}</p>}
-  <ol aria-label="Veto action history" className="overflow-y-auto space-y-3 text-sm">
+  <ol aria-label="Veto action history" className="overflow-y-auto space-y-3 text-sm break-words">
    {logs.map((entry,i)=><li key={entry.id} className={entry.metadata?.superseded || entry.metadata?.previous_session?'text-white/50':entry.action_type==='admin_action'?'border-l-2 border-yellow-400 pl-3 text-yellow-200':'text-white/90'}><time className="block text-xs text-white/50" dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString(undefined,{hour12:false})}</time>{lines[i].split(' — ').slice(1).join(' — ')}</li>)}
   </ol>
   {!logs.length && <p className="text-white/60">No actions yet.</p>}

@@ -28,13 +28,13 @@ export function VetoTimeline({steps,currentStep,teamAName,teamBName,headAdmin}:P
    {canReopen && index<currentStep && step.action!=='decider' ? <button className="text-left cursor-pointer hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-white" aria-label={`Reopen step ${index+1}: ${step.action}`} onClick={()=>{setTarget({index,clock:headAdmin!.clock!,current:currentStep});setReason('');setError('');requestId.current=crypto.randomUUID();}}><span className="font-semibold">{index+1}. {step.action}</span><span className="block mt-1">{step.actor==='team_a'?teamAName:step.actor==='team_b'?teamBName:'System'}</span></button> : <><span className="font-semibold">{index+1}. {step.action}</span><span className="block mt-1">{step.actor==='team_a'?teamAName:step.actor==='team_b'?teamBName:'System'}</span></>}
   </li>)}
  </ol>
- {target && <dialog ref={node=>{if(node && !node.open)node.showModal();}} onCancel={event=>{event.preventDefault();if(!busy)setTarget(null);}} aria-labelledby="reopen-step-title" className="bg-[#18181b] text-white border border-white/30 p-5 max-w-md w-[calc(100%-2rem)] rounded backdrop:bg-black/70">
+ {target && <dialog ref={node=>{if(node && !node.open)node.showModal();}} onCancel={event=>{event.preventDefault();if(!busy)setTarget(null);}} aria-labelledby="reopen-step-title" className="match-panel m-auto text-white max-w-md w-[calc(100%_-_2rem)] max-h-[calc(100dvh-2rem)] overflow-y-auto backdrop:bg-black/70">
    <h2 id="reopen-step-title" className="font-bold">Reopen step {target.index+1}</h2>
    <p className="text-sm text-white/80 my-3">This selection and every later selection will be cleared. Earlier selections stay. The current pause state is preserved, with a fresh 60-second timer.</p>
    <form onSubmit={event=>{event.preventDefault();void reopen();}}>
     <label className="block text-sm">Reason for reopening<textarea autoFocus required maxLength={500} disabled={busy} value={reason} onChange={event=>{setReason(event.target.value);requestId.current=crypto.randomUUID();}} className="mt-1 w-full bg-black border border-white/30 p-2"/></label>
     {error && <p role="alert" className="my-2 text-red-400">{error}</p>}
-    <div className="flex gap-2 mt-4"><button type="submit" className="btn-secondary p-2" disabled={busy || !reason.trim()}>{busy?'Reopening…':`Reopen step ${target.index+1}`}</button><button type="button" className="btn-secondary p-2" disabled={busy} onClick={()=>setTarget(null)}>Cancel</button></div>
+    <div className="grid grid-cols-2 gap-2 mt-4"><button type="submit" className="btn-secondary min-h-11 p-2" disabled={busy || !reason.trim()}>{busy?'Reopening…':`Reopen step ${target.index+1}`}</button><button type="button" className="btn-secondary min-h-11 p-2" disabled={busy} onClick={()=>setTarget(null)}>Cancel</button></div>
    </form>
  </dialog>}
  </>;

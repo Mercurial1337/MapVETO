@@ -40,9 +40,9 @@ export function TurnTimer({currentStep,stateUpdatedAt,teamAName,teamBName,matchI
   return ()=>{cancelled=true;clearTimeout(timer);document.removeEventListener('visibilitychange',recover);window.removeEventListener('focus',recover);stopSound();};
  },[currentStep,stateUpdatedAt,matchId,token,isInProgress,isComplete,isPaused,pausedRemainingSeconds,actorName,playTick,stopSound,clock,clockReady,expireTurn]);
  if(!currentStep || !isInProgress || isComplete) return null;
- return <div role="status" className="border border-white/20 bg-[#18181b] px-4 py-2 rounded flex items-center gap-3">
-  <span>{actorName} · {currentStep.description || currentStep.action}</span>
-  <strong className={`font-mono tabular-nums ${remaining!==null && remaining<=15?'text-yellow-400':''}`}>{isPaused?'Paused':remaining===null?'Syncing…':`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`}</strong>
+ return <div role="status" className="border border-white/20 bg-[#18181b] max-w-full px-4 py-2 rounded flex flex-wrap items-center justify-center gap-3 text-sm">
+  <span className="min-w-0 break-words">{actorName} · {currentStep.description || currentStep.action}</span>
+  <strong className={`shrink-0 font-mono tabular-nums ${remaining!==null && remaining<=15?'text-yellow-400':''}`}>{isPaused?'Paused':remaining===null?'Syncing…':`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`}</strong>
   {remaining!==null && remaining<=15 && !isPaused && <span className="text-yellow-400 text-sm">Time is running out</span>}
  </div>;
 }

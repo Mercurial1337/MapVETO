@@ -141,7 +141,8 @@ export function MapCard({
                 {/* Picked By Indicator */}
                 {state === 'picked' && pickedBy && (
                     <p
-                        className="text-[10px] md:text-xs text-white/80 font-medium"
+                        className="text-[10px] md:text-xs text-white/80 font-medium truncate"
+                        title={`Picked by ${pickedBy}`}
                     >
                         Picked by {pickedBy}
                     </p>
@@ -171,7 +172,7 @@ export function MapCard({
             {state === 'picked' && side && (
                 <div
                     className={cn(
-                        'absolute top-2 right-2 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider',
+                        'absolute top-2 right-2 max-w-[calc(100%_-_1rem)] px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider',
                         '  flex items-center gap-1',
                         side === 'attack'
                             ? 'bg-red-600 text-white '
@@ -180,7 +181,7 @@ export function MapCard({
                 >
                     {side === 'attack' ? 'ATK' : 'DEF'}
                     {sidePickedBy && (
-                        <span className="text-[8px] font-medium opacity-90 normal-case">
+                        <span className="text-[8px] font-medium opacity-90 normal-case truncate min-w-0" title={sidePickedBy}>
                             · {sidePickedBy}
                         </span>
                     )}

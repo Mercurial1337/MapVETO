@@ -305,12 +305,12 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     }
 
     return (
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col min-w-0">
             {error && <p role="alert" className="border-b border-red-800 px-4 py-2 text-red-300">{error}</p>}
             {/* Header */}
             <header className="glass-dark border-b border-white/10 px-4 md:px-6 py-3 md:py-4">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-2 md:gap-4">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-4 min-w-0">
                         {eventBranding?.logo_url ? (
                             <img
                                 src={eventBranding.logo_url}
@@ -329,7 +329,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                             {isConnected ? '● Live' : '○ Connecting...'}
                         </div>
                     </div>
-                    <div className="text-xs md:text-sm text-white/60">
+                    <div className="flex items-center gap-3 shrink-0 text-xs md:text-sm text-white/60">
+                        {(isAdmin || isReferee) && <a href="#match-tools" className="btn-secondary px-3 py-2 xl:hidden">Match tools</a>}
                         {match.format.toUpperCase()}
                     </div>
                 </div>
@@ -338,8 +339,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             {(userRole==='observer' || userRole==='admin' || userRole==='referee') && <p role="status" className="px-4 py-2 border-b border-white/20 text-sm text-white/70">Read-only view{isAdmin?' · Head Admin controls available.':isReferee?' · Referee: reset requests only.':''}</p>}
             {/* Teams Banner */}
             <div className="bg-black/40 border-b border-white/5 px-4 md:px-6 py-4 md:py-6">
-                <div className="max-w-4xl mx-auto flex items-center justify-center gap-4 md:gap-8">
-                    <div className="text-center flex-1 md:flex-none flex items-center justify-end gap-3">
+                <div className="max-w-4xl mx-auto flex items-center justify-center gap-3 md:gap-8">
+                    <div className="text-center flex-1 min-w-0 flex items-center justify-end gap-2 md:gap-3">
                         {displayedTeams.logoA && (
                             <img
                                 src={displayedTeams.logoA}
@@ -347,15 +348,15 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                                 className="w-10 h-10 md:w-14 md:h-14 rounded-lg object-contain flex-shrink-0"
                             />
                         )}
-                        <div>
-                            <h2 className="text-base md:text-2xl font-bold text-white truncate">{displayedTeams.teamA}</h2>
+                        <div className="min-w-0">
+                            <h2 className="text-base md:text-2xl font-bold text-white break-words">{displayedTeams.teamA}</h2>
                             <span className="text-xs text-[#00FFFF] uppercase tracking-wider font-semibold">Team A</span>
                         </div>
                     </div>
-                    <div className="text-2xl md:text-4xl font-light text-white/30">VS</div>
-                    <div className="text-center flex-1 md:flex-none flex items-center justify-start gap-3">
-                        <div>
-                            <h2 className="text-base md:text-2xl font-bold text-white truncate">{displayedTeams.teamB}</h2>
+                    <div className="text-lg md:text-2xl text-white/30 shrink-0">VS</div>
+                    <div className="text-center flex-1 min-w-0 flex items-center justify-start gap-2 md:gap-3">
+                        <div className="min-w-0">
+                            <h2 className="text-base md:text-2xl font-bold text-white break-words">{displayedTeams.teamB}</h2>
                             <span className="text-xs text-[#CCFF00] uppercase tracking-wider font-semibold">Team B</span>
                         </div>
                         {displayedTeams.logoB && (
@@ -367,6 +368,56 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                         )}
                     </div>
                 </div>
+            </div>
+
+            <div className="w-full max-w-[1600px] mx-auto px-4 md:px-6 pt-4 space-y-4">
+                <TimeoutRequestButton matchId={matchId} token={token}/>
+                <SideSelectionModal
+                    isOpen={showSideSelection}
+                    mapName={pendingSidePickMap?.mapName || ''}
+                    teamName={getCurrentTurnTeamName()}
+                    onSelect={pickSide}
+                    isSubmitting={isSubmitting || !!state?.is_paused}
+                />
+            {/* Ready Check Modal */}
+            <ReadyCheckModal inline
+                isOpen={showReadyCheck}
+                teamAName={match.team_a_name}
+                teamBName={match.team_b_name}
+                teamAReady={state?.team_a_ready || false}
+                teamBReady={state?.team_b_ready || false}
+                userRole={userRole}
+                onReady={readyUp}
+            />
+
+            {/* Coin Toss Modal */}
+            <CoinTossModal inline
+                isOpen={showCoinToss}
+                teamAName={match.team_a_name}
+                teamBName={match.team_b_name}
+                isAdmin={isAdmin}
+                winner={coinTossWinner}
+                isSeeded={!!match.coin_toss_forced}
+                onFlip={coinToss}
+                onAnimationComplete={handleCoinTossAnimationComplete}
+                userRole={userRole}
+            />
+
+            {/* Position Selection Modal */}
+            <PositionSelectionModal inline
+                isOpen={showPositionSelection}
+                turnStartedAt={state?.turn_started_at}
+                isPaused={state?.is_paused}
+                pausedRemainingSeconds={state?.paused_remaining_seconds}
+                teamAName={match.team_a_name}
+                teamBName={match.team_b_name}
+                coinTossWinner={coinTossWinner || null}
+                userRole={userRole}
+                token={token}
+                matchId={matchId}
+                isSeeded={!!match.coin_toss_forced}
+            />
+
             </div>
 
             {/* Turn Indicator */}
@@ -396,10 +447,10 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             )}
 
             {/* Main Content - Map Gallery + Action Log */}
-            <div className="flex-1 flex flex-col lg:flex-row px-2 md:px-4 py-4 md:py-6 gap-4">
+            <div className="flex-1 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] items-start w-full max-w-[1600px] mx-auto px-4 md:px-6 py-4 md:py-6 gap-5">
                 {/* Map Gallery */}
-                <div className="flex-1 flex flex-col items-start lg:items-center justify-center gap-4">
-                    <div className="flex flex-wrap gap-2 md:gap-3 justify-center max-w-5xl">
+                <div className="min-w-0 flex flex-col items-center gap-4">
+                    <div className="flex flex-wrap gap-2 md:gap-3 justify-center w-full max-w-5xl">
                         {mapsWithImages.map((map) => {
                             const mapState = mapStates[map.id] || { state: 'available' as MapCardState };
                             const isAvailableMap = mapState.state === 'active' || mapState.state === 'available';
@@ -434,7 +485,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     <Fragment>
                         {selectedMapId && currentStepDef && (currentStepDef.action === 'ban' || currentStepDef.action === 'pick') && (
                             <div
-                                className="flex items-center gap-4 glass rounded px-5 py-3"
+                                className="flex flex-wrap items-center justify-center gap-3 match-panel"
                             >
                                 <span className="text-white/80 text-sm font-medium">
                                     {mapNames[selectedMapId] || 'Map'}
@@ -453,16 +504,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                             </div>
                         )}
                     </Fragment>
-                </div>
-
-                {/* Action Log Panel */}
-                <div className="w-full lg:w-64 glass rounded p-4 mt-4 lg:mt-0">
-                    <MatchActivity mapNames={mapNames} isAdmin={isAdmin} matchId={matchId} token={token}/>
-                </div>
-            </div>
-
             {/* Timeline */}
-            <div className="glass-dark border-t border-white/10">
+            <div className="match-panel w-full min-w-0 !p-0">
                 <VetoTimeline
                     steps={templateSteps}
                     currentStep={state?.current_step || 0}
@@ -472,62 +515,21 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 />
             </div>
 
-            {/* Side Selection Modal */}
-            <SideSelectionModal
-                isOpen={showSideSelection}
-                mapName={pendingSidePickMap?.mapName || ''}
-                teamName={getCurrentTurnTeamName()}
-                onSelect={pickSide}
-                isSubmitting={isSubmitting}
-            />
 
-            {/* Ready Check Modal */}
-            <ReadyCheckModal
-                isOpen={showReadyCheck}
-                teamAName={match.team_a_name}
-                teamBName={match.team_b_name}
-                teamAReady={state?.team_a_ready || false}
-                teamBReady={state?.team_b_ready || false}
-                userRole={userRole}
-                onReady={readyUp}
-            />
+                </div>
 
-            {/* Coin Toss Modal */}
-            <CoinTossModal
-                isOpen={showCoinToss}
-                teamAName={match.team_a_name}
-                teamBName={match.team_b_name}
-                isAdmin={isAdmin}
-                winner={coinTossWinner}
-                isSeeded={!!match.coin_toss_forced}
-                onFlip={coinToss}
-                onAnimationComplete={handleCoinTossAnimationComplete}
-                userRole={userRole}
-            />
-
-            {/* Position Selection Modal */}
-            <PositionSelectionModal
-                isOpen={showPositionSelection}
-                turnStartedAt={state?.turn_started_at}
-                isPaused={state?.is_paused}
-                pausedRemainingSeconds={state?.paused_remaining_seconds}
-                teamAName={match.team_a_name}
-                teamBName={match.team_b_name}
-                coinTossWinner={coinTossWinner || null}
-                userRole={userRole}
-                token={token}
-                matchId={matchId}
-                isSeeded={!!match.coin_toss_forced}
-            />
+                {/* Action Log Panel */}
+                <aside id="match-tools" aria-label="Match tools and activity" className="min-w-0 space-y-4 scroll-mt-4">
+                    {isAdmin && <AdminPanel matchId={matchId} matchStatus={match.status} isPaused={state?.is_paused} token={token}/>}
+                    {isReferee && !isAdmin && <RefereePanel matchId={matchId} token={token}/>}
+                    <section aria-label="Match activity" className="match-panel">
+                    <MatchActivity mapNames={mapNames} isAdmin={isAdmin} matchId={matchId} token={token}/>
+                    </section>
+                </aside>
+            </div>
 
             {state?.is_complete && <p role="status" className="border-t border-white/20 px-4 py-3 text-green-300">Veto complete. The final selections are shown above.</p>}
-            <TimeoutRequestButton matchId={matchId} token={token}/>
             <ResetApproval matchId={matchId} token={token}/>
-            {isReferee && !isAdmin && <RefereePanel matchId={matchId} token={token}/>}
-            {/* Admin Panel */}
-            {isAdmin && match && (
-                <AdminPanel matchId={matchId} matchStatus={match.status} isPaused={state?.is_paused} token={token} />
-            )}
         </div>
     );
 }

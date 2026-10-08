@@ -25,3 +25,8 @@ button,a,input,select,textarea,[role=button] {touch-action:manipulation;}
 .scrollbar-hide {scrollbar-width:none;}.scrollbar-hide::-webkit-scrollbar{display:none;}
 .stream-mode {background:transparent!important;}.chroma-key {background:#00ff00!important;}
 select {color-scheme:dark;} select option {background:#18181b;color:#ededed;}
+.match-panel {min-width:0;padding:1rem;background:#18181b;border:1px solid #36363e;border-radius:4px;}
+.match-input {display:block;width:100%;min-width:0;padding:.65rem;background:#111114;border:1px solid #52525b;border-radius:4px;color:#ededed;resize:vertical;}
+.match-panel [role=tab] {color:#a1a1aa;}
+.match-panel [role=tab][aria-selected=true] {background:#333338;border-color:#a1a1aa;color:#fafafa;}
+.match-panel .btn-danger {color:#fca5a5;border-color:#7f1d1d;}

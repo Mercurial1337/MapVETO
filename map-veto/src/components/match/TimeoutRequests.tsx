@@ -30,9 +30,9 @@ export function TimeoutRequestButton({matchId,token}:{matchId:string;token:strin
   finally {setBusy(false);}
  }
  return <>
-  <div className="fixed bottom-4 left-4 z-[60]"><button className="btn-secondary px-4 py-2" disabled={pending || !active} onClick={()=>setOpen(true)}>{pending?'Timeout pending':'Request timeout'}</button></div>
+  <div className="flex justify-end"><button className="btn-secondary min-h-11 px-4 py-2 text-sm" disabled={pending || !active} onClick={()=>setOpen(true)}>{pending?'Timeout pending':'Request timeout'}</button></div>
   {open && <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center p-4">
-   <section role="dialog" aria-modal="true" aria-labelledby="timeout-title" className="w-full max-w-md bg-[#18181b] border border-white/30 p-5 rounded">
+   <section role="dialog" aria-modal="true" aria-labelledby="timeout-title" className="match-panel w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto">
     <h2 id="timeout-title" className="font-bold text-lg mb-2">Request timeout</h2>
     <p className="text-sm text-white/70 mb-3">Describe the problem for the referee. The timer continues until the referee pauses the veto.</p>
     <form onSubmit={e=>{e.preventDefault();void send();}}>
@@ -71,7 +71,7 @@ export function TimeoutsPanel({isAdmin,matchId,token}:{isAdmin:boolean;matchId:s
  const {logs,match}=useRealtime();
  const reports=useMemo(()=>timeoutRequests(logs),[logs]);
  if(!match) return null;
- return <div className="max-h-[480px] overflow-y-auto">
+ return <div className="max-h-[480px] overflow-y-auto break-words">
   <p className="text-sm text-white/60 mb-3">Requests do not pause the veto. {isAdmin?'Use Head Admin controls to pause or resume separately.':'The referee decides when to pause.'}</p>
   {reports.length ? <ul aria-label="Timeout requests" className="space-y-3">{reports.map(report=><TimeoutItem key={report.id} report={report} team={report.actor==='team_a'?match.team_a_name:match.team_b_name} canResolve={isAdmin} matchId={matchId} token={token}/>)}</ul> : <p className="text-white/60">No timeout requests.</p>}
  </div>;
@@ -90,9 +90,9 @@ export function MatchActivity({mapNames,isAdmin,matchId,token}:{mapNames:Record<
  const count=reports.filter(report=>!report.resolvedAt).length;
  if(!match) return null;
  return <>
-  <div role="tablist" aria-label="Match activity" className="flex flex-wrap gap-2 mb-3">
-   <button role="tab" id="activity-log-tab" aria-selected={tab==='log'} aria-controls="activity-log" className="btn-secondary px-2 py-1 text-sm" onClick={()=>setTab('log')}>Action log</button>
-   <button role="tab" id="activity-timeouts-tab" aria-selected={tab==='timeouts'} aria-controls="activity-timeouts" className="btn-secondary px-2 py-1 text-sm" onClick={()=>setTab('timeouts')}>Timeouts{count?` (${count})`:''}</button>
+  <div role="tablist" aria-label="Match activity" className="grid grid-cols-2 gap-2 mb-4">
+   <button role="tab" id="activity-log-tab" aria-selected={tab==='log'} aria-controls="activity-log" className={`btn-secondary min-h-11 px-2 py-2 text-sm ${tab==='log'?'border-white text-white':'text-white/60'}`} onClick={()=>setTab('log')}>Action log</button>
+   <button role="tab" id="activity-timeouts-tab" aria-selected={tab==='timeouts'} aria-controls="activity-timeouts" className={`btn-secondary min-h-11 px-2 py-2 text-sm ${tab==='timeouts'?'border-white text-white':'text-white/60'}`} onClick={()=>setTab('timeouts')}>Timeouts{count?` (${count})`:''}</button>
   </div>
   {tab==='log' ? <div role="tabpanel" id="activity-log" aria-labelledby="activity-log-tab"><ActionLog logs={logs} dbTeamAName={match.team_a_name} dbTeamBName={match.team_b_name} displayTeam1Name={match.team_a_name} displayTeam2Name={match.team_b_name} mapNames={mapNames}/></div>
   : <div role="tabpanel" id="activity-timeouts" aria-labelledby="activity-timeouts-tab">
