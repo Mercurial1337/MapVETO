@@ -118,11 +118,11 @@ export default function EventsPage() {
                     </Link>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                     {events.map((event) => (
                         <div
                             key={event.id}
-                            className="glass rounded p-5 relative group"
+                            className="glass rounded p-5 relative group min-w-0 flex flex-col"
                         >
                             {/* Logo Preview */}
                             <div className="h-12 mb-4 flex items-center">
@@ -130,7 +130,7 @@ export default function EventsPage() {
                                     <img
                                         src={event.logo_url}
                                         alt={event.name}
-                                        className="h-full object-contain"
+                                        className="h-full max-w-full object-contain"
                                     />
                                 ) : (
                                     <div className="h-full w-32 bg-white/5 rounded flex items-center justify-center">
@@ -140,8 +140,8 @@ export default function EventsPage() {
                             </div>
 
                             {/* Event Name & Role Badge */}
-                            <div className="flex items-center gap-2 mb-1">
-                                <h3 className="text-lg font-semibold text-white">{event.name}</h3>
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                                <h3 className="text-lg font-semibold text-white break-words min-w-0">{event.name}</h3>
                                 {event.role === 'owner' ? (
                                     <span className="text-xs px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-400 flex items-center gap-1">
                                         <Crown size={10} />
@@ -176,7 +176,7 @@ export default function EventsPage() {
                             )}
 
                             {/* Actions */}
-                            <div className="flex gap-2">
+                            <div className="grid grid-cols-2 gap-2 mt-auto [&>a]:min-w-0 [&>a]:min-h-11 [&>a]:justify-center [&>a]:text-center [&>button]:min-w-0 [&>button]:min-h-11 [&>button]:justify-center">
                                 <Link
                                     href={`/admin/matches?event=${event.id}`}
                                     className="px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-sm text-purple-400 flex items-center gap-1.5 transition-colors"
@@ -193,7 +193,7 @@ export default function EventsPage() {
                                 >
                                     Public Page
                                 </Link>
-                                <Link href={`/admin/events/${event.id}/sheet`} className="btn-secondary px-3 py-2 text-sm">Sheet matches</Link>
+                                <Link href={`/admin/events/${event.id}/sheet`} className="btn-secondary flex items-center px-3 py-2 text-sm">Sheet matches</Link>
                                 <button
                                     onClick={() => openExportModal(event.id)}
                                     className="px-3 py-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg text-sm text-green-400 flex items-center gap-1.5 transition-colors"
@@ -213,16 +213,16 @@ export default function EventsPage() {
                                 )}
                                 {event.role === 'owner' && (
                                     deleteConfirm === event.id ? (
-                                        <div className="flex gap-1">
+                                        <div className="col-span-2 grid grid-cols-2 gap-2">
                                             <button
                                                 onClick={() => handleDelete(event.id)}
-                                                className="px-3 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-sm text-white transition-colors"
+                                                className="min-h-11 px-3 py-2 bg-red-500 hover:bg-red-600 rounded-lg text-sm text-white transition-colors"
                                             >
                                                 Confirm
                                             </button>
                                             <button
                                                 onClick={() => setDeleteConfirm(null)}
-                                                className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-white transition-colors"
+                                                className="min-h-11 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm text-white transition-colors"
                                             >
                                                 Cancel
                                             </button>
@@ -230,9 +230,10 @@ export default function EventsPage() {
                                     ) : (
                                         <button
                                             onClick={() => setDeleteConfirm(event.id)}
-                                            className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
+                                            className="px-3 py-2 bg-red-500/10 hover:bg-red-500/20 rounded-lg text-sm text-red-400 flex items-center gap-2 transition-colors"
                                         >
                                             <Trash2 size={14} />
+                                            Delete
                                         </button>
                                     )
                                 )}
