@@ -13,13 +13,9 @@ export async function GET() {
     if (owned.error || memberships.error) return NextResponse.json({error:'Could not load staff access'}, {status:500});
     const eventIds=[...new Set([...owned.data.map(event=>event.id),...memberships.data.map(event=>event.event_id)])];
     const scope=eventIds.length?`created_by.eq.${user.id},event_id.in.(${eventIds.join(',')})`:`created_by.eq.${user.id}`;
-    const headEvents=[...new Set([...owned.data.map(event=>event.id),...memberships.data.filter(member=>member.role==='admin').map(member=>member.event_id)])];
-    const refereeEvents=memberships.data.filter(member=>member.role==='referee' && !headEvents.includes(member.event_id)).map(member=>member.event_id);
-    const ownScope=refereeEvents.length?`and(created_by.eq.${user.id},or(event_id.is.null,event_id.not.in.(${refereeEvents.join(',')})))`:`created_by.eq.${user.id}`;
-    const headScope=headEvents.length?`${ownScope},event_id.in.(${headEvents.join(',')})`:ownScope;
     const [completed,open]=await Promise.all([
      db.from('matches').select('id,team_a_name,team_b_name,completed_at').or(scope).eq('status','completed').not('completed_at','is',null).order('completed_at',{ascending:false}).limit(20),
-     db.from('veto_timeout_requests').select('id,match_id,actor,reason,created_at,matches!inner(team_a_name,team_b_name,created_by,event_id)').eq('status','open').or(headScope,{referencedTable:'matches'}).order('created_at',{ascending:false}).limit(100).returns<Array<{id:string;match_id:string;actor:string;reason:string;created_at:string;matches:{team_a_name:string;team_b_name:string}}>>()
+     db.from('veto_timeout_requests').select('id,match_id,actor,reason,created_at,matches!inner(team_a_name,team_b_name,created_by,event_id)').eq('status','open').or(scope,{referencedTable:'matches'}).order('created_at',{ascending:false}).limit(100).returns<Array<{id:string;match_id:string;actor:string;reason:string;created_at:string;matches:{team_a_name:string;team_b_name:string}}>>()
     ]);
     if (completed.error || open.error) return NextResponse.json({error:'Could not load notifications'}, {status:500});
     const timeouts=open.data.map(report=>({id:report.id,matchId:report.match_id,teamA:report.matches.team_a_name,teamB:report.matches.team_b_name,requestedBy:report.actor==='team_a'?report.matches.team_a_name:report.matches.team_b_name,reason:report.reason,createdAt:report.created_at}));

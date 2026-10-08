@@ -1,9 +1,13 @@
 'use client';
-import {useRef,useState} from 'react';
+import {useCallback,useMemo,useRef,useState} from 'react';
 import {useRealtime} from '@/lib/realtime';
+import {TimeoutBrowserAlerts} from '@/components/admin/TimeoutBrowserAlerts';
+import {timeoutRequests} from '@/lib/veto/timeoutRequests';
 
 export function RefereePanel({matchId,token}:{matchId:string;token:string}) {
- const {match,refresh}=useRealtime();
+ const {match,logs,refresh}=useRealtime();
+ const alerts=useMemo(()=>match?timeoutRequests(logs).filter(report=>!report.resolvedAt).map(report=>({id:report.id,matchId,teamA:match.team_a_name,teamB:match.team_b_name,requestedBy:report.actor==='team_a'?match.team_a_name:match.team_b_name})):[],[match,logs,matchId]);
+ const openTimeouts=useCallback(()=>window.dispatchEvent(new Event('veto-open-timeouts')),[]);
  const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[reason,setReason]=useState(''),[error,setError]=useState('');
  const requestId=useRef<string|null>(null);
  const pending=match?.reset_request;
@@ -18,6 +22,7 @@ export function RefereePanel({matchId,token}:{matchId:string;token:string}) {
   finally{setBusy(false);}
  }
  return <aside className="fixed bottom-4 right-4 z-[60]">
+  <TimeoutBrowserAlerts requests={alerts} onSelect={openTimeouts}/>
   {open && <section aria-label="Referee reset controls" className="mb-2 p-4 w-80 max-h-[75vh] overflow-auto bg-[#18181b] border border-white/30 rounded">
    <h2 className="font-bold mb-2">Referee</h2>
    <p className="text-sm text-white/70 mb-3">Reset requires both teams’ approval. The veto continues until both agree.</p>

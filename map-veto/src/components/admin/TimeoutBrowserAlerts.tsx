@@ -28,7 +28,7 @@ export function TimeoutBrowserAlerts({requests,onSelect}:{requests:BrowserTimeou
  async function enable(){if(requesting)return;setRequesting(true);setError('');try{await Notification.requestPermission();window.dispatchEvent(new Event('veto-notification-permission'));}catch{setError('Could not request notification permission. Check your browser settings.');}finally{setRequesting(false);}}
  return <div className="text-xs my-2">
   {current==='default'?<button disabled={requesting} className="btn-secondary p-2" onClick={()=>void enable()}>{requesting?'Respond to the browser permission prompt':'Enable timeout browser alerts'}</button>:<p>{current==='granted'?'Timeout browser alerts on · reminders every 30 seconds':current==='denied'?'Browser alerts blocked. Allow notifications in site settings.':'Browser notifications unavailable in this browser.'}</p>}
-  {current==='granted' && <p className="text-white/60 mt-1">Keep a dashboard or Head Admin match tab open.</p>}
+  {current==='granted' && <p className="text-white/60 mt-1">Keep a dashboard or staff match tab open.</p>}
   {error && <p role="alert" className="text-yellow-300 mt-1">{error}</p>}
  </div>;
 }
