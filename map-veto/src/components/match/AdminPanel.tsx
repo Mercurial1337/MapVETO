@@ -1,15 +1,18 @@
 'use client';
-import { useState } from 'react';
+import { useCallback,useMemo,useState } from 'react';
 import { useRealtime } from '@/lib/realtime';
 import { TimeoutsPanel } from './TimeoutRequests';
 import { timeoutRequests } from '@/lib/veto/timeoutRequests';
+import {TimeoutBrowserAlerts} from '@/components/admin/TimeoutBrowserAlerts';
 interface Props {matchId:string;matchStatus:string;isPaused?:boolean;token:string;}
 export function AdminPanel({matchId,matchStatus,isPaused,token}:Props) {
  const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [reason,setReason]=useState('');
- const {state,logs,refresh}=useRealtime();
+ const {state,logs,match,refresh}=useRealtime();
  const [tab,setTab]=useState<'controls'|'timeouts'>('controls');
  const pending=timeoutRequests(logs).filter(report=>!report.resolvedAt).length;
+ const alerts=useMemo(()=>match?timeoutRequests(logs).filter(report=>!report.resolvedAt).map(report=>({id:report.id,matchId,teamA:match.team_a_name,teamB:match.team_b_name,requestedBy:report.actor==='team_a'?match.team_a_name:match.team_b_name})):[],[match,logs,matchId]);
+ const openTimeouts=useCallback(()=>{setOpen(true);setTab('timeouts');window.dispatchEvent(new Event('veto-open-timeouts'));},[]);
  async function action(operation:string) {
   if(busy) return;
   if(!reason.trim()) {setError('Enter a reason for the audit log.');return;}
@@ -24,6 +27,7 @@ export function AdminPanel({matchId,matchStatus,isPaused,token}:Props) {
   finally {setBusy(false);}
  }
  return <aside className="fixed bottom-4 right-4 z-[60]">
+  <TimeoutBrowserAlerts requests={alerts} onSelect={openTimeouts}/>
   {open && <section aria-label="Head Admin override controls" className="mb-2 p-4 w-80 max-h-[75vh] overflow-auto bg-[#18181b] border border-white/30 rounded">
    <h2 className="font-bold mb-3">Head Admin override</h2>
    <div role="tablist" aria-label="Head Admin tools" className="flex gap-2 mb-3">

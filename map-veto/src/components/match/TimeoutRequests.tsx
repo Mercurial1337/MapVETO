@@ -1,5 +1,5 @@
 'use client';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect,useMemo, useRef, useState } from 'react';
 import { useRealtime } from '@/lib/realtime';
 import { timeoutRequests, type TimeoutRequest } from '@/lib/veto/timeoutRequests';
 import { ActionLog } from './ActionLog';
@@ -72,7 +72,7 @@ export function TimeoutsPanel({isAdmin,matchId,token}:{isAdmin:boolean;matchId:s
  const reports=useMemo(()=>timeoutRequests(logs),[logs]);
  if(!match) return null;
  return <div className="max-h-[480px] overflow-y-auto">
-  <p className="text-sm text-white/60 mb-3">Requests do not pause the veto. {isAdmin?'Use Referee controls to pause or resume separately.':'The referee decides when to pause.'}</p>
+  <p className="text-sm text-white/60 mb-3">Requests do not pause the veto. {isAdmin?'Use Head Admin controls to pause or resume separately.':'The referee decides when to pause.'}</p>
   {reports.length ? <ul aria-label="Timeout requests" className="space-y-3">{reports.map(report=><TimeoutItem key={report.id} report={report} team={report.actor==='team_a'?match.team_a_name:match.team_b_name} canResolve={isAdmin} matchId={matchId} token={token}/>)}</ul> : <p className="text-white/60">No timeout requests.</p>}
  </div>;
 }
@@ -80,6 +80,12 @@ export function TimeoutsPanel({isAdmin,matchId,token}:{isAdmin:boolean;matchId:s
 export function MatchActivity({mapNames,isAdmin,matchId,token}:{mapNames:Record<string,string>;isAdmin:boolean;matchId:string;token:string}) {
  const {logs,match}=useRealtime();
  const [tab,setTab]=useState<'log'|'timeouts'>('log');
+ useEffect(()=>{
+  const open=()=>{setTab('timeouts');document.getElementById('activity-timeouts-tab')?.scrollIntoView({block:'nearest'});};
+  window.addEventListener('veto-open-timeouts',open);
+  const timer=new URLSearchParams(window.location.search).get('activity')==='timeouts'?setTimeout(open,0):undefined;
+  return()=>{clearTimeout(timer);window.removeEventListener('veto-open-timeouts',open);};
+ },[]);
  const reports=useMemo(()=>timeoutRequests(logs),[logs]);
  const count=reports.filter(report=>!report.resolvedAt).length;
  if(!match) return null;
