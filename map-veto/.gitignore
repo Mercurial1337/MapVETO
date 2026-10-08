@@ -45,3 +45,5 @@ next-env.d.ts
 
 /.qa-session.json
 /.qa-bulk-session.json
+/.qa-clock-session.json
+/.qa-alert-session.json

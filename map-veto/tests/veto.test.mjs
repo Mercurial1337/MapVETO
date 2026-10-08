@@ -24,7 +24,7 @@ for(const file of ['008_add_event_teams.sql','015_add_admin_link.sql']) {
 await db.exec('CREATE TRIGGER trigger_create_match_state_and_links AFTER INSERT ON matches FOR EACH ROW EXECUTE FUNCTION create_match_state_and_links();');
 await db.exec(readFileSync('supabase/migrations/011_ready_check.sql', 'utf8'));
 await db.exec(`ALTER TABLE matches ADD COLUMN custom_veto_sequence jsonb; ALTER TABLE match_state ADD COLUMN is_paused boolean DEFAULT false; ALTER TABLE match_logs ADD COLUMN metadata jsonb; ALTER TABLE match_links DROP CONSTRAINT match_links_link_type_check;`);
-for (const file of readdirSync('supabase/migrations').filter(f => /^0(1[6-9]|2[0-9])_/.test(f) && !f.includes('scheduler')).sort()) {
+for (const file of readdirSync('supabase/migrations').filter(f => /^0(1[6-9]|[23][0-9])_/.test(f) && !f.includes('scheduler')).sort()) {
   await db.exec(readFileSync(`supabase/migrations/${file}`, 'utf8'));
 }
 }
@@ -314,5 +314,17 @@ assert.deepEqual(rw.new_state.available_maps,mapIds);assert.deepEqual(rw.new_sta
 await rejects('veto_reopen_step',[rewind.id,rewind.admin,0,'No forward jumps',rw.new_state.turn_started_at,0,randomUUID()],/earlier completed/);
 for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'veto_reopen_step(uuid,uuid,integer,text,timestamptz,integer,uuid)','EXECUTE') allowed",[role])).rows[0].allowed,false);
 console.log('PASS reopen step: Head Admin only, completed-veto restoration, exact maps/results/roles, side and first-step replay, superseded decider audit, stale state protection, idempotent retry and preserved pause');
+for(const token of [rewind.a,rewind.b,rewind.admin,rewind.observer,rewindRef]) {
+ const snapshot=await rpc('veto_session_snapshot',[rewind.id,token]);
+ assert.equal(snapshot.state.current_step,rw.new_state.current_step);
+ assert.equal(snapshot.match.status,rw.match.status);assert.equal(snapshot.logs.length,(await db.query('SELECT count(*)::int n FROM match_logs WHERE match_id=$1',[rewind.id])).rows[0].n);
+ assert.ok(Number.isFinite(Number(snapshot.server_time)));
+ assert.equal(JSON.stringify(snapshot).includes(rewind.admin),false);
+}
+assert.equal(await rpc('veto_session_snapshot',[rewind.id,f.admin]),null);
+await db.query("UPDATE match_links SET expires_at=now()-interval '1 second' WHERE token=$1",[rewind.a]);
+assert.equal(await rpc('veto_session_snapshot',[rewind.id,rewind.a]),null);
+for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'veto_session_snapshot(uuid,uuid)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+console.log('PASS atomic session: scoped/expired links, coherent match/state/logs, database clock, no tokens and service-only access');
 await db.close();
 

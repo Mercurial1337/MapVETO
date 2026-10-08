@@ -9,6 +9,6 @@ try {
  for(let i=0;i<10;i++) {await new Promise(resolve=>setTimeout(resolve,1500));if((await db.query('SELECT status FROM matches WHERE id=$1',[id])).rows[0].status==='in_progress'){advanced=true;break;}}
  assert.ok(advanced,'Scheduled worker did not advance the disconnected QA match');
  const log=(await db.query("SELECT metadata FROM match_logs WHERE match_id=$1 AND action_type='position_choice'",[id])).rows[0];assert.equal(log.metadata.timeout,true);
- const job=(await db.query("SELECT schedule,active FROM cron.job WHERE jobname='map-veto-timeouts'")).rows[0];assert.equal(job.active,true);
- console.log('PASS actual Supabase cron: disconnected match advances, timeout log written, 5-second job active');
+ const job=(await db.query("SELECT schedule,active FROM cron.job WHERE jobname='map-veto-timeouts'")).rows[0];assert.equal(job.active,true);assert.equal(job.schedule,'1 second');
+ console.log('PASS actual Supabase cron: disconnected match advances, timeout log written, 1-second job active');
 }finally{await db.query('DELETE FROM matches WHERE id=$1',[id]);await db.end();}

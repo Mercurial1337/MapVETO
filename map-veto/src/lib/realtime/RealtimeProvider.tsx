@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useRef } from 'react';
 import { matchNotices, timeoutNotice, requestNotice, noticeDelivery, strongestCue } from '@/lib/veto/notifications';
 import { useNotificationSound } from '@/hooks/useNotificationSound';
+import { VetoClock } from '@/lib/veto/clock';
 
 interface EventBranding {
     logo_url: string | null;
@@ -57,6 +58,9 @@ interface RealtimeContextValue {
 
     // Refresh
     refresh: () => Promise<void>;
+    clock: VetoClock;
+    clockReady: boolean;
+    expireTurn: (startedAt:string) => Promise<void>;
 }
 
 const RealtimeContext = createContext<RealtimeContextValue | null>(null);
@@ -87,18 +91,49 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
     const [error, setError] = useState<string | null>(null);
 
     const supabase = createClient();
+    const [clock]=useState(()=>new VetoClock());
+    const [clockReady,setClockReady]=useState(false);
+    const revision=useRef(0),flight=useRef<Promise<void>|null>(null),again=useRef(false);
+    const expiry=useRef<{clock:string;promise:Promise<void>}|null>(null);
+    const applyResult=useCallback((data:{new_state?:MatchState;match?:Match})=>{
+        revision.current++;
+        if(data.new_state)setState(data.new_state);
+        const updatedMatch=data.match;
+        if(updatedMatch)setMatch(prev=>({...prev,...updatedMatch}));
+    },[]);
 
     const fetchData = useCallback(async () => {
+        if(flight.current){again.current=true;return flight.current;}
+        const run=async()=>{do {
+        again.current=false;
+        const version=revision.current,sent=performance.now();
         try {
             const response=await fetch('/api/veto/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,token})});
             const data=await response.json();
+            const received=performance.now();
             if(!response.ok) {setError(data.error || 'Could not load match');return;}
+            if(clock.synchronize(data.server_time,sent,received,data.server_processing_ms))setClockReady(true);
+            if(version!==revision.current){again.current=true;continue;}
             setMatch(prev=>({...prev,...data.match}));
             setState(data.state);setLogs(data.logs);setUserRole(data.userRole);setEventBranding(data.eventBranding);
             setError(null);
         } catch { setError('Connection lost. Retrying…'); }
         finally {setIsLoading(false);}
-    },[matchId,token]);
+        }while(again.current);};
+        flight.current=run();
+        try{await flight.current;}finally{flight.current=null;}
+    },[matchId,token,clock]);
+    const expireTurn=useCallback(async(startedAt:string)=>{
+        if(expiry.current?.clock===startedAt)return expiry.current.promise;
+        const run=async()=>{
+            const response=await fetch('/api/veto/auto-action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,token,turn_started_at:startedAt})});
+            const data=await response.json();
+            if(response.ok)applyResult(data);
+            await fetchData();
+        };
+        const promise=run();expiry.current={clock:startedAt,promise};
+        try{await promise;}finally{if(expiry.current?.promise===promise)expiry.current=null;}
+    },[matchId,token,applyResult,fetchData]);
 
     const prevMatchRef = useRef<Match | null>(initialData.match);
     const prevStateRef = useRef<MatchState | null>(initialData.state);
@@ -129,9 +164,10 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
         let timer: ReturnType<typeof setTimeout> | undefined;
         const schedule=()=>{
             if(timer) return;
-            timer=setTimeout(()=>{timer=undefined;void fetchData();},100);
+            timer=setTimeout(()=>{timer=undefined;void fetchData();},50);
         };
         const channel=supabase.channel(`match:${matchId}`)
+            .on('broadcast',{event:'veto_changed'},schedule)
             .on('broadcast',{event:'match_state_update'},schedule)
             .on('broadcast',{event:'match_update'},schedule)
             .on('broadcast',{event:'match_log_insert'},schedule)
@@ -139,6 +175,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
             .on('postgres_changes',{event:'UPDATE',schema:'public',table:'matches',filter:`id=eq.${matchId}`},schedule)
             .on('postgres_changes',{event:'INSERT',schema:'public',table:'match_logs',filter:`match_id=eq.${matchId}`},schedule)
             .subscribe(status=>{setIsConnected(status==='SUBSCRIBED');if(status==='SUBSCRIBED')schedule();});
+        void fetchData();
         const recover=()=>{if(document.visibilityState==='visible')schedule();};
         const interval=setInterval(recover,15000);
         window.addEventListener('focus',recover);document.addEventListener('visibilitychange',recover);
@@ -174,9 +211,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
                 }
 
                 // Optimistically update state (realtime will confirm)
-                if (data.new_state) {
-                    setState(data.new_state);
-                }
+                applyResult(data);
 
                 return true;
             } catch {
@@ -184,7 +219,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
                 return false;
             }
         },
-        [matchId, token, state?.turn_started_at]
+        [matchId, token, state?.turn_started_at,applyResult]
     );
 
     // Perform coin toss (admin only - uses cookie auth)
@@ -208,14 +243,13 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
                 return null;
             }
 
-            if (data.match) setMatch(prev => prev ? { ...prev, ...data.match } : data.match);
-            if (data.new_state) setState(data.new_state);
+            applyResult(data);
             return data.match?.coin_toss_winner as VetoActor;
         } catch {
             setError('Network error');
             return null;
         }
-    }, [matchId, token]);
+    }, [matchId, token,applyResult]);
 
     // Perform ready check
     const performReady = useCallback(async (): Promise<boolean> => {
@@ -236,19 +270,13 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
                 return false;
             }
 
-            if (data.new_state) {
-                setState(data.new_state);
-            }
-
-            if (data.match) setMatch(prev => prev ? { ...prev, ...data.match } : data.match);
-
-            if (data.match) setMatch(prev => prev ? { ...prev, ...data.match } : data.match);
+            applyResult(data);
             return true;
         } catch {
             setError('Network error');
             return false;
         }
-    }, [matchId, token]);
+    }, [matchId, token,applyResult]);
 
     // Manual refresh
     const refresh = useCallback(async () => {
@@ -269,6 +297,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
         performCoinToss,
         performReady,
         refresh,
+        clock,clockReady,expireTurn,
     };
 
     return (
