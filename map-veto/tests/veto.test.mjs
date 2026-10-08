@@ -271,5 +271,48 @@ assert.equal((await rpc('veto_answer_reset',[approval.id,approval.b,stale,true])
 await db.query("INSERT INTO event_admins(event_id,user_id,role) VALUES($1,$2,'referee')",[event,outsider]);await rejects('bulk_create_matches',[event,outsider,randomUUID(),'denied.csv',template,JSON.stringify(bulkRows),mapIds],/administrator/);
 for(const fn of ['veto_request_reset(uuid,uuid,uuid,text)','veto_answer_reset(uuid,uuid,uuid,boolean)','veto_admin_internal(uuid,uuid,text,uuid,text,text,timestamptz)'])assert.equal((await db.query("SELECT has_function_privilege('authenticated',$1,'EXECUTE') allowed",[fn])).rows[0].allowed,false);
 console.log('PASS staff/reset approval: referee overrides denied, scoped/expired access denied, one request and vote per team, first approval preserves clock, both reset once to check-in, decline, Head Admin cancellation and importer/RPC restrictions');
+const rewind=await fixture(true);
+await rpc('veto_ready',[rewind.id,rewind.a]);await rpc('veto_ready',[rewind.id,rewind.b]);
+let rw=await rpc('veto_position',[rewind.id,rewind.b,true,false,null]);
+async function finishRewind() {
+ while(!rw.new_state.is_complete) {
+  const step=steps[rw.new_state.current_step];
+  rw=await rpc('veto_admin',[rewind.id,rewind.admin,'force',['ban','pick'].includes(step.action)?rw.new_state.available_maps[0]:null,step.action==='side'?'attack':null,'Rewind QA',rw.new_state.turn_started_at]);
+ }
+}
+await finishRewind();
+const rewindRef=(await db.query("SELECT token FROM match_links WHERE match_id=$1 AND link_type='referee'",[rewind.id])).rows[0].token;
+const args=[rewind.id,rewind.admin,1,'Correct disputed pick',rw.new_state.turn_started_at,rw.new_state.current_step,randomUUID()];
+for(const token of [rewindRef,rewind.a,rewind.b,rewind.observer,f.admin])await rejects('veto_reopen_step',[rewind.id,token,...args.slice(2)],/Head Admin/);
+for(const step of [-1,6,7])await rejects('veto_reopen_step',[...args.slice(0,2),step,...args.slice(3)],/earlier completed/);
+await rejects('veto_reopen_step',[...args.slice(0,2),4,...args.slice(3)],/decider is automatic/);
+await rejects('veto_reopen_step',[...args.slice(0,3),' ',...args.slice(4)],/reason/);
+await rejects('veto_reopen_step',[...args.slice(0,4),'2000-01-01T00:00:00Z',...args.slice(5)],/Veto changed/);
+await rejects('veto_reopen_step',[...args.slice(0,5),5,args[6]],/Veto changed/);
+await db.query("UPDATE match_links SET expires_at=now()-interval '1 second' WHERE token=$1",[rewind.admin]);
+await rejects('veto_reopen_step',args,/Head Admin/);
+await db.query('UPDATE match_links SET expires_at=NULL WHERE token=$1',[rewind.admin]);
+const original=(await db.query("SELECT state FROM veto_snapshots WHERE match_id=$1 AND (state->>'current_step')::int=1 AND NOT undone",[rewind.id])).rows[0].state;
+rw=await rpc('veto_reopen_step',args);
+for(const key of ['available_maps','banned_maps','picked_maps','results','actor_mapping','current_turn'])assert.deepEqual(rw.new_state[key],original[key]);
+assert.equal(rw.new_state.current_step,1);assert.equal(rw.new_state.is_complete,false);assert.equal(rw.match.status,'in_progress');assert.equal(rw.match.completed_at,null);
+const rwLogs=(await db.query('SELECT * FROM match_logs WHERE match_id=$1 ORDER BY log_order',[rewind.id])).rows;
+assert.equal(rwLogs.filter(log=>log.metadata?.superseded && log.metadata?.snapshot_id).length,5);
+assert.equal(rwLogs.find(log=>log.action_type==='decider').metadata.superseded,true);
+assert.equal(rwLogs.find(log=>log.action_type==='ban').metadata.superseded,undefined);
+assert.equal(rwLogs.at(-1).metadata.target_step,1);assert.match(rwLogs.at(-1).metadata.action_details,/reopened step 2 from the completed veto: Correct disputed pick/);
+const retry=await rpc('veto_reopen_step',args);assert.deepEqual(retry.new_state,rw.new_state);
+assert.equal((await db.query("SELECT count(*)::int n FROM match_logs WHERE match_id=$1 AND metadata->>'request_id'=$2",[rewind.id,args[6]])).rows[0].n,1);
+await rejects('veto_reopen_step',[...args.slice(0,3),'Changed reason',...args.slice(4)],/already used/);
+await finishRewind();
+rw=await rpc('veto_admin',[rewind.id,rewind.admin,'undo',null,null,'Return to last team step',rw.new_state.turn_started_at]);
+rw=await rpc('veto_admin',[rewind.id,rewind.admin,'pause',null,null,'Preserve pause',rw.new_state.turn_started_at]);
+rw=await rpc('veto_reopen_step',[rewind.id,rewind.admin,2,'Reopen side on replay',rw.new_state.turn_started_at,rw.new_state.current_step,randomUUID()]);
+assert.equal(rw.new_state.current_step,2);assert.equal(rw.new_state.picked_maps.length,1);assert.equal(rw.new_state.banned_maps.length,1);assert.equal(rw.new_state.is_paused,true);assert.equal(rw.new_state.paused_remaining_seconds,60);
+rw=await rpc('veto_reopen_step',[rewind.id,rewind.admin,0,'Reopen first ban',rw.new_state.turn_started_at,rw.new_state.current_step,randomUUID()]);
+assert.deepEqual(rw.new_state.available_maps,mapIds);assert.deepEqual(rw.new_state.results,[]);
+await rejects('veto_reopen_step',[rewind.id,rewind.admin,0,'No forward jumps',rw.new_state.turn_started_at,0,randomUUID()],/earlier completed/);
+for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'veto_reopen_step(uuid,uuid,integer,text,timestamptz,integer,uuid)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+console.log('PASS reopen step: Head Admin only, completed-veto restoration, exact maps/results/roles, side and first-step replay, superseded decider audit, stale state protection, idempotent retry and preserved pause');
 await db.close();
 

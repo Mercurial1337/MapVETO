@@ -6,8 +6,8 @@ import { timeoutRequests } from '@/lib/veto/timeoutRequests';
 interface Props {matchId:string;matchStatus:string;isPaused?:boolean;token:string;}
 export function AdminPanel({matchId,matchStatus,isPaused,token}:Props) {
  const [open,setOpen]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('');
- const [reason,setReason]=useState(''),[mapId,setMapId]=useState(''),[side,setSide]=useState<'attack'|'defense'>('attack');
- const {state,maps,logs,refresh}=useRealtime();
+ const [reason,setReason]=useState('');
+ const {state,logs,refresh}=useRealtime();
  const [tab,setTab]=useState<'controls'|'timeouts'>('controls');
  const pending=timeoutRequests(logs).filter(report=>!report.resolvedAt).length;
  async function action(operation:string) {
@@ -16,7 +16,7 @@ export function AdminPanel({matchId,matchStatus,isPaused,token}:Props) {
   if(operation==='reset' && !confirm('Restart this veto? Selections will be cleared and the history retained.')) return;
   setBusy(true);setError('');
   try {
-   const response=await fetch('/api/veto/admin/override',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,token,operation,reason,map_id:mapId || undefined,side,turn_started_at:state?.turn_started_at})});
+   const response=await fetch('/api/veto/admin/override',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,token,operation,reason,turn_started_at:state?.turn_started_at})});
    const data=await response.json();
    if(!response.ok) {setError(data.error || 'Override failed');return;}
    await refresh();
@@ -38,9 +38,7 @@ export function AdminPanel({matchId,matchStatus,isPaused,token}:Props) {
     <button className="btn-secondary p-2" disabled={busy || !['in_progress','side_selection'].includes(matchStatus)} onClick={()=>action('restart')}>Restart current timer</button>
     <button className="btn-secondary p-2" disabled={busy} onClick={()=>action('undo')}>Reopen last selection</button>
    </div>
-   <label className="block text-sm">Map to force or correct<select className="w-full bg-black border border-white/30 p-2 mt-1" value={mapId} onChange={e=>setMapId(e.target.value)}><option value="">Choose a map</option>{maps.map(map=><option key={map.id} value={map.id}>{map.name}{state?.available_maps.includes(map.id)?' (available)':''}</option>)}</select></label>
-   <label className="block text-sm mt-2">Side to force or correct<select className="w-full bg-black border border-white/30 p-2 mt-1" value={side} onChange={e=>setSide(e.target.value as 'attack'|'defense')}><option value="attack">Attack</option><option value="defense">Defense</option></select></label>
-   <div className="flex flex-wrap gap-2 my-3"><button className="btn-secondary p-2" disabled={busy || matchStatus!=='in_progress'} onClick={()=>action('force')}>Force current selection</button><button className="btn-secondary p-2" disabled={busy} onClick={()=>action('correct')}>Correct last selection</button></div>
+   <p className="text-sm text-white/70 mb-3">To reopen an earlier selection, choose its step in the veto step row.</p>
    <button className="btn-secondary p-2 text-red-400" disabled={busy} onClick={()=>action('reset')}>Restart entire veto</button>
    </div>}
   </section>}

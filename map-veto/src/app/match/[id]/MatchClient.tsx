@@ -468,6 +468,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     currentStep={state?.current_step || 0}
                     teamAName={displayedTeams.teamA}
                     teamBName={displayedTeams.teamB}
+                    headAdmin={isAdmin && match ? {matchId,token,status:match.status,clock:state?.turn_started_at} : undefined}
                 />
             </div>
 

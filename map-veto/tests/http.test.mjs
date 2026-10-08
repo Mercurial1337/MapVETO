@@ -23,7 +23,7 @@ for(const path of ['ready','coin-toss','position-choice','action']) {
  const payload={match_id:id,token:tokens.observer,pick_first:true,action:'ban',map_id:maps[0].id};
  await post('/api/veto/'+path,payload,path==='coin-toss'?403:400);
 }
-for(const operation of ['pause','resume','restart','undo','correct','force','reset']) await post('/api/veto/admin/override',{match_id:id,token:tokens.observer,operation,reason:'QA permission test'},403);
+for(const operation of ['pause','resume','restart','undo','correct','force','reset','reopen_step']) await post('/api/veto/admin/override',{match_id:id,token:tokens.observer,operation,reason:'QA permission test'},403);
 await post(`/api/matches/${id}`,{},403);await post(`/api/matches/${id}`,{action:'reset'},403,'PATCH');await post(`/api/matches/${id}`,{},403,'DELETE');
 await post('/api/veto/session',{match_id:id,token:randomUUID()},401);
 const anon=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -86,6 +86,25 @@ assert.equal(listing.pagination.count,listing.matches.length);assert.ok(listing.
 const logResponse=await fetch(`${base}/public/log/${id}`);assert.equal(logResponse.status,200);
 const logHtml=await logResponse.text();assert.ok(logHtml.includes('Match Veto Log'));assert.ok(logHtml.includes('Codex QA Alpha'));assert.ok(logHtml.includes('was left as the Decider'));
 console.log('PASS public outputs: ordered veto actions, map names, completed-match listing and rendered public log');
+const reopenPayload={match_id:id,token:tokens.admin,operation:'reopen_step',target_step:2,current_step:session.state.current_step,turn_started_at:session.state.turn_started_at,request_id:randomUUID(),reason:'Codex HTTP disputed selection'};
+for(const role of ['team_a','team_b','referee','observer'])await post('/api/veto/admin/override',{...reopenPayload,token:tokens[role]},403);
+await post('/api/veto/admin/override',{...reopenPayload,request_id:undefined},400);
+await post('/api/veto/admin/override',{...reopenPayload,current_step:0},409);
+const reopened=await post('/api/veto/admin/override',reopenPayload);
+assert.equal(reopened.new_state.current_step,2);assert.equal(reopened.match.status,'in_progress');assert.equal(reopened.new_state.is_complete,false);
+await post('/api/veto/admin/override',reopenPayload);
+session=await post('/api/veto/session',{match_id:id,token:tokens.observer});
+assert.equal(session.logs.filter(log=>log.metadata?.request_id===reopenPayload.request_id).length,1);
+assert.ok(session.logs.some(log=>log.action_type==='decider' && log.metadata?.superseded));
+const replayPublic=await (await fetch(`${base}/api/matches/${id}/public`)).json();
+assert.equal(replayPublic.is_complete,false);assert.equal(replayPublic.actions.length,2);
+console.log('PASS HTTP reopening: Head Admin only, validation, stale guard, completed-veto restoration, idempotency, audit and public actions exclude superseded selections');
+// Complete the disposable match again so browser QA can choose any earlier step.
+while(!session.state.is_complete) {
+ const step=template.sequence.steps[session.state.current_step];
+ await post('/api/veto/admin/override',{match_id:id,token:tokens.admin,operation:'force',reason:'Codex HTTP replay QA',map_id:['ban','pick'].includes(step.action)?session.state.available_maps[0]:undefined,side:step.action==='side'?'attack':undefined});
+ session=await post('/api/veto/session',{match_id:id,token:tokens.observer});
+}
 if(keep) console.log('QA match:',id);
 } finally {
  if(!keep) {const result=await db.from('matches').delete().eq('id',id).eq('team_a_name','Codex QA Alpha');assert.ifError(result.error);}

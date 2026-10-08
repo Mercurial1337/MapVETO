@@ -19,7 +19,7 @@ export function ActionLog({logs,dbTeamAName,dbTeamBName,mapNames}:Props) {
   <div className="flex gap-2 mb-3"><button className="btn-secondary px-2 py-1 text-xs" onClick={copy}>{copied?'Copied':'Copy log'}</button><button className="btn-secondary px-2 py-1 text-xs" onClick={download}>Download log</button></div>
   {error && <p role="alert">{error}</p>}
   <ol aria-label="Veto action history" className="overflow-y-auto space-y-3 text-sm">
-   {logs.map((entry,i)=><li key={entry.id} className={entry.metadata?.superseded || entry.metadata?.previous_session?'text-white/50':'text-white/90'}><time className="block text-xs text-white/50" dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString(undefined,{hour12:false})}</time>{lines[i].split(' — ').slice(1).join(' — ')}</li>)}
+   {logs.map((entry,i)=><li key={entry.id} className={entry.metadata?.superseded || entry.metadata?.previous_session?'text-white/50':entry.action_type==='admin_action'?'border-l-2 border-yellow-400 pl-3 text-yellow-200':'text-white/90'}><time className="block text-xs text-white/50" dateTime={entry.created_at}>{new Date(entry.created_at).toLocaleString(undefined,{hour12:false})}</time>{lines[i].split(' — ').slice(1).join(' — ')}</li>)}
   </ol>
   {!logs.length && <p className="text-white/60">No actions yet.</p>}
  </div>;
