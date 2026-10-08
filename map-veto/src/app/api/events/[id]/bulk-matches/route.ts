@@ -3,6 +3,7 @@ import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { canAccessEvent } from '@/lib/auth/eventAuth';
 import { parseBulkFile, BulkFileError, BULK_MAX_BYTES } from '@/lib/matches/bulk';
 import { z } from 'zod';
+import {COMPETITIVE_MAPS} from '@/lib/maps/pools';
 interface Context {params:Promise<{id:string}>;}
 async function access(eventId:string) {
  const {data:{user}}=await (await createClient()).auth.getUser();
@@ -27,7 +28,7 @@ export async function POST(request:NextRequest,{params}:Context) {
   const rows=parseBulkFile(await file.text()),db=createServiceClient();
   const {data:template}=await db.from('veto_templates').select('id,game_id,sequence').eq('format',settings.data.format).eq('is_default',true).single();
   if(!template)return NextResponse.json({error:'No default veto template is configured for this format.'},{status:400});
-  const {data:maps,error:mapError}=await db.from('maps').select('id,name').eq('game_id',template.game_id).eq('is_active',true).in('name',['Abyss','Bind','Breeze','Corrode','Haven','Pearl','Split']).order('name');
+  const {data:maps,error:mapError}=await db.from('maps').select('id,name').eq('game_id',template.game_id).eq('is_active',true).in('name',COMPETITIVE_MAPS).order('name');
   if(mapError || maps?.length!==7)return NextResponse.json({error:'The competitive seven-map pool is not configured for this template.'},{status:400});
   const {data,error}=await db.rpc('bulk_create_matches',{p_event_id:id,p_user_id:auth.user!.id,p_batch_id:settings.data.batch_id,p_file_name:file.name,p_template_id:template.id,p_rows:rows,p_maps:maps.map(map=>map.id)});
   if(error)return NextResponse.json({error:error.message},{status:409});

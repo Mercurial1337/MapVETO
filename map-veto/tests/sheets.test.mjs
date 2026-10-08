@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {parseDay,csvValues,spreadsheetId} from '../src/lib/sheets/parse.ts';
+const rows=[['Round','Status','Names','MapVETO Match ID','Format'],['R1','','Fnatic','D1-M01','BO1'],['','','LOUD','',''],['R2','','Winner from #1','D1-M02','BO3'],['','','Sentinels','',''],['GF','','G2','D1-M03','BO5'],['','','Liquid','','']];
+let parsed=parseDay(rows);assert.deepEqual(parsed.map(r=>[r.source_id,r.format,r.status]),[['D1-M01','bo1','ready'],['D1-M02','bo3','waiting'],['D1-M03','bo5','ready']]);assert.equal(parsed[1].round,'R2');
+const moved=[rows[0],...rows.slice(5),...rows.slice(1,5)];assert.equal(parseDay(moved)[0].source_id,'D1-M03');
+const duplicate=structuredClone(rows);duplicate[3][3]='D1-M01';assert.equal(parseDay(duplicate)[0].status,'invalid');assert.equal(parseDay(duplicate)[1].status,'invalid');
+const missing=structuredClone(rows);missing[1][3]='';missing[5][4]='BO7';assert.equal(parseDay(missing)[0].status,'invalid');assert.equal(parseDay(missing)[2].status,'invalid');
+const final=structuredClone(rows);final[3][2]='Fnatic';assert.equal(parseDay(final)[1].status,'ready');final[1][1]='Ended';assert.equal(parseDay(final)[0].status,'skipped');final[5][2]='#REF!';assert.equal(parseDay(final)[2].status,'waiting');
+const shifted=rows.map(row=>['',...row]);assert.equal(parseDay(shifted)[0].team_a,'Fnatic');
+const blank=structuredClone(rows);blank[1][2]='';blank[2][2]='';assert.equal(parseDay(blank)[0].source_id,'D1-M01');assert.equal(parseDay(blank)[0].status,'waiting');blank[2][2]='Fnatic';assert.equal(parseDay(blank)[0].status,'waiting');
+assert.deepEqual(csvValues('Names,ID\r\n"Team, A",one\r\n"a""b",two'),[['Names','ID'],['Team, A','one'],['a"b','two']]);
+assert.throws(()=>spreadsheetId('https://evil.example/anything'));assert.equal(spreadsheetId('https://docs.google.com/spreadsheets/d/12345678901234567890/edit'),'12345678901234567890');
+assert.throws(()=>parseDay([['Team A','Team B']]));
+console.log('PASS sheet parser: two-row layout, BO1/BO3/BO5, shifted headers, round sections, unresolved/formula errors, duplicate IDs, stable IDs after movement and CSV quoting');

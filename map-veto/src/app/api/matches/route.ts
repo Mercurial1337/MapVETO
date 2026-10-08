@@ -3,6 +3,7 @@ import { createServiceClient, createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { canAccessEvent } from '@/lib/auth/eventAuth';
+import {COMPETITIVE_MAPS,ALL_MAPS} from '@/lib/maps/pools';
 
 // Request validation schema
 const CreateMatchSchema = z.object({
@@ -127,8 +128,6 @@ export async function POST(request: NextRequest) {
 
         // Update match_state with the correct maps based on pool type
         // The trigger created match_state with default pool, now we override if needed
-        const COMPETITIVE_MAPS = ['Abyss', 'Bind', 'Breeze', 'Corrode', 'Haven', 'Pearl', 'Split'];
-        const ALL_MAPS = ['Abyss', 'Ascent', 'Bind', 'Breeze', 'Corrode', 'Fracture', 'Haven', 'Icebox', 'Lotus', 'Pearl', 'Split', 'Sunset'];
 
         let selectedMaps: string[];
         switch (data.map_pool_type) {

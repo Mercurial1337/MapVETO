@@ -14,6 +14,9 @@ if(remote) {
 } else db=new PGlite();
 if(!remote) {
 await db.exec(`CREATE SCHEMA auth; CREATE TABLE auth.users(id uuid PRIMARY KEY); CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;`);
+// PGlite has no external scheduler/network extensions; validate their SQL callers
+// with an inert scheduling boundary. Real worker delivery is covered by Sheets HTTP tests.
+await db.exec(`CREATE SCHEMA cron; CREATE FUNCTION cron.schedule(text,text,text) RETURNS bigint LANGUAGE sql AS 'SELECT 1::bigint';`);
 await db.exec(`CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql AS 'SELECT NULL::uuid'; CREATE FUNCTION auth.role() RETURNS text LANGUAGE sql AS 'SELECT current_user::text';`);
 let schema = readFileSync('supabase/schema.sql', 'utf8').split('-- Row Level Security')[0];
 schema = schema.replace(/CREATE EXTENSION[^;]+;/g, '').replaceAll('uuid_generate_v4()', 'gen_random_uuid()');
@@ -25,7 +28,7 @@ await db.exec('CREATE TRIGGER trigger_create_match_state_and_links AFTER INSERT 
 await db.exec(readFileSync('supabase/migrations/011_ready_check.sql', 'utf8'));
 await db.exec(`ALTER TABLE matches ADD COLUMN custom_veto_sequence jsonb; ALTER TABLE match_state ADD COLUMN is_paused boolean DEFAULT false; ALTER TABLE match_logs ADD COLUMN metadata jsonb; ALTER TABLE match_links DROP CONSTRAINT match_links_link_type_check;`);
 for (const file of readdirSync('supabase/migrations').filter(f => /^0(1[6-9]|[23][0-9])_/.test(f) && !f.includes('scheduler')).sort()) {
-  await db.exec(readFileSync(`supabase/migrations/${file}`, 'utf8'));
+  await db.exec(readFileSync(`supabase/migrations/${file}`, 'utf8').replace(/CREATE EXTENSION[^;]+;/g,''));
 }
 }
 const steps = [

@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import Image from 'next/image';
+import {COMPETITIVE_MAPS} from '@/lib/maps/pools';
 
 interface MapUpload {
     id: string;
@@ -214,7 +215,7 @@ export default function MapUploadPage() {
             <div className="glass rounded p-6">
                 <h2 className="text-lg font-semibold text-white mb-4">Current {selectedGame.toUpperCase()} Maps</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {['Abyss', 'Bind', 'Breeze', 'Corrode', 'Haven', 'Pearl', 'Split'].map((mapName) => (
+                    {COMPETITIVE_MAPS.map((mapName) => (
                         <div key={mapName} className="aspect-video rounded bg-white/5 border border-white/10 flex items-center justify-center">
                             <span className="text-white/40 text-sm">{mapName}</span>
                         </div>

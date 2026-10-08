@@ -193,6 +193,7 @@ export default function EventsPage() {
                                 >
                                     Public Page
                                 </Link>
+                                <Link href={`/admin/events/${event.id}/sheet`} className="btn-secondary px-3 py-2 text-sm">Sheet matches</Link>
                                 <button
                                     onClick={() => openExportModal(event.id)}
                                     className="px-3 py-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg text-sm text-green-400 flex items-center gap-1.5 transition-colors"

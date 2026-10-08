@@ -44,6 +44,7 @@ type SortOrder = 'newest' | 'oldest';
 export default function MatchesPage() {
     const searchParams = useSearchParams();
     const eventFilter = searchParams.get('event');
+    const matchFilter = searchParams.get('match');
     const [matches, setMatches] = useState<Match[]>([]);
     const [events, setEvents] = useState<Event[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -135,6 +136,7 @@ export default function MatchesPage() {
 
             if (effectiveEvent) query=query.eq('event_id',effectiveEvent);
             else if(eventFilterLocal==='none') query=query.is('event_id',null);
+            if(matchFilter) query=query.eq('id',matchFilter);
             if(batchFilter!=='all') query=query.eq('bulk_batch_id',batchFilter).order('match_number',{ascending:true});
             else query=query.order('id');
 
@@ -152,7 +154,7 @@ export default function MatchesPage() {
         }
 
         if (requestId === matchRequest.current) setIsLoading(false);
-    }, [supabase, effectiveEvent, eventFilterLocal, batchFilter, sortOrder, page]);
+    }, [supabase, effectiveEvent, eventFilterLocal, batchFilter, sortOrder, page, matchFilter]);
 
     useEffect(() => {
         let channel: ReturnType<typeof supabase.channel> | null = null;

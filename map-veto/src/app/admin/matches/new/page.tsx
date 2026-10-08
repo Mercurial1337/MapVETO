@@ -25,8 +25,7 @@ interface EventTeam {
 
 type MapPoolType = 'competitive' | 'all' | 'custom';
 
-const COMPETITIVE_MAPS = ['Abyss', 'Bind', 'Breeze', 'Corrode', 'Haven', 'Pearl', 'Split'];
-const ALL_MAPS = ['Abyss', 'Ascent', 'Bind', 'Breeze', 'Corrode', 'Fracture', 'Haven', 'Icebox', 'Lotus', 'Pearl', 'Split', 'Sunset'];
+import {COMPETITIVE_MAPS,ALL_MAPS} from '@/lib/maps/pools';
 
 interface MatchFormData {
     teamAName: string;
