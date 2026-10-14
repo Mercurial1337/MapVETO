@@ -2,6 +2,8 @@
 
 Open Events → Sheet matches. Connect a workbook URL, choose a day tab, check the desired matches, choose A/B/C, and confirm. Ready pairings create vetoes immediately; approved unresolved pairings create later. Unchecked pairings stay excluded until another confirmation selects them.
 
+Connecting a workbook or opening a day never creates matches. The preview shows each row's permanent ID, round, teams, format, password status, A/B/C choice and import status, with counts of rows ready to create, approved fixtures waiting for opponents, blocked or conflicting rows, already imported, skipped and unselected rows. **Confirm selected matches** re-reads the workbook; if anything changed since the preview, nothing is written, the preview refreshes in place, changed rows are marked “Changed since review”, existing checks are kept for rows that can still be created and new rows stay unchecked. After confirmation the page lists each selected ID as created, already imported, waiting, needing review or deleted. Background sync only creates fixtures approved in an earlier confirmation.
+
 A workbook entered when creating or editing an event is connected automatically. The Sheet matches page loads its day tabs without requiring the URL again. Migration 037 carries over saved event sheet IDs and preserves existing import connections and approvals. Entering a URL is normalized to its spreadsheet ID. Linking alone does not approve or create matches.
 
 ## Workbook contract
