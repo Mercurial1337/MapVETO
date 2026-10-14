@@ -14,7 +14,8 @@ import { ReadyCheckModal } from '@/components/match/ReadyCheckModal';
 import { MatchActivity, TimeoutRequestButton } from '@/components/match/TimeoutRequests';
 import { AdminPanel } from '@/components/match/AdminPanel';
 import {RefereePanel,ResetApproval} from '@/components/match/ResetApproval';
-import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus } from '@/lib/realtime';
+import { TeamPasswordScreen } from '@/components/match/TeamPasswordScreen';
+import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus, useRealtime } from '@/lib/realtime';
 import type { MapCardState, VetoStep, VetoActor, Match, VetoTemplate } from '@/types';
 
 // Map name to local image fallback
@@ -48,6 +49,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     const { match, state, maps, eventBranding, isLoading, error, userRole } = useMatchData();
     const { banMap, pickMap, pickSide, coinToss, readyUp, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
+    const { passwordRequired } = useRealtime();
     const [selectedMap, setSelectedMap] = useState<{id:string;clock:string | undefined} | null>(null);
     const selectedMapId=selectedMap?.clock===state?.turn_started_at ? selectedMap?.id ?? null : null;
     const isAdmin = userRole === 'admin' || Boolean((match as (Match & { can_admin?: boolean }) | null)?.can_admin);
@@ -277,6 +279,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
 
     // Block map interaction during side pick
     const isSidePicking = currentStepDef?.action === 'side';
+
+    if (passwordRequired) return <TeamPasswordScreen />;
 
     // Loading state
     if (isLoading) {
@@ -538,9 +542,10 @@ export interface MatchClientProps {
     matchId: string;
     token: string;
     initialData: ComponentProps<typeof RealtimeProvider>['initialData'];
+    passwordRequired?: boolean;
 }
 
-export default function MatchClient({ matchId, token, initialData }: MatchClientProps) {
+export default function MatchClient({ matchId, token, initialData, passwordRequired }: MatchClientProps) {
     if (!token || token === 'demo-token') {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -565,7 +570,7 @@ export default function MatchClient({ matchId, token, initialData }: MatchClient
                 />
             </div>
         }>
-            <RealtimeProvider matchId={matchId} token={token} initialData={initialData}>
+            <RealtimeProvider matchId={matchId} token={token} initialData={initialData} passwordRequired={passwordRequired}>
                 <MatchVetoInterface token={token} matchId={matchId} />
             </RealtimeProvider>
         </Suspense>

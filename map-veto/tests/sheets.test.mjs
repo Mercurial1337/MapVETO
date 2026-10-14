@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {parseDay,csvValues,spreadsheetId} from '../src/lib/sheets/parse.ts';
+import {parseDay,csvValues,spreadsheetId,visibleRow} from '../src/lib/sheets/parse.ts';
 const rows=[['Round','Status','Names','MapVETO Match ID','Format'],['R1','','Fnatic','D1-M01','BO1'],['','','LOUD','',''],['R2','','Winner from #1','D1-M02','BO3'],['','','Sentinels','',''],['GF','','G2','D1-M03','BO5'],['','','Liquid','','']];
 let parsed=parseDay(rows);assert.deepEqual(parsed.map(r=>[r.source_id,r.format,r.status]),[['D1-M01','bo1','ready'],['D1-M02','bo3','waiting'],['D1-M03','bo5','ready']]);assert.equal(parsed[1].round,'R2');
 const moved=[rows[0],...rows.slice(5),...rows.slice(1,5)];assert.equal(parseDay(moved)[0].source_id,'D1-M03');
@@ -11,4 +11,18 @@ const blank=structuredClone(rows);blank[1][2]='';blank[2][2]='';assert.equal(par
 assert.deepEqual(csvValues('Names,ID\r\n"Team, A",one\r\n"a""b",two'),[['Names','ID'],['Team, A','one'],['a"b','two']]);
 assert.throws(()=>spreadsheetId('https://evil.example/anything'));assert.equal(spreadsheetId('https://docs.google.com/spreadsheets/d/12345678901234567890/edit'),'12345678901234567890');
 assert.throws(()=>parseDay([['Team A','Team B']]));
+assert.ok(parseDay(rows).every(r=>r.password===null && r.password_status==='not_used'));
+const secured=[['Round','Status','Names','MapVETO Match ID','Format','Password'],['R1','','Fnatic','D1-M01','BO1','0042'],['','','LOUD','','',''],['R1','','G2','D1-M02','BO3','Pa$$ w0rd!é'],['','','Liquid','','','Pa$$ w0rd!é'],['R2','','Winner from #1','D1-M03','BO3',''],['','','Sentinels','','',''],['R2','','NRG','D1-M04','BO3','abcd'],['','','EG','','','ABCD'],['R3','','KRÜ','D1-M05','BO3',' padded '],['','','MIBR','','',''],['R3','Ended','100T','D1-M06','BO3',''],['','','C9','','',''],['R4','','FUT','D1-M07','BO5',''],['','','BBL','','','second-row']];
+let locked=parseDay(secured);
+assert.equal(locked[0].password,'0042');assert.equal(locked[0].password_status,'supplied');assert.equal(locked[0].status,'ready');
+assert.equal(locked[1].password,'Pa$$ w0rd!é');assert.equal(locked[1].status,'ready');
+assert.equal(locked[2].status,'invalid');assert.equal(locked[2].password_status,'missing');assert.match(locked[2].issue,/password/);
+assert.equal(locked[3].status,'invalid');assert.equal(locked[3].password,null);assert.match(locked[3].issue,/conflicting passwords/);
+assert.equal(locked[4].status,'invalid');assert.equal(locked[4].password_status,'invalid');assert.equal(locked[4].password,null);
+assert.equal(locked[5].status,'skipped');assert.equal(locked[5].password_status,'missing');
+assert.equal(locked[6].password,'second-row');assert.equal(locked[6].status,'ready');
+const short=structuredClone(secured);short[1][5]='abc';assert.equal(parseDay(short)[0].password_status,'invalid');
+assert.ok(locked.map(visibleRow).every(r=>!('password' in r) && !JSON.stringify(r).includes('0042') && 'password_status' in r));
+assert.equal(parseDay(csvValues('Status,Names,MapVETO Match ID,Format,Password\r\n,A,X1,BO3,0007\r\n,B,,,'))[0].password,'0007');
+console.log('PASS sheet passwords: leading zeros, case and special characters unchanged, missing/short/padded/conflicting cells blocked, waiting fixtures need passwords, skipped rows unaffected, preview rows omit plaintext');
 console.log('PASS sheet parser: two-row layout, BO1/BO3/BO5, shifted headers, round sections, unresolved/formula errors, duplicate IDs, stable IDs after movement and CSV quoting');

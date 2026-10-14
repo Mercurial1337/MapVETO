@@ -12,15 +12,29 @@ A workbook entered when creating or editing an event is connected automatically.
 - Put a permanent ID (letters, numbers, dots, underscores, hyphens; up to 100 characters) on the first team row. IDs must be unique across the entire workbook and must never be reused for another fixture. Move the ID with its two rows when rearranging fixtures.
 - Put `BO1`, `BO3`, or `BO5` on the first team row. A matching value on the second row is allowed.
 - Blank opponents, winner/loser placeholders, TBD/TBA and formula errors wait. Started/ended/forfeit/cancelled fixtures and byes are skipped.
+- Optional `Password` column: when present, every fixture on that day tab needs a team password on the first team row. The second row may be blank or repeat it; different values are a validation error. Format the column as plain text so leading zeros survive. Passwords are case-sensitive, 4–128 characters, and are never trimmed or altered; surrounding spaces, control characters and missing values block the row in the preview.
 - Google Sheets remains responsible for tournament results and bracket progression. Its calculated Names cells must only resolve to actual participants when the upstream results are final. Veto completion does not decide the tournament winner.
 
 The experiment workbook has 36 IDs, D1-M01 through D7-M01 as appropriate. Days 1–6 are BO3; Day 7 is BO5. Existing formulas remain in place.
+
+## Team passwords
+
+Both team links of a match imported with a password require that password before the website returns any match data or accepts any team action. The link and the password are both required. Head Admin, Referee and Observer links are unchanged.
+
+- The server enforces this on the match page, the session snapshot and every team action (check-in, Team A/B choice, bans/picks/sides, timer expiry, timeout requests and reset answers). A locked team page opens no realtime subscription. Match broadcasts carry no data; clients re-read the access-checked snapshot.
+- A correct password issues an HttpOnly cookie for that team link of that match only, valid for four hours. Refreshing and other tabs reuse it; another match or the opposing team link is not unlocked.
+- Five attempts per team link per ten minutes, including parallel requests. A successful attempt clears the counter.
+- Only salted scrypt hashes are stored, in a service-only table separate from the publicly readable match row. Sheet snapshots keep a keyed fingerprint for change detection. Plaintext never reaches SQL, logs, responses or exports; previews show only `Password supplied`, `Password missing` or `Password invalid`.
+- Sync never replaces an active password. A changed sheet password shows a conflict with **Approve new password** for Head Admins. Approval re-reads the sheet, activates the new hash and signs out both teams. A removed password keeps the current one active. Linking an existing manual match does not adopt the sheet password until a Head Admin approves it.
+- Use a private workbook shared with the service account for real passwords. When the app reads through public link access the preview warns that anyone with the link can read them. Use dummy passwords in the public experiment workbook.
+
+Known limits: the overlay endpoint `/api/matches/:id/public`, `GET /api/matches/:id` and anonymous table reads of `matches`, `match_state` and `match_logs` (used by realtime and existing admin pages) remain readable by anyone who knows a match ID, as before. The password protects the team-link experience; closing those match-ID-level reads needs a separate decision because overlays and admin pages depend on them.
 
 ## Access and deployment
 
 Public workbooks can be read without Google credentials. For private workbooks set `GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_PRIVATE_KEY` and share Viewer access with that service-account address. Enable the Google Sheets API for its project. The integration never writes match links or tokens to the workbook.
 
-Apply migrations 034–036 using `scripts/migrate.mjs`. They add service-only connection/source/worker tables, an atomic import function, and the `map-veto-sheet-sync` Supabase cron job. The job runs each minute and dispatches an authenticated HTTP request with a generated secret stored in a service-only table. Referees can read previews and history; only event owners/Head Admins can connect, approve, stop, sync or link existing matches.
+Apply migrations 034–036 using `scripts/migrate.mjs`. Apply migration 038 before deploying the password code: team routes fail closed (503) until its tables exist. They add service-only connection/source/worker tables, an atomic import function, and the `map-veto-sheet-sync` Supabase cron job. The job runs each minute and dispatches an authenticated HTTP request with a generated secret stored in a service-only table. Referees can read previews and history; only event owners/Head Admins can connect, approve, stop, sync or link existing matches.
 
 On a production connection/confirmation, the app configures the worker endpoint using `VERCEL_PROJECT_PRODUCTION_URL`, or `NEXT_PUBLIC_APP_URL` when hosting elsewhere. Set the latter to the canonical HTTPS **map-veto app** origin if needed. Configure the deployment environment with the usual Supabase server credentials and optional Google credentials. Local testing uses Sync now or an authenticated worker test: localhost cannot be reached by Supabase's cron job. A worker endpoint is not configured from request headers or user-provided URLs.
 

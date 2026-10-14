@@ -3,6 +3,7 @@ import {z} from 'zod';
 import {createServiceClient} from '@/lib/supabase/server';
 import {matchStaffAccess} from '@/lib/auth/matchAdmin';
 import {vetoResponse} from '@/lib/veto/respond';
+import {teamGate} from '@/lib/auth/teamAccess';
 const schema=z.discriminatedUnion('operation',[
  z.object({operation:z.literal('request'),match_id:z.string().uuid(),token:z.string().uuid().optional(),request_id:z.string().uuid(),reason:z.string().trim().min(1).max(500)}),
  z.object({operation:z.literal('answer'),match_id:z.string().uuid(),token:z.string().uuid(),request_id:z.string().uuid(),approve:z.boolean()})
@@ -19,6 +20,7 @@ export async function POST(request:NextRequest) {
  } else {
   const {data:link}=await db.from('match_links').select('link_type,expires_at').eq('match_id',d.match_id).eq('token',token!).single();
   if(!link || !['team_a','team_b'].includes(link.link_type) || (link.expires_at && Date.parse(link.expires_at)<=Date.now()))return NextResponse.json({error:'Valid team link required'},{status:403});
+  const gate=await teamGate(d.match_id,token!);if(gate)return gate;
  }
  const args=d.operation==='request'?{p_match_id:d.match_id,p_token:token!,p_request_id:d.request_id,p_reason:d.reason}:{p_match_id:d.match_id,p_token:token!,p_request_id:d.request_id,p_approve:d.approve};
  const {data,error}=await db.rpc(d.operation==='request'?'veto_request_reset':'veto_answer_reset',args);

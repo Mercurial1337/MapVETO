@@ -2,6 +2,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import MatchClient from './MatchClient';
 import { matchStaffAccess } from '@/lib/auth/matchAdmin';
 import { validateToken } from '@/lib/auth/token';
+import { teamPasswordRequired } from '@/lib/auth/teamAccess';
 
 interface MatchPageProps {
     params: Promise<{ id: string }>;
@@ -21,6 +22,10 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
 
     const access=await validateToken(matchId,token);
     if(!access.isValid) return <div role="alert" className="p-8">Invalid or expired match link.</div>;
+    // A protected team link renders nothing about the match until its password is verified.
+    if((access.linkType==='team_a' || access.linkType==='team_b') && await teamPasswordRequired(matchId,token).catch(()=>true)) {
+        return <MatchClient matchId={matchId} token={token} passwordRequired initialData={{ match: null, state: null, maps: [], logs: [], eventBranding: null, userRole: access.linkType }} />;
+    }
     const supabase = createServiceClient();
 
     // 1. Fetch Match Data and Token Role in Parallel

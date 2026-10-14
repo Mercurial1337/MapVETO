@@ -2,6 +2,7 @@ import { PGlite } from '@electric-sql/pglite';
 import { readFileSync, readdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
+import { hashPassword, passwordFingerprint } from '../src/lib/auth/teamPassword.ts';
 const remote=process.argv.includes('--remote');
 let db;
 if(remote) {
@@ -329,5 +330,73 @@ await db.query("UPDATE match_links SET expires_at=now()-interval '1 second' WHER
 assert.equal(await rpc('veto_session_snapshot',[rewind.id,rewind.a]),null);
 for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'veto_session_snapshot(uuid,uuid)','EXECUTE') allowed",[role])).rows[0].allowed,false);
 console.log('PASS atomic session: scoped/expired links, coherent match/state/logs, database clock, no tokens and service-only access');
+
+// Sheet passwords: the application sends only a keyed fingerprint and, for rows it may create, a salted hash.
+const sheetOwner=randomUUID(),sheetOutsider=randomUUID(),sheetEvent=randomUUID(),sheetId='qa_sheet_passwords_1234567890',secretWord='Zq-0042 pass!';
+for(const id of [sheetOwner,sheetOutsider])await db.query('INSERT INTO auth.users(id) VALUES($1)',[id]);
+await db.query("INSERT INTO events(id,name,created_by) VALUES($1,'Codex sheet password QA',$2)",[sheetEvent,sheetOwner]);
+await db.query('INSERT INTO event_sheet_connections(event_id,spreadsheet_id,connected_by) VALUES($1,$2,$3)',[sheetEvent,sheetId,sheetOwner]);
+const poolGame=(await db.query("SELECT game_id FROM veto_templates WHERE format='bo3' ORDER BY is_default DESC,created_at,id LIMIT 1")).rows[0].game_id;
+const poolMaps=(await db.query('SELECT id FROM maps WHERE game_id=$1 AND is_active ORDER BY name LIMIT 7',[poolGame])).rows.map(r=>r.id);
+while(poolMaps.length<7){const id=randomUUID();await db.query("INSERT INTO maps(id,game_id,name,slug,image_url) VALUES($1,$2,$3,$3,'/test.webp')",[id,poolGame,'Pool '+id]);poolMaps.push(id);}
+const accessKey=(await db.query('SELECT secret FROM match_access_settings WHERE id')).rows[0].secret;assert.ok(accessKey.length>=64);
+const fingerprint=word=>passwordFingerprint(word,accessKey);
+const prow=(id,extra={})=>({source_id:id,round:'QA',team_a:'PW Alpha '+id,team_b:'PW Beta '+id,format:'bo3',row:2,status:'ready',issue:'',password_status:'supplied',password_fingerprint:fingerprint(secretWord),password_hash:null,maps:poolMaps,...extra});
+const applyDay=(rows,choices=null,user=sheetOwner)=>rpc('sheet_apply_day',[sheetEvent,user,sheetId,1,'D1 - Matches',JSON.stringify(rows),choices&&JSON.stringify(choices)]);
+const rejectDay=(rows,choices,message,user=sheetOwner)=>rejects('sheet_apply_day',[sheetEvent,user,sheetId,1,'D1 - Matches',JSON.stringify(rows),choices&&JSON.stringify(choices)],message);
+const sheetHash=await hashPassword(secretWord);
+let dayRows=[prow('PW1',{password_hash:sheetHash}),prow('PW2',{team_b:'Winner from #1',status:'waiting',issue:'Waiting'}),prow('PW3')];
+await rejectDay([prow('PW1')],[{source_id:'PW1',selection:'C'}],/not prepared/);
+await rejectDay([prow('PW1',{password_status:'missing',password_fingerprint:null})],[{source_id:'PW1',selection:'C'}],/not prepared/);
+assert.equal((await db.query('SELECT count(*)::int n FROM matches WHERE event_id=$1',[sheetEvent])).rows[0].n,0);
+const confirmed=await applyDay(dayRows,[{source_id:'PW1',selection:'A'},{source_id:'PW2',selection:'C'}]);
+assert.equal(confirmed.created,1);assert.deepEqual(confirmed.results,[{source_id:'PW1',outcome:'created'},{source_id:'PW2',outcome:'waiting'}]);
+const sourceRow=id=>db.query('SELECT * FROM sheet_match_sources WHERE event_id=$1 AND source_id=$2',[sheetEvent,id]).then(r=>r.rows[0]);
+const pw1=await sourceRow('PW1'),lockRow=async id=>(await db.query('SELECT * FROM match_team_passwords WHERE match_id=$1',[id])).rows[0];
+assert.equal((await lockRow(pw1.match_id)).password_hash,sheetHash);assert.equal((await lockRow(pw1.match_id)).version,1);
+assert.equal('password_hash' in pw1.snapshot || 'password_hash' in pw1.created_snapshot,false);assert.equal(pw1.created_snapshot.password_fingerprint,fingerprint(secretWord));
+const stored=(await db.query("SELECT (SELECT string_agg(s::text,'') FROM sheet_match_sources s WHERE event_id=$1)||(SELECT string_agg(m::text,'') FROM matches m WHERE event_id=$1)||(SELECT string_agg(p::text,'') FROM match_team_passwords p JOIN matches m ON m.id=p.match_id WHERE m.event_id=$1) t",[sheetEvent])).rows[0].t;
+assert.equal(stored.includes(secretWord),false);
+// Background sync recreates nothing, skips unapproved rows and creates an approved fixture once it resolves.
+for(let i=0;i<2;i++)assert.equal((await applyDay(dayRows)).created,0);
+assert.equal((await sourceRow('PW3')).status,'excluded');
+dayRows[1]=prow('PW2',{password_hash:sheetHash});
+assert.equal((await applyDay(dayRows)).created,1);assert.equal((await applyDay([...dayRows.slice(0,1),prow('PW2'),dayRows[2]])).created,0);
+const pw2=await sourceRow('PW2');assert.ok(await lockRow(pw2.match_id));assert.equal(pw2.selection,'C');
+assert.deepEqual((await applyDay(dayRows,[{source_id:'PW1',selection:'A'}])).results,[{source_id:'PW1',outcome:'already_imported'}]);
+assert.equal((await db.query('SELECT count(*)::int n FROM matches WHERE event_id=$1',[sheetEvent])).rows[0].n,2);
+// A changed sheet password is a conflict until a Head Admin approves it; approval bumps the session version.
+dayRows[0]=prow('PW1',{password_fingerprint:fingerprint('New-0042')});
+const changed=await applyDay(dayRows);assert.equal(changed.conflicts,1);assert.match((await sourceRow('PW1')).issue,/Password changed/);assert.equal((await lockRow(pw1.match_id)).password_hash,sheetHash);
+const newHash=await hashPassword('New-0042');
+await rejects('sheet_replace_password',[sheetEvent,sheetOutsider,pw1.id,fingerprint('New-0042'),newHash],/Head Admin/);
+await rejects('sheet_replace_password',[sheetEvent,sheetOwner,pw1.id,'not-a-fingerprint',newHash],/Invalid password update/);
+await rejects('sheet_replace_password',[sheetEvent,sheetOwner,(await sourceRow('PW3')).id,fingerprint('New-0042'),newHash],/imported match/);
+assert.equal(await rpc('sheet_replace_password',[sheetEvent,sheetOwner,pw1.id,fingerprint('New-0042'),newHash]),2);
+assert.equal((await lockRow(pw1.match_id)).password_hash,newHash);assert.equal((await sourceRow('PW1')).status,'created');assert.equal((await applyDay(dayRows)).conflicts,0);
+dayRows[0]=prow('PW1',{password_status:'missing',password_fingerprint:null,status:'invalid'});
+assert.equal((await applyDay(dayRows)).conflicts,1);assert.match((await sourceRow('PW1')).issue,/current match password still applies/);assert.ok(await lockRow(pw1.match_id));
+dayRows[0]=prow('PW1',{team_b:'Changed opponent',password_fingerprint:fingerprint('New-0042')});
+await applyDay(dayRows);assert.match((await sourceRow('PW1')).issue,/Teams or format changed/);
+// Linking a manual veto never adopts the sheet password silently.
+const manualId=randomUUID(),manual=prow('PW4');
+await db.query("INSERT INTO matches(id,event_id,veto_template_id,team_a_name,team_b_name,format,status) VALUES($1,$2,$3,$4,$5,'bo3','ready_check')",[manualId,sheetEvent,(await db.query("SELECT id FROM veto_templates WHERE format='bo3' ORDER BY is_default DESC,created_at,id LIMIT 1")).rows[0].id,manual.team_a,manual.team_b]);
+const blocked=await applyDay([...dayRows,{...manual,password_hash:sheetHash}],[{source_id:'PW4',selection:'C'}]);assert.deepEqual(blocked.results,[{source_id:'PW4',outcome:'conflict'}]);
+await rpc('sheet_link_existing',[sheetEvent,sheetOwner,(await sourceRow('PW4')).id,manualId]);
+await applyDay([...dayRows,manual]);assert.match((await sourceRow('PW4')).issue,/now has a password/);assert.equal(await lockRow(manualId),undefined);
+assert.equal(await rpc('sheet_replace_password',[sheetEvent,sheetOwner,(await sourceRow('PW4')).id,fingerprint(secretWord),sheetHash]),1);assert.equal((await sourceRow('PW4')).status,'created');
+// Five password attempts per team link per ten minutes; other links and matches are unaffected.
+for(let i=0;i<5;i++)assert.equal(await rpc('match_password_reserve',[pw1.match_id,'team_a']),0);
+const wait=await rpc('match_password_reserve',[pw1.match_id,'team_a']);assert.ok(wait>0 && wait<=600);
+assert.equal(await rpc('match_password_reserve',[pw1.match_id,'team_b']),0);assert.equal(await rpc('match_password_reserve',[pw2.match_id,'team_a']),0);
+await db.query("UPDATE match_password_attempts SET window_started_at=now()-interval '11 minutes' WHERE match_id=$1 AND actor='team_a'",[pw1.match_id]);
+assert.equal(await rpc('match_password_reserve',[pw1.match_id,'team_a']),0);
+await rpc('sheet_replace_password',[sheetEvent,sheetOwner,pw1.id,fingerprint('New-0042'),newHash]);assert.equal((await db.query('SELECT count(*)::int n FROM match_password_attempts WHERE match_id=$1',[pw1.match_id])).rows[0].n,0);
+for(const role of ['anon','authenticated']) {
+ for(const table of ['match_team_passwords','match_password_attempts','match_access_settings'])assert.equal((await db.query('SELECT has_table_privilege($1,$2,$3) allowed',[role,table,'SELECT'])).rows[0].allowed,false);
+ for(const fn of ['match_password_reserve(uuid,text)','sheet_replace_password(uuid,uuid,uuid,text,text)','sheet_apply_day(uuid,uuid,text,bigint,text,jsonb,jsonb)'])assert.equal((await db.query('SELECT has_function_privilege($1,$2,$3) allowed',[role,fn,'EXECUTE'])).rows[0].allowed,false);
+}
+await db.query('DELETE FROM matches WHERE id=$1',[pw2.match_id]);assert.equal((await db.query('SELECT count(*)::int n FROM match_team_passwords WHERE match_id=$1',[pw2.match_id])).rows[0].n,0);
+console.log('PASS sheet passwords: hash stored only with created match, no plaintext or hash in snapshots, fail-closed creation, itemized confirmation, approved-only background creation, change/removal conflicts, Head Admin replacement with version bump, manual link approval, attempt limits and service-only access');
 await db.close();
 
