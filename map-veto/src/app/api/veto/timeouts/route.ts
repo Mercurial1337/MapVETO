@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createServiceClient } from '@/lib/supabase/server';
 import { matchAdminToken } from '@/lib/auth/matchAdmin';
 import { vetoResponse } from '@/lib/veto/respond';
+import { teamGate } from '@/lib/auth/teamAccess';
 const common={match_id:z.string().uuid(),token:z.string().uuid(),request_id:z.string().uuid()};
 const schema=z.discriminatedUnion('operation',[
  z.object({...common,operation:z.literal('request'),reason:z.string().trim().min(1).max(1000)}),
@@ -20,6 +21,7 @@ export async function POST(request:NextRequest) {
  } else {
   const {data:link}=await db.from('match_links').select('link_type,expires_at').eq('match_id',d.match_id).eq('token',token).single();
   if(!link || !['team_a','team_b'].includes(link.link_type) || (link.expires_at && Date.parse(link.expires_at)<=Date.now())) return NextResponse.json({error:'Valid team link required'},{status:403});
+  const gate=await teamGate(d.match_id,token);if(gate) return gate;
  }
  const {data,error}=d.operation==='request'
   ? await db.rpc('veto_request_timeout',{p_match_id:d.match_id,p_token:token,p_reason:d.reason,p_request_id:d.request_id})

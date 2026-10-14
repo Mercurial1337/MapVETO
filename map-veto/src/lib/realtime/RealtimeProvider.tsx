@@ -61,6 +61,8 @@ interface RealtimeContextValue {
     clock: VetoClock;
     clockReady: boolean;
     expireTurn: (startedAt:string) => Promise<void>;
+    passwordRequired: boolean;
+    unlock: (password:string) => Promise<string|null>;
 }
 
 const RealtimeContext = createContext<RealtimeContextValue | null>(null);
@@ -76,10 +78,11 @@ interface RealtimeProviderProps {
         eventBranding: EventBranding | null;
         userRole: UserRole;
     };
+    passwordRequired?: boolean;
     children: ReactNode;
 }
 
-export function RealtimeProvider({ matchId, token, initialData, children }: RealtimeProviderProps) {
+export function RealtimeProvider({ matchId, token, initialData, passwordRequired: initiallyLocked=false, children }: RealtimeProviderProps) {
     const [match, setMatch] = useState<Match | null>(initialData.match);
     const [state, setState] = useState<MatchState | null>(initialData.state);
     const [maps] = useState<GameMap[]>(initialData.maps);
@@ -89,6 +92,9 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
     const [isConnected, setIsConnected] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // Password-protected team links stay locked until the server issues a match session.
+    const [passwordRequired,setPasswordRequired]=useState(initiallyLocked);
+    const locked=useCallback((data:{password_required?:boolean})=>{if(!data?.password_required)return false;setPasswordRequired(true);setError(null);return true;},[]);
 
     const supabase = createClient();
     const [clock]=useState(()=>new VetoClock());
@@ -111,29 +117,39 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
             const response=await fetch('/api/veto/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,token})});
             const data=await response.json();
             const received=performance.now();
+            if(locked(data))return;
             if(!response.ok) {setError(data.error || 'Could not load match');return;}
             if(clock.synchronize(data.server_time,sent,received,data.server_processing_ms))setClockReady(true);
             if(version!==revision.current){again.current=true;continue;}
             setMatch(prev=>({...prev,...data.match}));
             setState(data.state);setLogs(data.logs);setUserRole(data.userRole);setEventBranding(data.eventBranding);
-            setError(null);
+            setError(null);setPasswordRequired(false);
         } catch { setError('Connection lost. Retrying…'); }
         finally {setIsLoading(false);}
         }while(again.current);};
         flight.current=run();
         try{await flight.current;}finally{flight.current=null;}
-    },[matchId,token,clock]);
+    },[matchId,token,clock,locked]);
     const expireTurn=useCallback(async(startedAt:string)=>{
         if(expiry.current?.clock===startedAt)return expiry.current.promise;
         const run=async()=>{
             const response=await fetch('/api/veto/auto-action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,token,turn_started_at:startedAt})});
             const data=await response.json();
-            if(response.ok)applyResult(data);
+            if(response.ok)applyResult(data);else if(locked(data))return;
             await fetchData();
         };
         const promise=run();expiry.current={clock:startedAt,promise};
         try{await promise;}finally{if(expiry.current?.promise===promise)expiry.current=null;}
-    },[matchId,token,applyResult,fetchData]);
+    },[matchId,token,applyResult,fetchData,locked]);
+    const unlock=useCallback(async(password:string)=>{
+        try {
+            const response=await fetch('/api/veto/access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,token,password})});
+            const data=await response.json();
+            if(!response.ok)return data.error || 'Could not verify the password. Please retry.';
+            await fetchData();
+            return null;
+        } catch {return 'Connection failed. Please retry.';}
+    },[matchId,token,fetchData]);
 
     const prevMatchRef = useRef<Match | null>(initialData.match);
     const prevStateRef = useRef<MatchState | null>(initialData.state);
@@ -161,6 +177,13 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
     // Read the authoritative snapshot after changes. Coalesce a transaction's
     // broadcasts into one request and recover missed events on reconnect/focus.
     useEffect(() => {
+        // No subscription or polling before the password is accepted; another tab
+        // that unlocks the same link is picked up when this one regains focus.
+        if(passwordRequired) {
+            const retry=()=>{if(document.visibilityState==='visible')void fetchData();};
+            window.addEventListener('focus',retry);document.addEventListener('visibilitychange',retry);
+            return ()=>{window.removeEventListener('focus',retry);document.removeEventListener('visibilitychange',retry);};
+        }
         let timer: ReturnType<typeof setTimeout> | undefined;
         const schedule=()=>{
             if(timer) return;
@@ -180,7 +203,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
         const interval=setInterval(recover,15000);
         window.addEventListener('focus',recover);document.addEventListener('visibilitychange',recover);
         return ()=>{clearTimeout(timer);clearInterval(interval);window.removeEventListener('focus',recover);document.removeEventListener('visibilitychange',recover);void supabase.removeChannel(channel);};
-    },[matchId,supabase,fetchData]);
+    },[matchId,supabase,fetchData,passwordRequired]);
 
     // Perform veto action
     const performAction = useCallback(
@@ -206,7 +229,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
                 const data = await response.json();
 
                 if (!response.ok) {
-                    setError(data.error || 'Action failed');
+                    if(!locked(data))setError(data.error || 'Action failed');
                     return false;
                 }
 
@@ -219,7 +242,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
                 return false;
             }
         },
-        [matchId, token, state?.turn_started_at,applyResult]
+        [matchId, token, state?.turn_started_at,applyResult,locked]
     );
 
     // Perform coin toss (admin only - uses cookie auth)
@@ -266,7 +289,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
             const data = await response.json();
 
             if (!response.ok) {
-                setError(data.error || 'Check-in failed');
+                if(!locked(data))setError(data.error || 'Check-in failed');
                 return false;
             }
 
@@ -276,7 +299,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
             setError('Network error');
             return false;
         }
-    }, [matchId, token,applyResult]);
+    }, [matchId, token,applyResult,locked]);
 
     // Manual refresh
     const refresh = useCallback(async () => {
@@ -298,6 +321,7 @@ export function RealtimeProvider({ matchId, token, initialData, children }: Real
         performReady,
         refresh,
         clock,clockReady,expireTurn,
+        passwordRequired,unlock,
     };
 
     return (

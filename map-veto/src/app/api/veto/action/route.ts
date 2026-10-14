@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { teamGate } from '@/lib/auth/teamAccess';
 
 // Request validation schema
 const VetoActionSchema = z.object({
@@ -36,6 +37,8 @@ export async function POST(request: NextRequest) {
         }
 
         const { match_id, token, action, map_id, side_choice, turn_started_at } = validationResult.data;
+        const gate = await teamGate(match_id, token);
+        if (gate) return gate;
         const supabase = createServiceClient();
 
         // 1. Call the atomic PostgreSQL RPC
@@ -72,38 +75,28 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Broadcast the new state to all clients
+        // Wake subscribed clients. The match channel is public, so it carries no
+        // match data; each client re-reads its access-checked session snapshot.
         const channel = supabase.channel(`match:${match_id}`);
         await channel.send({
             type: 'broadcast',
             event: 'match_state_update',
-            payload: newState
+            payload: {}
         });
 
         if (newState.is_complete) {
             await channel.send({
                 type: 'broadcast',
                 event: 'match_update',
-                payload: { status: 'completed' }
+                payload: {}
             });
         }
-        
-        // Broadcast the new log
-        const { data: latestLog } = await supabase
-            .from('match_logs')
-            .select('*')
-            .eq('match_id', match_id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
 
-        if (latestLog) {
-            await channel.send({
-                type: 'broadcast',
-                event: 'match_log_insert',
-                payload: latestLog
-            });
-        }
+        await channel.send({
+            type: 'broadcast',
+            event: 'match_log_insert',
+            payload: {}
+        });
 
         await supabase.removeChannel(channel);
 

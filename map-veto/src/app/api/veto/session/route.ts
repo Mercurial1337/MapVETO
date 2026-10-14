@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import {matchStaffAccess} from '@/lib/auth/matchAdmin';
+import {teamGate} from '@/lib/auth/teamAccess';
 const schema=z.object({match_id:z.string().uuid(),token:z.string().uuid()});
 export async function POST(request:NextRequest) {
  const started=performance.now();
@@ -9,10 +10,12 @@ export async function POST(request:NextRequest) {
  if(!input.success) return NextResponse.json({error:'Invalid match link'},{status:401});
  const {match_id,token}=input.data,db=createServiceClient();
  let sampled=started;
- const [snapshot,staff]=await Promise.all([
+ const [gate,snapshot,staff]=await Promise.all([
+  teamGate(match_id,token),
   db.rpc('veto_session_snapshot',{p_match_id:match_id,p_token:token}).then(result=>{sampled=performance.now();return result;}),
   matchStaffAccess(match_id,token)
  ]);
+ if(gate)return gate;
  if(snapshot.error)return NextResponse.json({error:'Could not load match'},{status:500});
  const data=snapshot.data;
  if(!data)return NextResponse.json({error:'Invalid or expired match link'},{status:401});
