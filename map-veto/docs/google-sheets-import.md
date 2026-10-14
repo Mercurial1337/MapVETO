@@ -55,3 +55,28 @@ The competitive map list has one application source: `src/lib/maps/pools.ts`. Sh
 `node tests/sheets.test.mjs` runs parser cases locally.
 
 With a local production server on port 3001, `node tests/sheets-http.test.mjs --keep` creates disposable users/event against the public experiment workbook. `node tests/sheets-tabs.test.mjs` checks all real day layouts; `node tests/sheets-db.test.mjs` checks format/seed modes, races, rollback, moved IDs, conflicts, deletion tombstones and manual linking. The resolution test requires temporarily setting D1 G9 to `Codex Sheet QA Winner`; restore its original `='Bracket View'!K9` formula afterwards. Run `node tests/sheets-http.test.mjs --cleanup` to remove the fixture. Never print or commit the ignored session file.
+
+## Sync test matrix — 14 October 2026
+
+Run against a disposable local stack (PostgreSQL 18 with migrations 016–039, PostgREST, production build) using the public experiment workbook read-only, plus PGlite database tests in `npm test`. No workbook values or formulas were edited, and only local disposable fixtures were created. Dummy passwords only.
+
+| Scenario | Result | Evidence |
+| --- | --- | --- |
+| Open/connect workbook without confirmation | Pass: 0 matches, 0 import rows after opening all 7 days | local HTTP + DB query |
+| Confirm a subset of ready matches | Pass: 2 checked ready created, 1 checked waiting approved, 8 unchecked excluded | browser |
+| Confirm unresolved fixture, then it resolves | Pass: created exactly once, with password | `npm test` (sheet passwords) |
+| Repeated Sync now, worker retries, concurrent confirmation | Pass: 3 concurrent syncs, 2×2 concurrent worker calls, 2 concurrent confirms; no duplicates | local HTTP + DB query |
+| Multiple rounds on the same day | Pass: Round 1/2 rows keep distinct IDs | real workbook D1, parser tests |
+| Moved rows / changed day order | Pass: same ID stays associated | parser tests; remote `sheets-db` case |
+| Teams, format or password changed after import | Pass: conflict shown, existing match unchanged; password needs Head Admin approval | `npm test` |
+| Missing/duplicate ID, invalid format, conflicting password cells | Pass: row blocked with a clear issue | parser tests |
+| Blank/TBD opponents, byes, cancelled/started fixtures | Pass: wait or skip | parser tests, real workbook |
+| Delete an imported veto, then sync | Pass: tombstoned as deleted, not recreated | local HTTP + DB query |
+| Google access revoked / unreadable, then restored | Pass: worker reports failure, `last_error` shown, next run recovers with no duplicates; bad worker secret 401 | local worker endpoint |
+| Stale preview at confirmation | Pass: nothing written, preview refreshed, selection and A/B/C kept | browser |
+| Private workbook through a Viewer service account | **Not run**: no service-account credentials available locally | — |
+| Deployed background worker (Supabase cron → production URL) | **Not run**: nothing was deployed; the worker endpoint was exercised directly | — |
+| Real opponent resolution in the workbook (`sheets-resolution`) | **Not run**: requires editing the shared workbook | — |
+
+Before release, run against the real project: `npm run test:remote`, `npm run test:sheets-http`, `node tests/sheets-db.test.mjs`, `node tests/sheets-resolution.test.mjs` (with the documented D1 G9 edit and restore), `npm run test:password-http`, and a private workbook shared with the service account containing dummy passwords.
+
