@@ -34,6 +34,11 @@ export function requestNotice(log:MatchLog,match:Match,role:LinkType|null,canAdm
  if(log.action_type==='timeout_request' && (role==='admin' || role==='referee' || canAdmin)) return {kind:'warning',message:`${log.actor==='team_a'?match.team_a_name:match.team_b_name} requested a timeout. Open the Timeouts tab to review it.`};
  if(log.action_type==='reset_request' && (role==='admin' || role==='referee' || canAdmin)) return {kind:'warning',message:`Referee requested a veto reset: ${String(log.metadata?.reason || '')}`};
  if(log.action_type==='reset_answer' && (role==='admin' || role==='referee' || canAdmin)) return {kind:'info',message:`${log.actor==='team_a'?match.team_a_name:match.team_b_name} ${log.metadata?.approved?'approved':'declined'} the veto reset.`};
+ if(log.action_type==='timeout_acknowledged') {
+  const staff=log.metadata?.staff_role==='referee'?'Referee':'Head Admin';
+  if(role===log.metadata?.request_actor) return {kind:'info',message:`The ${staff.toLowerCase()} acknowledged your timeout request. The veto continues unless it is paused.`};
+  if(role==='admin' || role==='referee' || canAdmin) return {kind:'info',message:`${staff} acknowledged ${log.metadata?.request_actor==='team_a'?match.team_a_name:match.team_b_name}'s timeout request.`};
+ }
  if(log.action_type==='timeout_resolved' && role===log.metadata?.request_actor) return {kind:'success',message:`The Head Admin resolved your timeout: ${String(log.metadata?.resolution || '')}`};
  return null;
 }

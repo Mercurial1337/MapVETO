@@ -53,6 +53,13 @@ assert.equal(session.state.is_paused,false);assert.equal(session.state.turn_star
 assert.equal(session.logs.filter(log=>log.action_type==='timeout_request').length,1);
 await post('/api/veto/timeouts',{operation:'request',match_id:id,token:tokens.team_a,request_id:randomUUID(),reason:'Duplicate problem'},409);
 for(const role of ['team_a','team_b','observer']) await post('/api/veto/timeouts',{operation:'resolve',match_id:id,token:tokens[role],request_id:requestId,resolution:'Reconnected'},403);
+// Acknowledgment: staff links only, shared with all staff, no pause, details hidden from teams.
+for(const role of ['team_a','team_b','observer']) await post('/api/veto/timeouts',{operation:'acknowledge',match_id:id,token:tokens[role],request_id:requestId},403);
+const acknowledged=await Promise.all([tokens.referee,tokens.admin].map(token=>post('/api/veto/timeouts',{operation:'acknowledge',match_id:id,token,request_id:requestId})));
+assert.equal(acknowledged[0].request.acknowledged_at,acknowledged[1].request.acknowledged_at);assert.equal(acknowledged[0].request.status,'open');
+session=await post('/api/veto/session',{match_id:id,token:tokens.admin});assert.equal(session.state.is_paused,false);assert.equal(session.logs.filter(log=>log.action_type==='timeout_acknowledged').length,1);
+assert.ok(['Referee link','Head Admin link'].includes(session.match.timeout_acknowledgments[requestId].by));
+const teamView=await post('/api/veto/session',{match_id:id,token:tokens.team_a});assert.equal(teamView.match.timeout_acknowledgments,undefined);assert.equal(teamView.logs.filter(log=>log.action_type==='timeout_acknowledged').length,1);
 const paused=await post('/api/veto/admin/override',{match_id:id,token:tokens.admin,operation:'pause',reason:'Investigate team timeout'});
 const resolutionPayload={operation:'resolve',match_id:id,token:tokens.admin,request_id:requestId,resolution:'Connection restored'};
 await post('/api/veto/timeouts',resolutionPayload);await post('/api/veto/timeouts',resolutionPayload);
@@ -63,7 +70,7 @@ assert.equal(session.logs.find(log=>log.action_type==='timeout_resolved').metada
 const hiddenReports=await anon.from('veto_timeout_requests').select('*').eq('match_id',id);assert.equal(hiddenReports.data?.length || 0,0);
 const directRequest=await anon.rpc('veto_request_timeout',{p_match_id:id,p_token:tokens.team_b,p_request_id:randomUUID(),p_reason:'Bypass API'});assert.ok(directRequest.error);
 await post('/api/veto/admin/override',{match_id:id,token:tokens.admin,operation:'resume',reason:'Investigation finished'});
-console.log('PASS HTTP team timeouts: team report reaches referee, retries deduplicated, resolution protected/audited, referee controls pause/resume independently');
+console.log('PASS HTTP team timeouts: team report reaches referee, retries deduplicated, staff-only acknowledgment shared without pausing, resolution protected/audited, referee controls pause/resume independently');
 for(let i=0;i<30;i++) {
  session=await post('/api/veto/session',{match_id:id,token:tokens.observer});
  if(session.state.is_complete) break;

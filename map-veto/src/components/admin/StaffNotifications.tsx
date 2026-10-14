@@ -7,7 +7,7 @@ import {TimeoutBrowserAlerts} from './TimeoutBrowserAlerts';
 import type {BrowserTimeout} from '@/lib/veto/browserTimeoutAlerts';
 
 interface Completion {id:string;team_a_name:string;team_b_name:string;completed_at:string;}
-interface StaffTimeout extends BrowserTimeout {reason:string;createdAt:string;}
+interface StaffTimeout extends BrowserTimeout {reason:string;createdAt:string;acknowledgedAt:string|null;acknowledgedBy:string|null;}
 export function StaffNotifications() {
     const [open,setOpen]=useState(false),[items,setItems]=useState<Completion[]>([]),[error,setError]=useState(''),[opening,setOpening]=useState('');
     const router=useRouter(),seen=useRef(new Set<string>()),initialized=useRef(false);
@@ -59,13 +59,29 @@ export function StaffNotifications() {
         finally {setOpening('');}
     },[opening,router]);
     const openTimeout=useCallback((item:BrowserTimeout)=>{void view({id:item.matchId},'timeouts');},[view]);
+    const [acknowledging,setAcknowledging]=useState('');
+    // Uses the signed-in staff account; acknowledging never pauses or resolves the veto.
+    const acknowledge=useCallback(async (item:StaffTimeout)=>{
+        if(acknowledging)return;
+        setAcknowledging(item.id);
+        try {
+            const response=await fetch('/api/veto/timeouts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:'acknowledge',match_id:item.matchId,request_id:item.id})});
+            const data=await response.json();
+            if(!response.ok)throw new Error(data.error);
+            await refresh();
+        } catch(e) {setError(e instanceof Error && e.message?e.message:'Could not acknowledge the timeout. Please retry.');}
+        finally {setAcknowledging('');}
+    },[acknowledging,refresh]);
+    const waiting=timeouts.filter(item=>!item.acknowledged).length;
     return <div className="relative">
-        <button className="btn-secondary px-3 py-2 text-sm" aria-expanded={open} onClick={()=>{setOpen(!open);if(!open)void refresh();}}>Notifications{timeouts.length?` · ${timeouts.length} timeout${timeouts.length===1?'':'s'}`:''}</button>
+        <button className={`btn-secondary min-h-11 px-3 py-2 text-sm ${waiting?'border-yellow-400':''}`} aria-expanded={open} onClick={()=>{setOpen(!open);if(!open)void refresh();}}>Notifications{timeouts.length?` · ${timeouts.length} open timeout${timeouts.length===1?'':'s'}`:''}{waiting?` (${waiting} not acknowledged)`:''}</button>
         <TimeoutBrowserAlerts requests={timeouts} onSelect={openTimeout}/>
         {open && <section aria-label="Staff notifications" className="absolute right-0 top-full mt-2 z-50 w-80 max-w-[90vw] max-h-[70vh] overflow-auto border border-white/30 bg-[#18181b] p-3 rounded">
             <h2 className="font-semibold">Open timeouts</h2>
             {!timeouts.length && <p className="text-sm mb-3">No open timeouts.</p>}
-            <ul className="space-y-2 mb-4">{timeouts.map(item=><li key={item.id} className="border-l-2 border-yellow-400 pl-2"><p>{item.teamA} vs {item.teamB}</p><p className="text-sm">{item.requestedBy}: {item.reason}</p><button disabled={Boolean(opening)} className="text-sm underline" onClick={()=>openTimeout(item)}>Review timeout</button></li>)}</ul>
+            <ul className="space-y-2 mb-4">{timeouts.map(item=><li key={item.id} className="border-l-2 border-yellow-400 pl-2"><p>{item.teamA} vs {item.teamB}</p><p className="text-sm break-words">{item.requestedBy}: {item.reason}</p>
+                <p className="text-xs text-white/70">{item.acknowledged?`Acknowledged by ${item.acknowledgedBy || 'staff'}${item.acknowledgedAt?' at '+new Date(item.acknowledgedAt).toLocaleTimeString():''}`:'Not acknowledged'}</p>
+                <div className="flex flex-wrap gap-x-4">{!item.acknowledged && <button disabled={Boolean(acknowledging)} className="text-sm underline min-h-11" onClick={()=>void acknowledge(item)}>{acknowledging===item.id?'Acknowledging…':'Acknowledge'}</button>}<button disabled={Boolean(opening)} className="text-sm underline min-h-11" onClick={()=>openTimeout(item)}>Review timeout</button></div></li>)}</ul>
             <h2 className="font-semibold">Completed vetos</h2><p className="text-sm text-white/70 mb-3">Record the match start when play begins. Veto completion is not the match start time.</p>
             {error && <p role="alert">{error}</p>}
             {!items.length && !error && <p className="text-sm">No completed vetos yet.</p>}

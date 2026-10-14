@@ -16,6 +16,7 @@ export function formatLog(entry: MatchLog, teams: Record<string,string>, maps: R
   case 'reset_request':text=`Referee requested veto reset: ${metadata.reason || ''}`;break;
   case 'reset_answer':text=`${actor} ${metadata.approved?'approved':'declined'} the veto reset`;break;
   case 'timeout_request':text=`${actor} requested a timeout: ${metadata.reason || ''}`;break;
+  case 'timeout_acknowledged':text=`${metadata.staff_role==='referee'?'Referee':'Head Admin'} acknowledged ${teams[String(metadata.request_actor)] || 'the team'}'s timeout request`;break;
   case 'timeout_resolved':text=`Head Admin resolved ${teams[String(metadata.request_actor)] || 'the team'}'s timeout: ${metadata.resolution || ''}`;break;
   default:text=`${actor}: ${entry.action_type}`;
  }

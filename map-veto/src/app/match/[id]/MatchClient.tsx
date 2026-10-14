@@ -340,7 +340,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 </div>
             </header>
 
-            {(userRole==='observer' || userRole==='admin' || userRole==='referee') && <p role="status" className="px-4 py-2 border-b border-white/20 text-sm text-white/70">Read-only view{isAdmin?' · Head Admin controls available.':isReferee?' · Referee: reset requests only.':''}</p>}
+            {(userRole==='observer' || userRole==='admin' || userRole==='referee') && <p role="status" className="px-4 py-2 border-b border-white/20 text-sm text-white/70">Read-only view{isAdmin?' · Head Admin controls available.':isReferee?' · Referee: reset requests and timeout acknowledgment.':''}</p>}
             {/* Teams Banner */}
             <div className="bg-black/40 border-b border-white/5 px-4 md:px-6 py-4 md:py-6">
                 <div className="max-w-4xl mx-auto flex items-center justify-center gap-3 md:gap-8">
@@ -527,7 +527,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     {isAdmin && <AdminPanel matchId={matchId} matchStatus={match.status} isPaused={state?.is_paused} token={token}/>}
                     {isReferee && !isAdmin && <RefereePanel matchId={matchId} token={token}/>}
                     <section aria-label="Match activity" className="match-panel">
-                    <MatchActivity mapNames={mapNames} isAdmin={isAdmin} matchId={matchId} token={token}/>
+                    <MatchActivity mapNames={mapNames} isAdmin={isAdmin} canAcknowledge={isAdmin || isReferee} matchId={matchId} token={token}/>
                     </section>
                 </aside>
             </div>

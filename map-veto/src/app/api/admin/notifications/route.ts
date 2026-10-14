@@ -15,9 +15,9 @@ export async function GET() {
     const scope=eventIds.length?`created_by.eq.${user.id},event_id.in.(${eventIds.join(',')})`:`created_by.eq.${user.id}`;
     const [completed,open]=await Promise.all([
      db.from('matches').select('id,team_a_name,team_b_name,completed_at').or(scope).eq('status','completed').not('completed_at','is',null).order('completed_at',{ascending:false}).limit(20),
-     db.from('veto_timeout_requests').select('id,match_id,actor,reason,created_at,matches!inner(team_a_name,team_b_name,created_by,event_id)').eq('status','open').or(scope,{referencedTable:'matches'}).order('created_at',{ascending:false}).limit(100).returns<Array<{id:string;match_id:string;actor:string;reason:string;created_at:string;matches:{team_a_name:string;team_b_name:string}}>>()
+     db.from('veto_timeout_requests').select('id,match_id,actor,reason,created_at,acknowledged_at,acknowledged_label,acknowledged_role,matches!inner(team_a_name,team_b_name,created_by,event_id)').eq('status','open').or(scope,{referencedTable:'matches'}).order('created_at',{ascending:false}).limit(100).returns<Array<{id:string;match_id:string;actor:string;reason:string;created_at:string;acknowledged_at:string|null;acknowledged_label:string|null;acknowledged_role:string|null;matches:{team_a_name:string;team_b_name:string}}>>()
     ]);
     if (completed.error || open.error) return NextResponse.json({error:'Could not load notifications'}, {status:500});
-    const timeouts=open.data.map(report=>({id:report.id,matchId:report.match_id,teamA:report.matches.team_a_name,teamB:report.matches.team_b_name,requestedBy:report.actor==='team_a'?report.matches.team_a_name:report.matches.team_b_name,reason:report.reason,createdAt:report.created_at}));
+    const timeouts=open.data.map(report=>({id:report.id,matchId:report.match_id,teamA:report.matches.team_a_name,teamB:report.matches.team_b_name,requestedBy:report.actor==='team_a'?report.matches.team_a_name:report.matches.team_b_name,reason:report.reason,createdAt:report.created_at,acknowledged:!!report.acknowledged_at,acknowledgedAt:report.acknowledged_at,acknowledgedBy:report.acknowledged_label}));
     return NextResponse.json({notifications:completed.data,timeouts,eventIds,userId:user.id},{headers:{'Cache-Control':'no-store'}});
 }
