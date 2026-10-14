@@ -397,6 +397,26 @@ for(const role of ['anon','authenticated']) {
  for(const fn of ['match_password_reserve(uuid,text)','sheet_replace_password(uuid,uuid,uuid,text,text)','sheet_apply_day(uuid,uuid,text,bigint,text,jsonb,jsonb)'])assert.equal((await db.query('SELECT has_function_privilege($1,$2,$3) allowed',[role,fn,'EXECUTE'])).rows[0].allowed,false);
 }
 await db.query('DELETE FROM matches WHERE id=$1',[pw2.match_id]);assert.equal((await db.query('SELECT count(*)::int n FROM match_team_passwords WHERE match_id=$1',[pw2.match_id])).rows[0].n,0);
+// Timeout acknowledgment: staff-only, idempotent, separate from resolution and pausing.
+const ackMatch=await fixture(),ackRef=(await db.query("SELECT token FROM match_links WHERE match_id=$1 AND link_type='referee'",[ackMatch.id])).rows[0].token,ackRequest=randomUUID();
+await rpc('veto_ready',[ackMatch.id,ackMatch.a]);
+await rpc('veto_request_timeout',[ackMatch.id,ackMatch.a,'Discord crashed',ackRequest]);
+const ackBefore=(await db.query('SELECT * FROM match_state WHERE match_id=$1',[ackMatch.id])).rows[0];
+for(const token of [ackMatch.a,ackMatch.b,ackMatch.observer,f.admin,randomUUID()])await rejects('veto_acknowledge_timeout',[ackMatch.id,token,ackRequest,null,'Someone'],/Head Admin or Referee/);
+await rejects('veto_acknowledge_timeout',[ackMatch.id,ackRef,randomUUID(),null,'Referee link'],/not found/);
+await rejects('veto_acknowledge_timeout',[ackMatch.id,ackRef,ackRequest,null,'  '],/Staff name/);
+const firstAck=await rpc('veto_acknowledge_timeout',[ackMatch.id,ackRef,ackRequest,sheetOwner,'referee@example.invalid']);
+assert.equal(firstAck.request.acknowledged_role,'referee');assert.equal(firstAck.request.status,'open');assert.equal('acknowledged_by' in firstAck.request,false);
+const secondAck=await rpc('veto_acknowledge_timeout',[ackMatch.id,ackMatch.admin,ackRequest,null,'Head Admin link']);assert.equal(secondAck.request.acknowledged_label,'referee@example.invalid');assert.equal(secondAck.request.acknowledged_at,firstAck.request.acknowledged_at);
+const ackLogs=(await db.query("SELECT * FROM match_logs WHERE match_id=$1 AND action_type='timeout_acknowledged'",[ackMatch.id])).rows;
+assert.equal(ackLogs.length,1);assert.deepEqual(Object.keys(ackLogs[0].metadata).sort(),['confirmed_at','request_actor','staff_role','timeout_request_id']);assert.equal(JSON.stringify(ackLogs[0]).includes('referee@example.invalid'),false);
+const ackAfter=(await db.query('SELECT * FROM match_state WHERE match_id=$1',[ackMatch.id])).rows[0];
+assert.equal(ackAfter.is_paused,ackBefore.is_paused);assert.equal(String(ackAfter.turn_started_at),String(ackBefore.turn_started_at));assert.equal(ackAfter.current_step,ackBefore.current_step);
+await rpc('veto_resolve_timeout',[ackMatch.id,ackMatch.admin,ackRequest,'Reconnected']);
+const lateRequest=randomUUID();await rpc('veto_request_timeout',[ackMatch.id,ackMatch.b,'Lost connection',lateRequest]);await rpc('veto_resolve_timeout',[ackMatch.id,ackMatch.admin,lateRequest,'Back online']);
+await rejects('veto_acknowledge_timeout',[ackMatch.id,ackRef,lateRequest,null,'Referee link'],/already resolved/);
+for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'veto_acknowledge_timeout(uuid,uuid,uuid,uuid,text)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+console.log('PASS timeout acknowledgment: Head Admin/Referee links only, idempotent first acknowledger kept, one audit entry without staff email, clock and pause unchanged, resolved requests not acknowledged, service-only access');
 console.log('PASS sheet passwords: hash stored only with created match, no plaintext or hash in snapshots, fail-closed creation, itemized confirmation, approved-only background creation, change/removal conflicts, Head Admin replacement with version bump, manual link approval, attempt limits and service-only access');
 await db.close();
 

@@ -69,6 +69,12 @@ Requesting or resolving an incident does not pause, resume or restart the clock.
 Migration 026 provides service-only functions and a protected request table. Local and remote database tests cover permissions, expired/cross-match links, idempotence, duplicate open requests, immutable resolution and preserved clocks/pauses. HTTP tests exercise report delivery and protected resolution. Production build and targeted ESLint passed.
 Browser verification passed: a team submitted its explanation, the already-open referee Timeouts tab received it without reload, the referee resolved it, and both tabs showed the request and resolution in the audit. The labeled QA match was deleted afterward.
 
+### Acknowledgment and browser alerts
+
+Head Admins and Referees now **acknowledge** a timeout request in the match Timeouts tab or from the dashboard Notifications panel. Acknowledgment is saved on the server (migration 039), shown to all staff with who acknowledged it, and stops reminders in every staff tab. It never pauses, resumes or resolves the veto; resolution remains a Head Admin action. Teams see that the referee acknowledged their request; staff email addresses stay in a service-only table and are not written to the public audit log.
+
+Browser alerts: one notification immediately for each new request, then one reminder after two minutes if nobody has acknowledged it, then no further browser notifications. The request stays visible in the dashboard button and as an “open timeout · not acknowledged” notice in Head Admin and Referee tools, regardless of notification permission. Alerts are deduplicated across dashboard and match tabs with shared records plus a Web Lock per alert, so two tabs updated at the same instant cannot both alert. A tab waking from sleep spends an overdue reminder instead of replaying it, and several new requests seen at once produce one combined alert. Resolution or acknowledgment closes the notification where supported. The two-minute single reminder is a proposed default for review (`REMINDER_DELAY_MS` in `src/lib/veto/browserTimeoutAlerts.ts`).
+
 ## Lint cleanup
 
 The 30 legacy lint errors were fixed without disabling rules: typed public API/log data and form choices, derived simulation state, conditional route/event state adjustments and a cancellable export initialization request. Repository-wide ESLint reports zero errors; 40 existing non-blocking warnings remain.

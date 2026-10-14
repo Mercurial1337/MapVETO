@@ -2,6 +2,8 @@
 import { useEffect,useMemo, useRef, useState } from 'react';
 import { useRealtime } from '@/lib/realtime';
 import { timeoutRequests, type TimeoutRequest } from '@/lib/veto/timeoutRequests';
+import type { BrowserTimeout } from '@/lib/veto/browserTimeoutAlerts';
+import type { Match, MatchLog } from '@/types';
 import { ActionLog } from './ActionLog';
 
 async function submitTimeout(body:Record<string,unknown>) {
@@ -45,9 +47,31 @@ export function TimeoutRequestButton({matchId,token}:{matchId:string;token:strin
  </>;
 }
 
-function TimeoutItem({report,team,canResolve,matchId,token}:{report:TimeoutRequest;team:string;canResolve:boolean;matchId:string;token:string}) {
- const {refresh}=useRealtime();
+export function staffTimeoutAlerts(match:Match|null,logs:MatchLog[],matchId:string):BrowserTimeout[] {
+ return match?timeoutRequests(logs).filter(report=>!report.resolvedAt).map(report=>({id:report.id,matchId,teamA:match.team_a_name,teamB:match.team_b_name,requestedBy:report.actor==='team_a'?match.team_a_name:match.team_b_name,acknowledged:Boolean(report.acknowledgedAt)})):[];
+}
+
+// Keeps unresolved requests visible in staff tools whether or not browser alerts are allowed.
+export function OpenTimeoutsNotice({alerts}:{alerts:BrowserTimeout[]}) {
+ if(!alerts.length) return null;
+ const waiting=alerts.filter(alert=>!alert.acknowledged).length;
+ return <div role="status" className="border-l-4 border-yellow-400 bg-yellow-400/10 p-3 space-y-2">
+  <p className="font-semibold">{alerts.length} open timeout{alerts.length===1?'':'s'}{waiting?` · ${waiting} not acknowledged`:' · all acknowledged'}</p>
+  <button className="btn-secondary min-h-11 w-full px-3 py-2 text-sm" onClick={()=>window.dispatchEvent(new Event('veto-open-timeouts'))}>Review in the Timeouts tab</button>
+ </div>;
+}
+
+function TimeoutItem({report,team,canResolve,canAcknowledge,matchId,token}:{report:TimeoutRequest;team:string;canResolve:boolean;canAcknowledge:boolean;matchId:string;token:string}) {
+ const {refresh,match}=useRealtime();
  const [resolution,setResolution]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const acknowledgedBy=match?.timeout_acknowledgments?.[report.id]?.by;
+ async function acknowledge() {
+  if(busy) return;
+  setBusy(true);setError('');
+  try {await submitTimeout({operation:'acknowledge',match_id:matchId,token,request_id:report.id});await refresh();}
+  catch(e) {setError(e instanceof Error?e.message:'Connection failed. Please retry.');}
+  finally {setBusy(false);}
+ }
  async function resolve() {
   if(busy || !resolution.trim()) return;
   setBusy(true);setError('');
@@ -56,28 +80,30 @@ function TimeoutItem({report,team,canResolve,matchId,token}:{report:TimeoutReque
   finally {setBusy(false);}
  }
  return <li className="border border-white/20 p-3 rounded">
-  <p className="font-semibold">{team} · {report.resolvedAt?'Resolved':'Open'}</p>
+  <p className="font-semibold">{team} · {report.resolvedAt?'Resolved':report.acknowledgedAt?'Open · acknowledged':'Open · not acknowledged'}</p>
   <time className="text-xs text-white/60" dateTime={report.createdAt}>{new Date(report.createdAt).toLocaleString()}</time>
   <p className="my-2 whitespace-pre-wrap break-words">{report.reason}</p>
+  {report.acknowledgedAt ? <p className="text-sm text-white/70 mb-2 break-words">Acknowledged by {acknowledgedBy || (report.acknowledgedRole==='referee'?'the Referee':'the Head Admin')} · <time dateTime={report.acknowledgedAt}>{new Date(report.acknowledgedAt).toLocaleTimeString()}</time></p>
+  : !report.resolvedAt && canAcknowledge && <div className="mb-3"><button className="btn-primary min-h-11 px-3 py-2" disabled={busy} onClick={()=>void acknowledge()}>{busy?'Saving…':'Acknowledge'}</button><p className="text-xs text-white/60 mt-1">Stops reminders for all staff. It does not pause or resolve the veto.</p></div>}
   {report.resolvedAt ? <><p className="text-green-300 whitespace-pre-wrap break-words">Referee: {report.resolution}</p><time className="text-xs text-white/60" dateTime={report.resolvedAt}>{new Date(report.resolvedAt).toLocaleString()}</time></> : canResolve ? <form onSubmit={e=>{e.preventDefault();void resolve();}}>
    <label className="block text-sm">Resolution<textarea required maxLength={1000} rows={3} className="w-full bg-black border border-white/30 p-2 mt-1" value={resolution} disabled={busy} onChange={e=>setResolution(e.target.value)}/></label>
-   {error && <p role="alert" className="text-red-400 my-2">{error}</p>}
-   <button className="btn-secondary px-3 py-2 mt-2" disabled={busy || !resolution.trim()}>{busy?'Resolving…':'Resolve timeout'}</button>
-  </form> : <p className="text-white/60 text-sm">Waiting for the referee.</p>}
+    <button className="btn-secondary min-h-11 px-3 py-2 mt-2" disabled={busy || !resolution.trim()}>{busy?'Resolving…':'Resolve timeout'}</button>
+  </form> : <p className="text-white/60 text-sm">{canAcknowledge?'Only the Head Admin can resolve this request.':'Waiting for the referee.'}</p>}
+  {error && <p role="alert" className="text-red-400 my-2">{error}</p>}
  </li>;
 }
 
-export function TimeoutsPanel({isAdmin,matchId,token}:{isAdmin:boolean;matchId:string;token:string}) {
+export function TimeoutsPanel({isAdmin,canAcknowledge,matchId,token}:{isAdmin:boolean;canAcknowledge:boolean;matchId:string;token:string}) {
  const {logs,match}=useRealtime();
  const reports=useMemo(()=>timeoutRequests(logs),[logs]);
  if(!match) return null;
  return <div className="max-h-[480px] overflow-y-auto break-words">
   <p className="text-sm text-white/60 mb-3">Requests do not pause the veto. {isAdmin?'Use Head Admin controls to pause or resume separately.':'The referee decides when to pause.'}</p>
-  {reports.length ? <ul aria-label="Timeout requests" className="space-y-3">{reports.map(report=><TimeoutItem key={report.id} report={report} team={report.actor==='team_a'?match.team_a_name:match.team_b_name} canResolve={isAdmin} matchId={matchId} token={token}/>)}</ul> : <p className="text-white/60">No timeout requests.</p>}
+  {reports.length ? <ul aria-label="Timeout requests" className="space-y-3">{reports.map(report=><TimeoutItem key={report.id} report={report} team={report.actor==='team_a'?match.team_a_name:match.team_b_name} canResolve={isAdmin} canAcknowledge={canAcknowledge} matchId={matchId} token={token}/>)}</ul> : <p className="text-white/60">No timeout requests.</p>}
  </div>;
 }
 
-export function MatchActivity({mapNames,isAdmin,matchId,token}:{mapNames:Record<string,string>;isAdmin:boolean;matchId:string;token:string}) {
+export function MatchActivity({mapNames,isAdmin,canAcknowledge,matchId,token}:{mapNames:Record<string,string>;isAdmin:boolean;canAcknowledge:boolean;matchId:string;token:string}) {
  const {logs,match}=useRealtime();
  const [tab,setTab]=useState<'log'|'timeouts'>('log');
  useEffect(()=>{
@@ -96,7 +122,7 @@ export function MatchActivity({mapNames,isAdmin,matchId,token}:{mapNames:Record<
   </div>
   {tab==='log' ? <div role="tabpanel" id="activity-log" aria-labelledby="activity-log-tab"><ActionLog logs={logs} dbTeamAName={match.team_a_name} dbTeamBName={match.team_b_name} displayTeam1Name={match.team_a_name} displayTeam2Name={match.team_b_name} mapNames={mapNames}/></div>
   : <div role="tabpanel" id="activity-timeouts" aria-labelledby="activity-timeouts-tab">
-   <TimeoutsPanel isAdmin={isAdmin} matchId={matchId} token={token}/>
+   <TimeoutsPanel isAdmin={isAdmin} canAcknowledge={canAcknowledge} matchId={matchId} token={token}/>
   </div>}
  </>;
 }

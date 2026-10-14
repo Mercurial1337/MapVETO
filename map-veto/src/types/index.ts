@@ -111,6 +111,7 @@ export interface Match {
   can_admin?: boolean;
   can_referee?: boolean;
   reset_request?: ResetRequest | null;
+  timeout_acknowledgments?: Record<string,{at:string;by:string;role:string}>;
   scheduled_at: string | null;
   started_at: string | null;
   completed_at: string | null;
@@ -192,7 +193,7 @@ export interface MatchLog {
   id: string;
   match_id: string;
   step_number: number;
-  action_type: VetoAction | 'coin_toss' | 'ready_check' | 'admin_action' | 'position_choice' | 'timeout_request' | 'timeout_resolved' | 'reset_request' | 'reset_answer';
+  action_type: VetoAction | 'coin_toss' | 'ready_check' | 'admin_action' | 'position_choice' | 'timeout_request' | 'timeout_acknowledged' | 'timeout_resolved' | 'reset_request' | 'reset_answer';
   actor: VetoActor | 'admin';
   log_order?: number;
   map_id: string | null;
