@@ -9,8 +9,9 @@ export function TeamPasswordScreen() {
  async function submit() {
   if(busy || !password)return;
   setBusy(true);setError('');
+  // On success this screen unmounts; if the follow-up snapshot failed it stays usable for a retry.
   const failure=await unlock(password);
-  if(failure){setError(failure);setBusy(false);}
+  setError(failure || '');setBusy(false);
  }
  return <main className="min-h-screen flex items-center justify-center px-4 py-8">
   <section aria-labelledby="team-password-title" className="match-panel w-full max-w-sm">
