@@ -103,15 +103,18 @@ await post('/api/veto/admin/override',reopenPayload);
 session=await post('/api/veto/session',{match_id:id,token:tokens.observer});
 assert.equal(session.logs.filter(log=>log.metadata?.request_id===reopenPayload.request_id).length,1);
 assert.ok(session.logs.some(log=>log.action_type==='decider' && log.metadata?.superseded));
-const replayPublic=await (await fetch(`${base}/api/matches/${id}/public`)).json();
-assert.equal(replayPublic.is_complete,false);assert.equal(replayPublic.actions.length,2);
-console.log('PASS HTTP reopening: Head Admin only, validation, stale guard, completed-veto restoration, idempotency, audit and public actions exclude superseded selections');
+// A reopened veto is live again, so it is private until it completes again.
+assert.equal((await fetch(`${base}/api/matches/${id}/public`)).status,404);
+console.log('PASS HTTP reopening: Head Admin only, validation, stale guard, completed-veto restoration, idempotency, audit, and the reopened veto is private again');
 // Complete the disposable match again so browser QA can choose any earlier step.
 while(!session.state.is_complete) {
  const step=template.sequence.steps[session.state.current_step];
  await post('/api/veto/admin/override',{match_id:id,token:tokens.admin,operation:'force',reason:'Codex HTTP replay QA',map_id:['ban','pick'].includes(step.action)?session.state.available_maps[0]:undefined,side:step.action==='side'?'attack':undefined});
  session=await post('/api/veto/session',{match_id:id,token:tokens.observer});
 }
+const completedPublic=await (await fetch(`${base}/api/matches/${id}/public`)).json();
+assert.equal(completedPublic.is_complete,true);assert.equal(completedPublic.actions.length,template.sequence.steps.length,'public actions exclude superseded selections');
+console.log('PASS HTTP re-completion: public again once complete, with superseded selections excluded');
 if(keep) console.log('QA match:',id);
 } finally {
  if(!keep) {const result=await db.from('matches').delete().eq('id',id).eq('team_a_name','Codex QA Alpha');assert.ifError(result.error);}

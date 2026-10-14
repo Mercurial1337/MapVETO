@@ -19,11 +19,11 @@ export async function OPTIONS() {
  * 
  * GET /api/matches/public
  * 
- * Lists all matches so external consumers can discover match IDs,
- * then poll /api/matches/:id/public for veto data.
+ * Lists completed matches so external consumers can discover match IDs,
+ * then read /api/matches/:id/public. Live vetoes stay private until complete.
  * 
  * Query params:
- *   - status: filter by match status (e.g. "in_progress", "completed", "coin_toss")
+ *   - status: accepted for compatibility; only "completed" returns matches
  *   - event_id: filter by event
  *   - limit: max results (default 50)
  *   - offset: pagination offset (default 0)
@@ -65,11 +65,13 @@ export async function GET(request: NextRequest) {
                 scheduled_at,
                 created_at
             `)
+            .eq('status', 'completed')
             .order('created_at', { ascending: false })
             .range(offset, offset + limit - 1);
 
-        if (status) {
-            query = query.eq('status', status);
+        // A veto becomes public only when it is complete.
+        if (status && status !== 'completed') {
+            return NextResponse.json({ matches: [], pagination: { offset, limit, count: 0 } }, { headers: corsHeaders });
         }
 
         if (eventId) {

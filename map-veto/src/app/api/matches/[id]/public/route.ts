@@ -33,7 +33,7 @@ export async function OPTIONS() {
  * GET /api/matches/:id/public
  * 
  * Returns a simplified action-log style response for external graphics/overlays.
- * Consumers can poll this endpoint to get live data.
+ * Only completed vetoes are returned; live vetoes stay private (404).
  * 
  * Response shape:
  * {
@@ -76,6 +76,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 events(id, name, logo_url)
             `)
             .eq('id', matchId)
+            .eq('status', 'completed') // live vetoes stay private until complete
             .single<PublicMatch>();
 
         if (matchError || !match) {
