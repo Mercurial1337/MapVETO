@@ -30,13 +30,13 @@ Both team links of a match imported with a password require that password before
 - Sync never replaces an active password. A changed sheet password shows a conflict with **Approve new password** for Head Admins. Approval re-reads the sheet, activates the new hash and signs out both teams. A removed password keeps the current one active. Linking an existing manual match does not adopt the sheet password until a Head Admin approves it.
 - Use a private workbook shared with the service account for real passwords. When the app reads through public link access the preview warns that anyone with the link can read them. Use dummy passwords in the public experiment workbook.
 
-Known limits: the overlay endpoint `/api/matches/:id/public`, `GET /api/matches/:id` and anonymous table reads of `matches`, `match_state` and `match_logs` (used by realtime and existing admin pages) remain readable by anyone who knows a match ID, as before. The password protects the team-link experience; closing those match-ID-level reads needs a separate decision because overlays and admin pages depend on them.
+Match privacy: a veto is private until it is complete. Before completion only the match creator, the event owner and event Head Admins/Referees can read it directly; teams use their password-checked links and observers their private links. `/api/matches/public`, `/api/matches/:id/public`, `GET /api/matches/:id`, the public log page and anonymous table reads (migration 040) only return completed matches. A veto reopened by a Head Admin is private again until it completes.
 
 ## Access and deployment
 
 Public workbooks can be read without Google credentials. For private workbooks set `GOOGLE_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_PRIVATE_KEY` and share Viewer access with that service-account address. Enable the Google Sheets API for its project. The integration never writes match links or tokens to the workbook.
 
-Apply migrations 034–036 using `scripts/migrate.mjs`. Apply migration 038 before deploying the password code: team routes fail closed (503) until its tables exist. They add service-only connection/source/worker tables, an atomic import function, and the `map-veto-sheet-sync` Supabase cron job. The job runs each minute and dispatches an authenticated HTTP request with a generated secret stored in a service-only table. Referees can read previews and history; only event owners/Head Admins can connect, approve, stop, sync or link existing matches.
+Apply migrations 034–036 using `scripts/migrate.mjs`. Apply migrations 038–040 before deploying this code: team routes fail closed (503) until 038's tables exist. Migrations 038–040 were applied to the production project on 14 October 2026. They add service-only connection/source/worker tables, an atomic import function, and the `map-veto-sheet-sync` Supabase cron job. The job runs each minute and dispatches an authenticated HTTP request with a generated secret stored in a service-only table. Referees can read previews and history; only event owners/Head Admins can connect, approve, stop, sync or link existing matches.
 
 On a production connection/confirmation, the app configures the worker endpoint using `VERCEL_PROJECT_PRODUCTION_URL`, or `NEXT_PUBLIC_APP_URL` when hosting elsewhere. Set the latter to the canonical HTTPS **map-veto app** origin if needed. Configure the deployment environment with the usual Supabase server credentials and optional Google credentials. Local testing uses Sync now or an authenticated worker test: localhost cannot be reached by Supabase's cron job. A worker endpoint is not configured from request headers or user-provided URLs.
 
@@ -79,4 +79,8 @@ Run against a disposable local stack (PostgreSQL 18 with migrations 016–039, P
 | Real opponent resolution in the workbook (`sheets-resolution`) | **Not run**: requires editing the shared workbook | — |
 
 Before release, run against the real project: `npm run test:remote`, `npm run test:sheets-http`, `node tests/sheets-db.test.mjs`, `node tests/sheets-resolution.test.mjs` (with the documented D1 G9 edit and restore), `npm run test:password-http`, and a private workbook shared with the service account containing dummy passwords.
+
+### Production project run — 14 October 2026
+
+Migrations 038–040 applied to the hosted project in one transaction. With the app built locally against that project, these passed: `http`, `team-password-http`, `match-privacy-http`, `timer-http` (Realtime broadcasts), `staff-timeouts-http`, `bulk-http`, `sheets-http`, `sheets-tabs` and `sheets-db`. All disposable users, events and matches were removed afterwards. Still not run: `test:remote` (needs the database password for `SUPABASE_DB_URL`), a private service-account workbook, `sheets-resolution` (edits the shared workbook), and the cron worker against the deployed URL, which runs after the production deploy.
 

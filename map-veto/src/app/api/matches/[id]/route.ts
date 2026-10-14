@@ -24,7 +24,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             .eq('id', matchId)
             .single();
 
-        if (error || !match) {
+        // Live vetoes are visible only to their staff; completed ones are public.
+        if (error || !match || (match.status !== 'completed' && !(await matchStaffAccess(matchId)))) {
             return NextResponse.json(
                 { error: 'Match not found' },
                 { status: 404 }
