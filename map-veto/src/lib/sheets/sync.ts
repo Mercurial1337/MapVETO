@@ -21,14 +21,14 @@ export const previewHash=(rows:unknown)=>createHash('sha256').update(JSON.string
 // fingerprint; SQL also receives a salted hash for rows that may create a match now.
 async function fingerprinted(rows:ParsedRow[]) {
  const secret=rows.some(row=>row.password!==null)?await accessSecret():'';
- return rows.map(({password,...row})=>({...row,password_fingerprint:password===null?null:passwordFingerprint(password,secret)}));
+ return rows.map(({password,team_b_password,...row})=>({...row,password_fingerprint:password===null || team_b_password===null?null:passwordFingerprint(JSON.stringify([password,team_b_password]),secret)}));
 }
 export async function protectRows(rows:ParsedRow[],sources:SavedSource[],choices:Choice[]|null) {
  const safe=await fingerprinted(rows);
  return Promise.all(safe.map(async(row,index)=>{
   const password=rows[index].password,saved=sources.find(source=>source.source_id===row.source_id);
   const creatable=password!==null && row.status==='ready' && !saved?.was_created && (choices?choices.some(choice=>choice.source_id===row.source_id):!!saved?.approved);
-  return {...row,password_hash:creatable?await hashPassword(password):null};
+  return {...row,password_hash:creatable?await hashPassword(password):null,team_b_password_hash:creatable?await hashPassword(rows[index].team_b_password!):null};
  }));
 }
 export async function loadDay(eventId:string,tabId:number) {

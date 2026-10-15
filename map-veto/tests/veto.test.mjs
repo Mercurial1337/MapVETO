@@ -28,7 +28,7 @@ for(const file of ['008_add_event_teams.sql','015_add_admin_link.sql']) {
 await db.exec('CREATE TRIGGER trigger_create_match_state_and_links AFTER INSERT ON matches FOR EACH ROW EXECUTE FUNCTION create_match_state_and_links();');
 await db.exec(readFileSync('supabase/migrations/011_ready_check.sql', 'utf8'));
 await db.exec(`ALTER TABLE matches ADD COLUMN custom_veto_sequence jsonb; ALTER TABLE match_state ADD COLUMN is_paused boolean DEFAULT false; ALTER TABLE match_logs ADD COLUMN metadata jsonb; ALTER TABLE match_links DROP CONSTRAINT match_links_link_type_check;`);
-for (const file of readdirSync('supabase/migrations').filter(f => /^0(1[6-9]|[23][0-9])_/.test(f) && !f.includes('scheduler')).sort()) {
+for (const file of readdirSync('supabase/migrations').filter(f => /^(?:0(1[6-9]|[23][0-9])_|\d{14}_)/.test(f) && !f.includes('scheduler')).sort()) {
   await db.exec(readFileSync(`supabase/migrations/${file}`, 'utf8').replace(/CREATE EXTENSION[^;]+;/g,''));
 }
 }
@@ -397,6 +397,23 @@ for(const role of ['anon','authenticated']) {
  for(const fn of ['match_password_reserve(uuid,text)','sheet_replace_password(uuid,uuid,uuid,text,text)','sheet_apply_day(uuid,uuid,text,bigint,text,jsonb,jsonb)'])assert.equal((await db.query('SELECT has_function_privilege($1,$2,$3) allowed',[role,fn,'EXECUTE'])).rows[0].allowed,false);
 }
 await db.query('DELETE FROM matches WHERE id=$1',[pw2.match_id]);assert.equal((await db.query('SELECT count(*)::int n FROM match_team_passwords WHERE match_id=$1',[pw2.match_id])).rows[0].n,0);
+// Separate sheet passwords: both hashes are required together and never enter snapshots.
+const pairHash=await hashPassword('Other-team-0042'),pairFingerprint=fingerprint(JSON.stringify([secretWord,'Other-team-0042']));
+const pair=prow('PW5',{password_hash:sheetHash,team_b_password_hash:pairHash,password_fingerprint:pairFingerprint});
+await rejectDay([{...pair,team_b_password_hash:null}],[{source_id:'PW5',selection:'C'}],/not prepared/);
+assert.equal((await applyDay([pair],[{source_id:'PW5',selection:'C'}])).created,1);
+const pairSource=await sourceRow('PW5');
+assert.equal((await lockRow(pairSource.match_id)).team_b_password_hash,pairHash);
+for(const snapshot of [pairSource.snapshot,pairSource.created_snapshot]) {
+ assert.equal('password_hash' in snapshot,false);assert.equal('team_b_password_hash' in snapshot,false);
+}
+await rejects('sheet_replace_team_passwords',[sheetEvent,sheetOutsider,pairSource.id,pairFingerprint,newHash,pairHash],/Head Admin/);
+await rejects('sheet_replace_team_passwords',[sheetEvent,sheetOwner,pairSource.id,pairFingerprint,newHash,null],/Invalid password update/);
+assert.equal(await rpc('sheet_replace_team_passwords',[sheetEvent,sheetOwner,pairSource.id,pairFingerprint,newHash,pairHash]),2);
+assert.equal((await lockRow(pairSource.match_id)).password_hash,newHash);
+assert.equal((await lockRow(pairSource.match_id)).team_b_password_hash,pairHash);
+for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'sheet_replace_team_passwords(uuid,uuid,uuid,text,text,text)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+console.log('PASS separate sheet passwords: two hashes stored, missing second hash rejected, no snapshot leaks, Head Admin replacement and version bump, service-only RPC');
 // Timeout acknowledgment: staff-only, idempotent, separate from resolution and pausing.
 const ackMatch=await fixture(),ackRef=(await db.query("SELECT token FROM match_links WHERE match_id=$1 AND link_type='referee'",[ackMatch.id])).rows[0].token,ackRequest=randomUUID();
 await rpc('veto_ready',[ackMatch.id,ackMatch.a]);

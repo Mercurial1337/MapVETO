@@ -9,7 +9,7 @@ export function freshDatabaseSql() {
  // Never include the destructive reset header or historical reference seeds.
  const structure=base.slice(base.indexOf('-- Enable UUID extension'),base.indexOf('-- Seed Data: Valorant'));
  const migrations=readdirSync(path.join(root,'supabase/migrations'))
-  .filter(name=>/^\d{3}_.*\.sql$/.test(name) && name!=='006_event_admins.sql').sort();
+  .filter(name=>/^(?:\d{3}|\d{14})_.*\.sql$/.test(name) && name!=='006_event_admins.sql').sort();
  return [
   `DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_tables WHERE schemaname='public') THEN RAISE EXCEPTION 'Fresh install requires an empty public schema'; END IF; END $$;`,
   'SET search_path=public,extensions;',structure,

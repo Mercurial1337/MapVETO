@@ -20,5 +20,5 @@ try {
  assert.ok((await db.query(`SELECT has_table_privilege('anon','maps','SELECT') allowed`)).rows[0].allowed);
  assert.equal((await db.query(`SELECT has_table_privilege('anon','match_links','SELECT') allowed`)).rows[0].allowed,false);
  await assert.rejects(db.exec(sql),/requires an empty public schema/);
- console.log('PASS fresh database: full schema through migration 040, 23 RLS-protected tables, no records/reference seeds, new secrets, explicit API grants, refuses existing database');
+ console.log('PASS fresh database: full schema including timestamped team-password migration, 23 RLS-protected tables, no records/reference seeds, new secrets, explicit API grants, refuses existing database');
 }finally{await db.close();}

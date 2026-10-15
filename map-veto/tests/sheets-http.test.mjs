@@ -37,10 +37,10 @@ try{
  // password only to this disposable imported match, then unlock each team link.
  // Source-password parsing/fingerprints are covered by the parser/DB tests.
  const fixturePassword=randomUUID()+'aA!',{data:protection,error:protectionError}=await db.from('match_team_passwords').select('match_id').eq('match_id',matches[0].id).maybeSingle();assert.ifError(protectionError);
- if(protection)assert.ifError((await db.from('match_team_passwords').update({password_hash:await hashPassword(fixturePassword)}).eq('match_id',matches[0].id)).error);
+ if(protection)assert.ifError((await db.from('match_team_passwords').update({password_hash:await hashPassword(fixturePassword),team_b_password_hash:await hashPassword(fixturePassword+'B')}).eq('match_id',matches[0].id)).error);
  for(const role of ['team_a','team_b']){
   const credentials={match_id:matches[0].id,token:links.find(l=>l.link_type===role).token};let cookie='';
-  if(protection){const access=await fetch(base+'/api/veto/access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,password:fixturePassword})});assert.equal(access.status,200);cookie=access.headers.getSetCookie().map(value=>value.split(';')[0]).join('; ');}
+  if(protection){const access=await fetch(base+'/api/veto/access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,password:role==='team_a'?fixturePassword:fixturePassword+'B'})});assert.equal(access.status,200);cookie=access.headers.getSetCookie().map(value=>value.split(';')[0]).join('; ');}
   const response=await fetch(base+'/api/veto/ready',{method:'POST',headers:{'Content-Type':'application/json',Cookie:cookie},body:JSON.stringify(credentials)});assert.equal(response.status,200);
  }
  const started=(await db.from('matches').select('status,coin_toss_winner').eq('id',matches[0].id).single()).data;assert.equal(started.status,'side_selection');assert.ok(['team_a','team_b'].includes(started.coin_toss_winner));

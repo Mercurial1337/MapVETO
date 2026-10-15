@@ -12,11 +12,11 @@ async function post(path,body,expected,cookie='') {
 }
 const {data:template}=await db.from('veto_templates').select('*').eq('format','bo3').eq('is_default',true).single();
 const {data:maps}=await db.from('maps').select('id').eq('game_id',template.game_id).eq('is_active',true).limit(7);
-async function fixture(password) {
+async function fixture(password,teamBPassword=null) {
  const id=randomUUID();ids.push(id);
  assert.ifError((await db.from('matches').insert({id,veto_template_id:template.id,team_a_name:'Codex Password Alpha',team_b_name:'Codex Password Beta',format:'bo3',status:'ready_check'})).error);
  await db.from('match_state').update({available_maps:maps.map(m=>m.id)}).eq('match_id',id);
- if(password)assert.ifError((await db.from('match_team_passwords').insert({match_id:id,password_hash:await hashPassword(password)})).error);
+ if(password)assert.ifError((await db.from('match_team_passwords').insert({match_id:id,password_hash:await hashPassword(password),team_b_password_hash:teamBPassword?await hashPassword(teamBPassword):null})).error);
  const {data:links}=await db.from('match_links').select('link_type,token').eq('match_id',id);
  return {id,tokens:Object.fromEntries(links.map(l=>[l.link_type,l.token]))};
 }
@@ -29,7 +29,7 @@ try {
  assert.equal(deniedCatalog.password_required,true);assert.equal(deniedCatalog.maps,undefined);
  for(const [path,extra] of [['ready',{}],['position-choice',{pick_first:true}],['action',{action:'ban',map_id:maps[0].id}],['auto-action',{turn_started_at:new Date().toISOString()}],['timeouts',{operation:'request',request_id:randomUUID(),reason:'QA'}],['reset-requests',{operation:'answer',request_id:randomUUID(),approve:true}]])
   assert.equal((await post('/api/veto/'+path,{...team('team_a'),...extra},401)).data.password_required,true,path);
- const page=await (await fetch(`${base}/match/${locked.id}?token=${locked.tokens.team_a}`)).text();assert.ok(!page.includes('Codex Password Alpha'));assert.ok(page.includes('Match password'));
+ const page=await (await fetch(`${base}/match/${locked.id}?token=${locked.tokens.team_a}`)).text();assert.ok(!page.includes('Codex Password Alpha'));assert.ok(page.includes('Team password'));
  assert.equal((await post('/api/veto/session',{match_id:locked.id,token:locked.tokens.observer},200)).data.match.team_a_name,'Codex Password Alpha');
  assert.equal((await post('/api/veto/session',{match_id:open.id,token:open.tokens.team_a},200)).data.userRole,'team_a');
  // Exact password, leading zeros kept; the session is scoped to one team link of one match.
@@ -58,11 +58,12 @@ try {
  const renewed=await post('/api/veto/access',{...team('team_a'),password:'Next!0042'},200);await post('/api/veto/session',team('team_a'),200,renewed.cookie);
  // Protected match progression: each team keeps the catalog obtained at unlock
  // while readiness, automatic toss, position choice and bans update independently.
- const flow=await fixture('Maps!0042'),clients={};
+ const flow=await fixture('Maps!0042','Other!0042'),clients={};
  assert.ifError((await db.from('matches').update({auto_coin_toss:true}).eq('id',flow.id)).error);
  for(const role of ['team_a','team_b']) {
   const credentials={match_id:flow.id,token:flow.tokens[role]};
-  const access=await post('/api/veto/access',{...credentials,password:'Maps!0042'},200);
+  await post('/api/veto/access',{...credentials,password:role==='team_a'?'Other!0042':'Maps!0042'},401);
+  const access=await post('/api/veto/access',{...credentials,password:role==='team_a'?'Maps!0042':'Other!0042'},200);
   const session=await post('/api/veto/session',{...credentials,include_maps:true},200,access.cookie);
   clients[role]={credentials,cookie:access.cookie,maps:session.data.maps};
   assert.ok(maps.every(map=>clients[role].maps.some(item=>item.id===map.id)));
@@ -71,7 +72,7 @@ try {
  let progress=(await post('/api/veto/session',clients.team_a.credentials,200,clients.team_a.cookie)).data;
  assert.equal(progress.match.status,'side_selection');
  const chooser=clients[progress.match.coin_toss_winner];
- await post('/api/veto/position-choice',{...chooser.credentials,pick_first:true},200,chooser.cookie);
+ await post('/api/veto/position-choice',{...chooser.credentials,pick_first:false},200,chooser.cookie);
  progress=(await post('/api/veto/session',clients.team_b.credentials,200,clients.team_b.cookie)).data;
  assert.equal(progress.match.status,'in_progress');assert.equal(progress.state.current_step,0);
  for(const client of Object.values(clients))assert.ok(progress.state.available_maps.every(id=>client.maps.some(map=>map.id===id)));
@@ -83,6 +84,16 @@ try {
   assert.equal(updated.state.current_step,1);assert.ok(updated.state.banned_maps.some(ban=>ban.map_id===banned));
   assert.ok(client.maps.some(map=>map.id===banned));assert.equal(updated.maps,undefined);
  }
+ const {data:pairLock}=await db.from('match_team_passwords').select('version').eq('match_id',flow.id).single();
+ assert.ifError((await db.from('match_team_passwords').update({password_hash:await hashPassword('NewAlpha!0042'),team_b_password_hash:await hashPassword('NewBeta!0042'),version:pairLock.version+1}).eq('match_id',flow.id)).error);
+ for(const role of ['team_a','team_b']) {
+  await post('/api/veto/session',clients[role].credentials,401,clients[role].cookie);
+  await post('/api/veto/access',{...clients[role].credentials,password:role==='team_a'?'Maps!0042':'Other!0042'},401);
+  await post('/api/veto/access',{...clients[role].credentials,password:role==='team_a'?'NewBeta!0042':'NewAlpha!0042'},401);
+  const renewed=await post('/api/veto/access',{...clients[role].credentials,password:role==='team_a'?'NewAlpha!0042':'NewBeta!0042'},200);
+  await post('/api/veto/session',clients[role].credentials,200,renewed.cookie);
+ }
  console.log('PASS protected map hydration: maps withheld before unlock, catalog loaded for both teams, check-in/automatic toss/position/ban work with retained catalog, routine snapshots omit maps');
+ console.log('PASS separate team passwords: opposite password denied, own password accepted, sessions survive swapped veto positions');
  console.log('PASS password HTTP: team reads/actions/page denied without session, observer and unprotected matches unchanged, exact password, scoped to one team and match, concurrent attempt limit, replacement revokes sessions');
 }finally{if(ids.length)await db.from('matches').delete().in('id',ids);}

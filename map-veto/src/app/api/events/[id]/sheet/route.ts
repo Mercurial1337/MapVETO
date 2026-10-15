@@ -55,8 +55,8 @@ export async function POST(request:NextRequest,{params}:Context){
   if(body.operation==='password'){
    const day=await loadDay(id,body.tab);if(body.hash!==day.hash)return stale();
    const source=day.sources.find(s=>s.id===body.source),row=source && day.rows.find(r=>r.source_id===source.source_id);
-   if(!source?.password_update || !row?.password)return NextResponse.json({error:'This match has no sheet password change to approve. Refresh the preview.'},{status:409});
-   const {error}=await db.rpc('sheet_replace_password',{p_event:id,p_user:auth.user!.id,p_source:source.id,p_fingerprint:passwordFingerprint(row.password,await accessSecret()),p_hash:await hashPassword(row.password)});
+   if(!source?.password_update || !row?.password || !row.team_b_password)return NextResponse.json({error:'Both team passwords must be valid before approving a replacement. Refresh the preview.'},{status:409});
+   const {error}=await db.rpc('sheet_replace_team_passwords',{p_event:id,p_user:auth.user!.id,p_source:source.id,p_fingerprint:passwordFingerprint(JSON.stringify([row.password,row.team_b_password]),await accessSecret()),p_hash:await hashPassword(row.password),p_team_b_hash:await hashPassword(row.team_b_password)});
    if(error)return NextResponse.json({error:error.message},{status:409});return json({success:true});
   }
   if(body.operation==='link'){const {error}=await db.rpc('sheet_link_existing',{p_event:id,p_user:auth.user!.id,p_source:body.source,p_match:body.match});if(error)return NextResponse.json({error:error.message},{status:409});return json({success:true});}

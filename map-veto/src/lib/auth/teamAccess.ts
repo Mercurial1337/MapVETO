@@ -32,6 +32,6 @@ export async function teamPasswordRequired(matchId:string,token:string) {
 export async function teamGate(matchId:string,token:string):Promise<NextResponse|null> {
  try {
   if(!await teamPasswordRequired(matchId,token))return null;
-  return NextResponse.json({error:'Enter the match password to continue.',password_required:true},{status:401,headers:{'Cache-Control':'no-store'}});
+  return NextResponse.json({error:'Enter your team password to continue.',password_required:true},{status:401,headers:{'Cache-Control':'no-store'}});
  } catch {return NextResponse.json({error:'Could not verify match access. Please retry.'},{status:503});}
 }

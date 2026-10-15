@@ -15,8 +15,8 @@ export function TeamPasswordScreen() {
  }
  return <main className="min-h-screen flex items-center justify-center px-4 py-8">
   <section aria-labelledby="team-password-title" className="match-panel w-full max-w-sm">
-   <h1 id="team-password-title" className="text-xl font-bold mb-2">Match password</h1>
-   <p className="text-sm text-white/70 mb-4">{match?'Your access expired or the password was changed. Enter the current password for this match.':'Enter the password your organizer supplied for this match.'}</p>
+   <h1 id="team-password-title" className="text-xl font-bold mb-2">Team password</h1>
+   <p className="text-sm text-white/70 mb-4">{match?'Your access expired or the password was changed. Enter the current password for your team link.':'Enter the password your organizer supplied for your team link.'}</p>
    <form onSubmit={e=>{e.preventDefault();void submit();}} aria-busy={busy}>
     <label htmlFor="team-password" className="block text-sm">Password</label>
     <input id="team-password" type={visible?'text':'password'} autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={256} required autoFocus
