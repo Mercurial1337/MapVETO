@@ -5,6 +5,15 @@ export async function middleware(request: NextRequest) {
     const hostname = request.headers.get('host') || '';
     const pathname = request.nextUrl.pathname;
 
+    // Independent deployments (e.g. vgveto.com) serve the app on their own
+    // domain. Leave unset on EMEA Clash to retain its landing/subdomain routing.
+    if (process.env.APP_ROUTING_MODE === 'standalone') {
+        if (pathname === '/' || pathname.startsWith('/admin') || pathname.startsWith('/auth')) {
+            return await updateSession(request);
+        }
+        return NextResponse.next();
+    }
+
     // Determine if we're on localhost (dev) or production
     const isLocalhost = hostname.includes('localhost') || hostname.includes('127.0.0.1');
 
