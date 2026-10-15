@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
+import PerformanceMonitoring from "@/components/PerformanceMonitoring";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -24,6 +25,9 @@ export default function RootLayout({
       >
         {children}
         <Toaster theme="dark" position="top-right" />
+        {process.env.APP_ROUTING_MODE === 'standalone' && process.env.VERCEL_ENV === 'production' && (
+          <PerformanceMonitoring />
+        )}
       </body>
     </html>
   );
