@@ -69,25 +69,98 @@ Validate the new schema against the current live schema before using it.
 7. Remove disposable new-instance fixtures and record both project IDs and the
    deployed commit. Never commit credentials or backups.
 
-## Access status when prepared
+## Provisioning record — 15 October 2026
 
-On 15 October 2026, the connected Supabase integration could inspect the existing
-organization/database, but its required `get_cost` project-creation operation was
-unavailable. The owner approved creating the new database in
-`Mercurial1337's Org` (`faesmjyychewvorsaqrx`) and was asked to create it through
-the dashboard. The old database had 4 events and 141 matches at inspection time;
-no records were changed.
+| Resource | EMEA Clash | VG Veto |
+| --- | --- | --- |
+| Vercel project | `mapveto` / `prj_Il5a4WXAwuDhaDBcCWbr5dgMjz5J` | `vgveto` / `prj_jyPRVmLgEbBZ4kMmnXOT820Qjwu1` |
+| Supabase project | `wxlrbiwysksiwfpfqkef` | `rmertbxmgsnxkqvdhbii` |
+| Supabase region | London (`eu-west-2`) | Ireland (`eu-west-1`, owner's Europe selection) |
+| Runtime | Existing configuration | Fluid, Dublin (`dub1`) |
+| Records after test cleanup | 4 events, 141 matches | 0 events, matches, logs, sheet connections and uploaded objects |
+| Accounts carried over | Existing accounts retained | `mo@vcl.com` only |
 
-The separate Vercel project `vgveto` was created successfully:
-`prj_jyPRVmLgEbBZ4kMmnXOT820Qjwu1`. It belongs to the same team as `mapveto`:
-`team_JlhAyaA2xvtyhNjHwFJDFjQ6`. The root directory is `map-veto`, framework is
-Next.js, and the two public routing variables above are configured. It has not
-been deployed or connected to Git, a database, or a domain yet.
+The owner created VG Veto in `Mercurial1337's Org`
+(`faesmjyychewvorsaqrx`). The new database has all 23 RLS-protected application
+tables through migration 040, separate random worker/access secrets, explicit
+Data API grants, the timeout/sheet cron jobs, and an empty `event-assets` bucket
+with user-owned upload permissions. Reference data copied: 1 game, 12 maps,
+1 pool, 7 pool memberships, 3 templates. The main account's password hash and
+email identity were migrated; no sessions, other accounts, or tournament records
+were copied. Temporary test users were deleted.
 
-Explicit team-scoped Vercel requests returned HTTP 403, but project operations
-using the connection's default scope worked. Billing reads remain blocked, so
-the team's current Pro/Hobby status was not independently verified. Projects
-in the same team use that team's plan and shared usage billing.
+`scripts/fresh-database.mjs` assembles a guarded, seed-free installation from the
+existing schema/migrations. It refuses an existing public schema and omits the
+destructive reset header. `node tests/fresh-database.test.mjs` verifies the full
+install, grants, RLS, empty records and reinstallation refusal locally.
 
-Routing regression tests, targeted lint, and the production build passed. This
-is preparation for the cutover, not a completed deployment.
+Both Vercel projects belong to team `team_JlhAyaA2xvtyhNjHwFJDFjQ6`. The new
+project's Production environment has independent Supabase credentials and the
+routing variables above. Secret values are not in this document or Git. Billing
+reads are blocked by the connection, so the team's current Pro/Hobby status was
+not independently verified. Projects in that team use its plan and shared usage.
+
+Source commit `a569163fef54d0df68f433a5a4fd4a75675699e2` was pushed to
+`codex/vgveto-standalone`; the remote EMEA `main` branch was left unchanged.
+The Git deployment failed with `git_info_fail`. A direct source deployment was
+then completed as `dpl_9yEVNDCFkYdVUEKMNkhSRuyCu3oq`. After attaching the
+custom domain, production was rebuilt as `dpl_F5wKxVZLrWMpxRyxmaGQannTEvza`
+and reached **READY** with no alias errors. This refreshed the system production
+URL used by sheet workers. `https://vgveto.com` serves the login over verified
+HTTPS; `www.vgveto.com` is verified and redirects to the apex with HTTP 308.
+Source files and assets were uploaded without credentials. The project is not connected for
+automatic Git deployments; pushing a branch alone does not deploy VG Veto yet.
+
+An initial production approval review flagged the existing public-results and
+permanent-delete routes. Code inspection and real HTTP checks established that
+only completed vetoes are public and deletion requires match-admin access. The
+deployment request subsequently passed review. No route permissions were relaxed.
+
+Passed against the new database using the local production build:
+
+- `tests/match-privacy-http.test.mjs`: public APIs/listings/table reads hide live
+  vetoes; completed results become public.
+- `tests/http.test.mjs`: unauthorized link access/deletion/overrides denied;
+  readiness, full BO3, timeouts, acknowledgment/resolution, reopen and audit work.
+- `tests/team-password-http.test.mjs`: gated reads/actions, scoped sessions,
+  rate limits, password replacement and map hydration for both teams work.
+- `tests/bulk-http.test.mjs`: authenticated imports, batch filtering, A/B/C flow,
+  referee restrictions/reset approvals, and staff completion notifications work.
+- Standalone/legacy routing regression test, targeted lint and production build.
+
+The password/map-hydration and bulk/staff-role suites also passed through the
+live `https://vgveto.com` domain. The live Sheets suite passed real day-tab reads,
+selected-only creation, concurrent retry deduplication, password-aware team
+check-in, role restrictions and authenticated worker execution. Its test fixture
+uses a known temporary password on its disposable imported match, rather than
+assuming the public experiment workbook has no passwords. The test also asserts
+that background sync uses the public production origin; the saved endpoint is
+`https://vgveto.com/api/sheets/worker`.
+
+All disposable fixtures were removed. Signed-out `/admin` returns a redirect to
+login, and the public match list returned HTTP 200 with zero matches at release.
+
+## Managing the instances
+
+- Tournament operations: `https://vgveto.com/admin` after domain activation.
+  Sign in with `mo@vcl.com` and its existing password.
+- Hosting, deployments, logs, domains and project usage:
+  `https://vercel.com/mohameds-projects-f7bd3723/vgveto`.
+- Database, Auth users, query logs, storage and database usage:
+  `https://supabase.com/dashboard/project/rmertbxmgsnxkqvdhbii`.
+- Old records: keep using EMEA Clash's original site/projects. Never run a new
+  instance's cleanup/reset command against the archive.
+
+For future automatic releases, connect `Mercurial1337/MapVETO` under the new
+Vercel project's Git settings and deliberately choose its production branch.
+Until then, release VG Veto explicitly through its project; do not assume a push
+to EMEA's `main` updates it. Never copy credentials between the two projects.
+
+The original ignored `.env.local` still targets EMEA. New-instance credentials
+are in the separate ignored `.env.vgveto.local`. Select the intended environment
+explicitly before building or testing; Next.js embeds public Supabase settings
+at build time, so switching server runtime variables alone is insufficient.
+
+Supabase Auth's Site URL/redirect settings should be set to `https://vgveto.com`
+in the new project before introducing password-reset or email-link flows. The
+current login uses email/password; copied accounts do not need an email link.

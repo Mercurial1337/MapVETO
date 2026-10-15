@@ -3,6 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {readFileSync,writeFileSync,unlinkSync} from 'node:fs';
 import {createClient} from '@supabase/supabase-js';
 import {createServerClient} from '@supabase/ssr';
+import {hashPassword} from '../src/lib/auth/teamPassword.ts';
 process.loadEnvFile('.env.local');
 const db=createClient(process.env.NEXT_PUBLIC_SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY),base=process.env.TEST_APP_URL||'http://127.0.0.1:3001';
 const sheet='1tifK0_pUo4iLxJ1cGVECxONf5B-fw0_u4iI8G1gh8NA',keep=process.argv.includes('--keep'),userIds=[];let eventId;
@@ -32,10 +33,20 @@ try{
  const {data:poolMaps}=await db.from('maps').select('name').in('id',state.available_maps);assert.deepEqual(poolMaps.map(m=>m.name).sort(),['Abyss','Bind','Breeze','Corrode','Haven','Pearl','Split']);
  const history=await api(referee,'?tab='+tab.id);const excluded=preview.rows.find(row=>!choices.some(c=>c.source_id===row.source_id));assert.equal(history.sources.find(s=>s.source_id===excluded.source_id).approved,false);if(pending)assert.equal(history.sources.find(s=>s.source_id===pending.source_id).selection,'A');
  await api(referee,'',{operation:'sync'},403);await api(owner,'',{operation:'sync'});assert.equal((await db.from('matches').select('id').eq('event_id',eventId)).data.length,1);
- for(const role of ['team_a','team_b']){const response=await fetch(base+'/api/veto/ready',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matches[0].id,token:links.find(l=>l.link_type===role).token})});assert.equal(response.status,200);}
+ // The public experiment sheet has owner-edited passwords. Assign a known
+ // password only to this disposable imported match, then unlock each team link.
+ // Source-password parsing/fingerprints are covered by the parser/DB tests.
+ const fixturePassword=randomUUID()+'aA!',{data:protection,error:protectionError}=await db.from('match_team_passwords').select('match_id').eq('match_id',matches[0].id).maybeSingle();assert.ifError(protectionError);
+ if(protection)assert.ifError((await db.from('match_team_passwords').update({password_hash:await hashPassword(fixturePassword)}).eq('match_id',matches[0].id)).error);
+ for(const role of ['team_a','team_b']){
+  const credentials={match_id:matches[0].id,token:links.find(l=>l.link_type===role).token};let cookie='';
+  if(protection){const access=await fetch(base+'/api/veto/access',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...credentials,password:fixturePassword})});assert.equal(access.status,200);cookie=access.headers.getSetCookie().map(value=>value.split(';')[0]).join('; ');}
+  const response=await fetch(base+'/api/veto/ready',{method:'POST',headers:{'Content-Type':'application/json',Cookie:cookie},body:JSON.stringify(credentials)});assert.equal(response.status,200);
+ }
  const started=(await db.from('matches').select('status,coin_toss_winner').eq('id',matches[0].id).single()).data;assert.equal(started.status,'side_selection');assert.ok(['team_a','team_b'].includes(started.coin_toss_winner));
  assert.equal((await fetch(base+'/api/sheets/worker',{method:'POST',headers:{Authorization:'Bearer bad'}})).status,401);
- const {data:settings}=await db.from('sheet_worker_settings').select('secret').eq('id',true).single();
+ const {data:settings}=await db.from('sheet_worker_settings').select('secret,endpoint').eq('id',true).single();
+ if(base.startsWith('https://'))assert.equal(new URL(settings.endpoint).origin,new URL(base).origin,'Background sync must target the public production domain');
  await db.from('event_sheet_connections').update({last_sync_at:null,lease_until:null}).eq('event_id',eventId);
  const worker=await fetch(base+'/api/sheets/worker',{method:'POST',headers:{Authorization:'Bearer '+settings.secret}});assert.equal(worker.status,200);const worked=await worker.json();assert.ok(worked.results.some(r=>r.eventId===eventId));
  console.log('PASS live Sheets HTTP: 7 real tabs, 11 Day-1 pairings, pending opponents, checked-only creation, concurrent/repeated confirmation creates once, stale preview rejected, links/state/pool initialized, Referee read-only, outsider denied and authenticated worker');
