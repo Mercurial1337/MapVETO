@@ -151,10 +151,20 @@ login, and the public match list returned HTTP 200 with zero matches at release.
 - Old records: keep using EMEA Clash's original site/projects. Never run a new
   instance's cleanup/reset command against the archive.
 
-For future automatic releases, connect `Mercurial1337/MapVETO` under the new
-Vercel project's Git settings and deliberately choose its production branch.
-Until then, release VG Veto explicitly through its project; do not assume a push
-to EMEA's `main` updates it. Never copy credentials between the two projects.
+### Git deployment cutover — 15 October 2026
+
+The four implementation/setup commits through `430c1da` were pushed to `main`.
+VG Veto is now connected to `Mercurial1337/MapVETO`, with `main` as its production
+branch and `map-veto` as its root directory. Future pushes to `main` build VG Veto;
+other branches create previews. The temporary `codex/vgveto-standalone` branch is
+historical and is no longer needed for releases.
+
+EMEA's `mapveto` project was disconnected from Git after setting its Ignored Build
+Step to `exit 0`. The first push to `main` was canceled there as intended. Its
+existing production deployment, domains, environment variables and database stay
+in place. Reconnecting it later requires an explicit archive maintenance decision;
+remove the ignored-build setting only when intentionally releasing to EMEA.
+Never copy credentials between the two projects.
 
 The original ignored `.env.local` still targets EMEA. New-instance credentials
 are in the separate ignored `.env.vgveto.local`. Select the intended environment
