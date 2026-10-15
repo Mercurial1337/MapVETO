@@ -85,7 +85,7 @@ interface RealtimeProviderProps {
 export function RealtimeProvider({ matchId, token, initialData, passwordRequired: initiallyLocked=false, children }: RealtimeProviderProps) {
     const [match, setMatch] = useState<Match | null>(initialData.match);
     const [state, setState] = useState<MatchState | null>(initialData.state);
-    const [maps] = useState<GameMap[]>(initialData.maps);
+    const [maps, setMaps] = useState<GameMap[]>(initialData.maps);
     const [logs, setLogs] = useState<MatchLog[]>(initialData.logs);
     const [eventBranding, setEventBranding] = useState<EventBranding | null>(initialData.eventBranding);
     const [userRole, setUserRole] = useState<UserRole>(initialData.userRole);
@@ -114,7 +114,7 @@ export function RealtimeProvider({ matchId, token, initialData, passwordRequired
         again.current=false;
         const version=revision.current,sent=performance.now();
         try {
-            const response=await fetch('/api/veto/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,token})});
+            const response=await fetch('/api/veto/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,token,include_maps:maps.length===0})});
             const data=await response.json();
             const received=performance.now();
             if(locked(data))return;
@@ -122,6 +122,7 @@ export function RealtimeProvider({ matchId, token, initialData, passwordRequired
             if(clock.synchronize(data.server_time,sent,received,data.server_processing_ms))setClockReady(true);
             if(version!==revision.current){again.current=true;continue;}
             setMatch(prev=>({...prev,...data.match}));
+            if(data.maps)setMaps(data.maps);
             setState(data.state);setLogs(data.logs);setUserRole(data.userRole);setEventBranding(data.eventBranding);
             setError(null);setPasswordRequired(false);
         } catch { setError('Connection lost. Retrying…'); }
@@ -129,7 +130,7 @@ export function RealtimeProvider({ matchId, token, initialData, passwordRequired
         }while(again.current);};
         flight.current=run();
         try{await flight.current;}finally{flight.current=null;}
-    },[matchId,token,clock,locked]);
+    },[matchId,token,clock,locked,maps.length]);
     const expireTurn=useCallback(async(startedAt:string)=>{
         if(expiry.current?.clock===startedAt)return expiry.current.promise;
         const run=async()=>{

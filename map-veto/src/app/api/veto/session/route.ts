@@ -3,7 +3,7 @@ import { createServiceClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import {matchStaffAccess} from '@/lib/auth/matchAdmin';
 import {teamGate} from '@/lib/auth/teamAccess';
-const schema=z.object({match_id:z.string().uuid(),token:z.string().uuid()});
+const schema=z.object({match_id:z.string().uuid(),token:z.string().uuid(),include_maps:z.boolean().optional()});
 export async function POST(request:NextRequest) {
  const started=performance.now();
  const input=schema.safeParse(await request.json().catch(()=>null));
@@ -19,9 +19,17 @@ export async function POST(request:NextRequest) {
  if(snapshot.error)return NextResponse.json({error:'Could not load match'},{status:500});
  const data=snapshot.data;
  if(!data)return NextResponse.json({error:'Invalid or expired match link'},{status:401});
+ // Locked pages have no initial catalog. Load it only when requested after access
+ // is verified; subsequent realtime snapshots do not repeat this query/payload.
+ let maps;
+ if(input.data.include_maps) {
+  const catalog=await db.from('maps').select('*').eq('game_id',data.match.veto_templates.game_id).eq('is_active',true);
+  if(catalog.error)return NextResponse.json({error:'Could not load maps. Retrying…'},{status:500});
+  maps=catalog.data;
+ }
  // Only staff learn who acknowledged a timeout; the shared audit log records the role alone.
  let timeout_acknowledgments:Record<string,{at:string;by:string;role:string}>|undefined;
  if(staff){const {data:acks}=await db.from('veto_timeout_requests').select('id,acknowledged_at,acknowledged_label,acknowledged_role').eq('match_id',match_id).not('acknowledged_at','is',null);timeout_acknowledgments=Object.fromEntries((acks||[]).map(ack=>[ack.id,{at:ack.acknowledged_at,by:ack.acknowledged_label,role:ack.acknowledged_role}]));}
  const finished=performance.now();
- return NextResponse.json({...data,match:{...data.match,can_admin:staff?.role==='admin',can_referee:staff?.role==='referee',reset_request:data.reset_request,timeout_acknowledgments},server_time:Number(data.server_time)+finished-sampled,server_processing_ms:finished-started},{headers:{'Cache-Control':'no-store'}});
+ return NextResponse.json({...data,...(maps?{maps}:{}),match:{...data.match,can_admin:staff?.role==='admin',can_referee:staff?.role==='referee',reset_request:data.reset_request,timeout_acknowledgments},server_time:Number(data.server_time)+finished-sampled,server_processing_ms:finished-started},{headers:{'Cache-Control':'no-store'}});
 }
