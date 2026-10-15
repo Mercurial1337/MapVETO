@@ -14,7 +14,8 @@
     "test:scheduler": "node tests/scheduler.test.mjs",
     "test:bulk-http": "node tests/bulk-http.test.mjs",
     "test:password-http": "node tests/team-password-http.test.mjs",
-    "test:privacy-http": "node tests/match-privacy-http.test.mjs"
+    "test:privacy-http": "node tests/match-privacy-http.test.mjs",
+    "test:normal-http": "node tests/normal-creation-http.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
                 custom_veto_sequence: data.custom_veto_sequence || null,
                 coin_toss_winner: isSeeded ? data.higher_seed : null,
                 coin_toss_forced: isSeeded,
+                auto_coin_toss: !isSeeded,
             });
 
         if (matchError) {

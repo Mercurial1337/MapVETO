@@ -90,9 +90,6 @@ function NewMatchContent() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [createdMatch, setCreatedMatch] = useState<CreatedMatch | null>(null);
-    const [isFlippingCoin, setIsFlippingCoin] = useState(false);
-    const [coinFlipResult, setCoinFlipResult] = useState<'team_a' | 'team_b' | null>(null);
-    const [wasForced, setWasForced] = useState(false);
 
     // Readiness state
     const [teamAReady, setTeamAReady] = useState(false);
@@ -316,38 +313,6 @@ function NewMatchContent() {
         });
     };
 
-    const handleCoinFlip = async (forcedWinner?: 'team_a' | 'team_b') => {
-        if (!createdMatch || isFlippingCoin) return;
-
-        setIsFlippingCoin(true);
-        setError('');
-
-        try {
-            const response = await fetch('/api/veto/coin-toss', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    match_id: createdMatch.id,
-                    forced_winner: forcedWinner,
-                }),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                setError(data.error || 'Failed to flip coin');
-            } else {
-                setCoinFlipResult(data.winner);
-                setWasForced(!!forcedWinner);
-            }
-        } catch {
-            setError('Network error. Please try again.');
-        }
-
-        setIsFlippingCoin(false);
-    };
-
     // Select a team from the event roster
     const selectEventTeam = (team: EventTeam, side: 'a' | 'b') => {
         if (side === 'a') {
@@ -471,89 +436,18 @@ function NewMatchContent() {
                             </div>
                         </div>
 
-                        {createdMatch.isSeeded ? (
-                            <div className="text-center py-4">
-                                <span className="text-4xl inline-block mb-3">👑</span>
-                                <p className="text-yellow-400 text-xl font-bold">
-                                    Seeded Match
-                                </p>
-                                <p className="text-white/60 text-sm mt-1">
-                                    <span className="font-medium text-white">{createdMatch.seededTeam === 'team_a' ? formData.teamAName : formData.teamBName}</span> is the higher seed.
-                                    They will automatically pick first once both teams are ready.
-                                </p>
-                            </div>
-                        ) : coinFlipResult ? (
-                            <div
-                                className="text-center py-4"
-                            >
-                                <p className="text-yellow-400 text-xl font-bold">
-                                    {coinFlipResult === 'team_a' ? formData.teamAName : formData.teamBName} wins!
-                                </p>
-                                <p className="text-white/60 text-sm mt-1">
-                                    {wasForced ? 'Admin selected winner' : 'They will pick first'}
-                                </p>
-                            </div>
-                        ) : isFlippingCoin ? (
-                            <div className="text-center py-4">
-                                <span
-                                    className="text-4xl inline-block"
-                                >
-                                    🪙
-                                </span>
-                                <p className="text-white/60 mt-2">Flipping...</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {/* Random Coin Flip */}
-                                <div className="text-center relative group">
-                                    <p className="text-white/60 text-sm mb-3">Flip the coin to determine who picks first</p>
-                                    <button
-                                        onClick={() => handleCoinFlip()}
-                                        disabled={!teamAReady || !teamBReady}
-                                        className="px-8 py-3 bg-[#25252a]   text-black font-bold rounded   transition-colors disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed"
-                                    >
-                                        Flip Coin
-                                    </button>
-                                    {(!teamAReady || !teamBReady) && (
-                                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-1.5 bg-black/80 text-white/90 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                                            Waiting for both teams to be ready
-                                        </div>
-                                    )}
-                                </div>
+                        <p className="text-white/70 text-sm">
+                            {createdMatch.isSeeded
+                                ? `${createdMatch.seededTeam === 'team_a' ? formData.teamAName : formData.teamBName} is the higher seed and will choose Team A or Team B once both teams are ready.`
+                                : 'The coin toss runs automatically once both teams are ready. The winner then chooses Team A or Team B.'}
+                        </p>
 
-                                {/* Divider */}
-                                <div className="flex items-center gap-3">
-                                    <div className="flex-1 h-px bg-white/10" />
-                                    <span className="text-white/30 text-xs">or select winner manually</span>
-                                    <div className="flex-1 h-px bg-white/10" />
-                                </div>
-
-                                {/* Manual Selection Buttons */}
-                                <div className="flex gap-3 justify-center group relative">
-                                    <button
-                                        onClick={() => handleCoinFlip('team_a')}
-                                        disabled={!teamAReady || !teamBReady}
-                                        className="px-6 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded text-red-400 font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                                    >
-                                        {formData.teamAName}
-                                    </button>
-                                    <button
-                                        onClick={() => handleCoinFlip('team_b')}
-                                        disabled={!teamAReady || !teamBReady}
-                                        className="px-6 py-2 bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/30 rounded text-blue-400 font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                                    >
-                                        {formData.teamBName}
-                                    </button>
-                                </div>
-                            </div>
-                        )}
                     </div>
 
                     <div className="mt-8 flex gap-4">
                         <button
                             onClick={() => {
                                 setCreatedMatch(null);
-                                setCoinFlipResult(null);
                                 setFormData(prev => ({
                                     teamAName: '',
                                     teamBName: '',
@@ -830,7 +724,7 @@ function NewMatchContent() {
                             {formData.teamBName && <option value="team_b">{formData.teamBName}</option>}
                         </select>
                         <p className="text-xs text-white/40 mt-1">
-                            The higher seed automatically wins the coin toss and picks first once both teams are ready.
+                            Without a higher seed, the coin toss runs automatically once both teams are ready. A higher seed chooses Team A or Team B.
                         </p>
                     </div>
 
