@@ -1,15 +1,11 @@
 'use client';
-import { useCallback,useMemo,useState } from 'react';
+import { useState } from 'react';
 import { useRealtime } from '@/lib/realtime';
-import {TimeoutBrowserAlerts} from '@/components/admin/TimeoutBrowserAlerts';
-import {OpenTimeoutsNotice,staffTimeoutAlerts} from './TimeoutRequests';
 interface Props {matchId:string;matchStatus:string;isPaused?:boolean;token:string;}
 export function AdminPanel({matchId,matchStatus,isPaused,token}:Props) {
  const [open,setOpen]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState('');
  const [reason,setReason]=useState('');
- const {state,logs,match,refresh}=useRealtime();
- const alerts=useMemo(()=>staffTimeoutAlerts(match,logs,matchId),[match,logs,matchId]);
- const openTimeouts=useCallback(()=>window.dispatchEvent(new Event('veto-open-timeouts')),[]);
+ const {state,refresh}=useRealtime();
  async function action(operation:string) {
   if(busy) return;
   if(!reason.trim()) {setError('Enter a reason for the audit log.');return;}
@@ -25,7 +21,6 @@ export function AdminPanel({matchId,matchStatus,isPaused,token}:Props) {
  }
  return <section aria-label="Head Admin override controls" className="match-panel space-y-4">
   <div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Head Admin controls</h2><button aria-expanded={open} aria-controls="head-admin-controls-panel" className="btn-secondary min-h-11 px-3 py-2 text-xs" onClick={()=>setOpen(!open)}>{open?'Hide':'Show'}</button></div>
-  <OpenTimeoutsNotice alerts={alerts}/>
   {open && <div id="head-admin-controls-panel" className="space-y-3">
    <label className="block text-sm text-white/70">Reason for the action<textarea rows={3} className="match-input mt-2" maxLength={500} value={reason} onChange={e=>setReason(e.target.value)}/></label>
    {error && <p role="alert" className="text-red-400 my-2">{error}</p>}
@@ -37,6 +32,5 @@ export function AdminPanel({matchId,matchStatus,isPaused,token}:Props) {
    <p className="text-sm text-white/70 mb-3">To reopen an earlier selection, choose its step in the veto step row.</p>
    <div className="border-t border-white/10 pt-3"><button className="btn-secondary btn-danger min-h-11 w-full px-3 py-2 text-sm" disabled={busy} onClick={()=>action('reset')}>Restart entire veto</button></div>
    </div>}
-  <div className="border-t border-white/10 pt-2 text-white/60"><TimeoutBrowserAlerts requests={alerts} onSelect={openTimeouts}/></div>
  </section>;
 }

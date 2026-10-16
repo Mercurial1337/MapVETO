@@ -27,7 +27,7 @@ try {
  for(const role of ['team_a','team_b'])assert.equal((await post('/api/veto/session',team(role),401)).data.password_required,true);
  const deniedCatalog=(await post('/api/veto/session',{...team('team_a'),include_maps:true},401)).data;
  assert.equal(deniedCatalog.password_required,true);assert.equal(deniedCatalog.maps,undefined);
- for(const [path,extra] of [['ready',{}],['position-choice',{pick_first:true}],['action',{action:'ban',map_id:maps[0].id}],['auto-action',{turn_started_at:new Date().toISOString()}],['timeouts',{operation:'request',request_id:randomUUID(),reason:'QA'}],['reset-requests',{operation:'answer',request_id:randomUUID(),approve:true}]])
+ for(const [path,extra] of [['ready',{}],['position-choice',{pick_first:true}],['action',{action:'ban',map_id:maps[0].id}],['auto-action',{turn_started_at:new Date().toISOString()}],['reset-requests',{operation:'answer',request_id:randomUUID(),approve:true}]])
   assert.equal((await post('/api/veto/'+path,{...team('team_a'),...extra},401)).data.password_required,true,path);
  const page=await (await fetch(`${base}/match/${locked.id}?token=${locked.tokens.team_a}`)).text();assert.ok(!page.includes('Codex Password Alpha'));assert.ok(page.includes('Team password'));
  assert.equal((await post('/api/veto/session',{match_id:locked.id,token:locked.tokens.observer},200)).data.match.team_a_name,'Codex Password Alpha');
