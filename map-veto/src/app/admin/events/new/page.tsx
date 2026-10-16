@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Image as ImageIcon, Type, Check, ArrowLeft } from 'lucide-react';
+import { Upload, Image as ImageIcon, Check, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
@@ -11,9 +11,6 @@ export const dynamic = 'force-dynamic';
 interface EventFormData {
     name: string;
     logo_url: string;
-    coin_image_url: string;
-    custom_font_url: string;
-    custom_font_name: string;
     google_sheet_id: string;
 }
 
@@ -22,16 +19,13 @@ export default function NewEventPage() {
     const [formData, setFormData] = useState<EventFormData>({
         name: '',
         logo_url: '',
-        coin_image_url: '',
-        custom_font_url: '',
-        custom_font_name: '',
         google_sheet_id: '',
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [uploading, setUploading] = useState<string | null>(null);
 
-    const handleFileUpload = async (file: File, type: 'logo' | 'coin' | 'font') => {
+    const handleFileUpload = async (file: File, type: 'logo') => {
         setUploading(type);
         setError('');
 
@@ -56,17 +50,7 @@ export default function NewEventPage() {
                 .from('event-assets')
                 .getPublicUrl(filePath);
 
-            if (type === 'logo') {
-                setFormData(prev => ({ ...prev, logo_url: publicUrl }));
-            } else if (type === 'coin') {
-                setFormData(prev => ({ ...prev, coin_image_url: publicUrl }));
-            } else if (type === 'font') {
-                setFormData(prev => ({
-                    ...prev,
-                    custom_font_url: publicUrl,
-                    custom_font_name: file.name.replace(/\.[^/.]+$/, ''),
-                }));
-            }
+            setFormData(prev => ({ ...prev, logo_url: publicUrl }));
         } catch (err) {
             console.error('Upload error:', err);
             setError(`Failed to upload ${type}. Make sure the 'event-assets' storage bucket exists in Supabase.`);
@@ -92,9 +76,6 @@ export default function NewEventPage() {
                 body: JSON.stringify({
                     name: formData.name,
                     logo_url: formData.logo_url || null,
-                    coin_image_url: formData.coin_image_url || null,
-                    custom_font_url: formData.custom_font_url || null,
-                    custom_font_name: formData.custom_font_name || null,
                     google_sheet_id: formData.google_sheet_id || null,
                 }),
             });
@@ -122,7 +103,7 @@ export default function NewEventPage() {
     }: {
         label: string;
         description: string;
-        type: 'logo' | 'coin' | 'font';
+        type: 'logo';
         accept: string;
         currentUrl: string;
         icon: typeof ImageIcon;
@@ -140,9 +121,7 @@ export default function NewEventPage() {
                         <div className="flex items-center gap-2">
                             <Check size={16} className="text-green-400" />
                             <span className="text-sm text-green-400">Uploaded</span>
-                            {type !== 'font' && (
-                                <img src={currentUrl} alt="" className="h-8 ml-2 rounded" />
-                            )}
+                            <img src={currentUrl} alt="" className="h-8 ml-2 rounded" />
                         </div>
                     ) : (
                         <label className="cursor-pointer">
@@ -215,23 +194,6 @@ export default function NewEventPage() {
                         icon={ImageIcon}
                     />
 
-                    <FileUploadBox
-                        label="Coin Design"
-                        description="Custom coin for coin toss animation. Recommended: 200×200px, PNG circular"
-                        type="coin"
-                        accept="image/png,image/jpeg,image/webp"
-                        currentUrl={formData.coin_image_url}
-                        icon={ImageIcon}
-                    />
-
-                    <FileUploadBox
-                        label="Custom Font"
-                        description="Font file for all text on match pages. Supports .woff2 or .ttf"
-                        type="font"
-                        accept=".woff2,.ttf,.woff"
-                        currentUrl={formData.custom_font_url}
-                        icon={Type}
-                    />
                 </div>
 
                 {/* Google Sheets Integration */}

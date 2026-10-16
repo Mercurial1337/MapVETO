@@ -13,9 +13,6 @@ interface Event {
     id: string;
     name: string;
     logo_url: string | null;
-    coin_image_url: string | null;
-    custom_font_url: string | null;
-    custom_font_name: string | null;
     is_active: boolean;
     created_at: string;
     matches: { count: number }[];
@@ -102,7 +99,7 @@ export default function EventsPage() {
             </div>
 
             <p className="text-white/50 text-sm">
-                Create events to group matches with custom branding (logo, coin design, font).
+                Create events to group matches with event logos.
             </p>
 
             {events.length === 0 ? (
@@ -165,12 +162,6 @@ export default function EventsPage() {
                                 <div className="flex gap-2 mb-4">
                                     <span className={`text-xs px-2 py-1 rounded ${event.logo_url ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
                                         Logo
-                                    </span>
-                                    <span className={`text-xs px-2 py-1 rounded ${event.coin_image_url ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
-                                        Coin
-                                    </span>
-                                    <span className={`text-xs px-2 py-1 rounded ${event.custom_font_url ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
-                                        Font
                                     </span>
                                 </div>
                             )}

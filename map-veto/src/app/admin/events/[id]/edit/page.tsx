@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, Image as ImageIcon, Type, Check, ArrowLeft, X, UserPlus, Trash2, Crown, Shield } from 'lucide-react';
+import { Upload, Image as ImageIcon, Check, ArrowLeft, X, UserPlus, Trash2, Crown, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
@@ -11,9 +11,6 @@ export const dynamic = 'force-dynamic';
 interface EventFormData {
     name: string;
     logo_url: string;
-    coin_image_url: string;
-    custom_font_url: string;
-    custom_font_name: string;
     google_sheet_id: string;
 }
 
@@ -35,9 +32,6 @@ export default function EditEventPage({ params }: PageProps) {
     const [formData, setFormData] = useState<EventFormData>({
         name: '',
         logo_url: '',
-        coin_image_url: '',
-        custom_font_url: '',
-        custom_font_name: '',
         google_sheet_id: '',
     });
     const [isLoading, setIsLoading] = useState(true);
@@ -66,9 +60,6 @@ export default function EditEventPage({ params }: PageProps) {
                     setFormData({
                         name: data.event.name || '',
                         logo_url: data.event.logo_url || '',
-                        coin_image_url: data.event.coin_image_url || '',
-                        custom_font_url: data.event.custom_font_url || '',
-                        custom_font_name: data.event.custom_font_name || '',
                         google_sheet_id: data.event.google_sheet_id || '',
                     });
                 } else {
@@ -148,7 +139,7 @@ export default function EditEventPage({ params }: PageProps) {
         }
     };
 
-    const handleFileUpload = async (file: File, type: 'logo' | 'coin' | 'font') => {
+    const handleFileUpload = async (file: File, type: 'logo') => {
         setUploading(type);
         setError('');
 
@@ -173,17 +164,7 @@ export default function EditEventPage({ params }: PageProps) {
                 .from('event-assets')
                 .getPublicUrl(filePath);
 
-            if (type === 'logo') {
-                setFormData(prev => ({ ...prev, logo_url: publicUrl }));
-            } else if (type === 'coin') {
-                setFormData(prev => ({ ...prev, coin_image_url: publicUrl }));
-            } else if (type === 'font') {
-                setFormData(prev => ({
-                    ...prev,
-                    custom_font_url: publicUrl,
-                    custom_font_name: file.name.replace(/\.[^/.]+$/, ''),
-                }));
-            }
+            setFormData(prev => ({ ...prev, logo_url: publicUrl }));
         } catch (err) {
             console.error('Upload error:', err);
             setError(`Failed to upload ${type}. Make sure the 'event-assets' storage bucket exists in Supabase.`);
@@ -192,14 +173,8 @@ export default function EditEventPage({ params }: PageProps) {
         setUploading(null);
     };
 
-    const handleRemoveAsset = (type: 'logo' | 'coin' | 'font') => {
-        if (type === 'logo') {
-            setFormData(prev => ({ ...prev, logo_url: '' }));
-        } else if (type === 'coin') {
-            setFormData(prev => ({ ...prev, coin_image_url: '' }));
-        } else if (type === 'font') {
-            setFormData(prev => ({ ...prev, custom_font_url: '', custom_font_name: '' }));
-        }
+    const handleRemoveAsset = () => {
+        setFormData(prev => ({ ...prev, logo_url: '' }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -219,9 +194,6 @@ export default function EditEventPage({ params }: PageProps) {
                 body: JSON.stringify({
                     name: formData.name,
                     logo_url: formData.logo_url || null,
-                    coin_image_url: formData.coin_image_url || null,
-                    custom_font_url: formData.custom_font_url || null,
-                    custom_font_name: formData.custom_font_name || null,
                     google_sheet_id: formData.google_sheet_id || null,
                 }),
             });
@@ -249,7 +221,7 @@ export default function EditEventPage({ params }: PageProps) {
     }: {
         label: string;
         description: string;
-        type: 'logo' | 'coin' | 'font';
+        type: 'logo';
         accept: string;
         currentUrl: string;
         icon: typeof ImageIcon;
@@ -267,12 +239,10 @@ export default function EditEventPage({ params }: PageProps) {
                         <div className="flex items-center gap-2">
                             <Check size={16} className="text-green-400" />
                             <span className="text-sm text-green-400">Uploaded</span>
-                            {type !== 'font' && (
-                                <img src={currentUrl} alt="" className="h-8 ml-2 rounded" />
-                            )}
+                            <img src={currentUrl} alt="" className="h-8 ml-2 rounded" />
                             <button
                                 type="button"
-                                onClick={() => handleRemoveAsset(type)}
+                                onClick={() => handleRemoveAsset()}
                                 className="ml-2 p-1 hover:bg-red-500/20 rounded text-red-400"
                                 title="Remove"
                             >
@@ -384,23 +354,6 @@ export default function EditEventPage({ params }: PageProps) {
                         icon={ImageIcon}
                     />
 
-                    <FileUploadBox
-                        label="Coin Design"
-                        description="Custom coin for coin toss animation. Recommended: 200×200px, PNG circular"
-                        type="coin"
-                        accept="image/png,image/jpeg,image/webp"
-                        currentUrl={formData.coin_image_url}
-                        icon={ImageIcon}
-                    />
-
-                    <FileUploadBox
-                        label="Custom Font"
-                        description="Font file for all text on match pages. Supports .woff2 or .ttf"
-                        type="font"
-                        accept=".woff2,.ttf,.woff"
-                        currentUrl={formData.custom_font_url}
-                        icon={Type}
-                    />
                 </div>
 
                 {/* Google Sheets Integration */}

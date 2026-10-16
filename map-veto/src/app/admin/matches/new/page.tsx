@@ -707,7 +707,7 @@ function NewMatchContent() {
                             ))}
                         </select>
                         <p className="text-xs text-white/40 mt-1">
-                            Assign to an event to use custom branding (logo, coin, font)
+                            Assign to an event to use its logo
                         </p>
                     </div>
 
