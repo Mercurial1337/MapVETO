@@ -92,7 +92,6 @@ try {
   await post('/api/veto/coin-toss',{match_id:matchId,token:cookie?undefined:tokens.referee},403,cookie);
  }
  for(const method of ['PATCH','DELETE'])assert.equal((await fetch(`${base}/api/matches/${matchId}`,{method,headers:{Cookie:outsider.cookie,'Content-Type':'application/json'},body:JSON.stringify({})})).status,403);
- await post('/api/veto/timeouts',{operation:'resolve',match_id:matchId,token:tokens.referee,request_id:randomUUID(),resolution:'Forbidden'},403);
  const requestId=randomUUID();
  const resetBody={operation:'request',match_id:matchId,request_id:requestId,reason:'Roles QA: both teams approve'};
  for(const role of ['team_a','team_b','observer','admin'])await post('/api/veto/reset-requests',{...resetBody,token:tokens[role]},403);

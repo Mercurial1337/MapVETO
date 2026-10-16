@@ -32,7 +32,7 @@ export async function OPTIONS() {
  * 
  * GET /api/matches/:id/public
  * 
- * Returns a simplified action-log style response for external graphics/overlays.
+ * Returns a simplified action-log style response for external consumers.
  * Only completed vetoes are returned; live vetoes stay private (404).
  * 
  * Response shape:

@@ -1,13 +1,9 @@
 'use client';
-import {useCallback,useMemo,useRef,useState} from 'react';
+import {useRef,useState} from 'react';
 import {useRealtime} from '@/lib/realtime';
-import {TimeoutBrowserAlerts} from '@/components/admin/TimeoutBrowserAlerts';
-import {OpenTimeoutsNotice,staffTimeoutAlerts} from './TimeoutRequests';
 
 export function RefereePanel({matchId,token}:{matchId:string;token:string}) {
- const {match,logs,refresh}=useRealtime();
- const alerts=useMemo(()=>staffTimeoutAlerts(match,logs,matchId),[match,logs,matchId]);
- const openTimeouts=useCallback(()=>window.dispatchEvent(new Event('veto-open-timeouts')),[]);
+ const {match,refresh}=useRealtime();
  const [open,setOpen]=useState(true),[busy,setBusy]=useState(false),[reason,setReason]=useState(''),[error,setError]=useState('');
  const requestId=useRef<string|null>(null);
  const pending=match?.reset_request;
@@ -23,13 +19,11 @@ export function RefereePanel({matchId,token}:{matchId:string;token:string}) {
  }
  return <section aria-label="Referee reset controls" className="match-panel space-y-4">
   <div className="flex items-center justify-between gap-3"><h2 className="font-semibold">Referee controls</h2><button aria-expanded={open} aria-controls="referee-controls-panel" className="btn-secondary min-h-11 px-3 py-2 text-xs" onClick={()=>setOpen(!open)}>{open?'Hide':'Show'}</button></div>
-  <OpenTimeoutsNotice alerts={alerts}/>
   {open && <div id="referee-controls-panel">
    <p className="text-sm text-white/70 mb-3">Reset requires both teams’ approval. The veto continues until both agree.</p>
    {pending?<p role="status" className="text-sm break-words">Reset requested. {match?.team_a_name || 'Team A'} {pending.team_a_approved_at?'approved':'has not approved'}; {match?.team_b_name || 'Team B'} {pending.team_b_approved_at?'approved':'has not approved'}.</p>:<><label className="block text-sm text-white/70">Reset reason<textarea rows={3} maxLength={500} className="match-input mt-2" value={reason} onChange={e=>{setReason(e.target.value);requestId.current=null;}}/></label><button className="btn-secondary min-h-11 w-full px-3 py-2 text-sm mt-3" disabled={busy || !reason.trim()} onClick={()=>void requestReset()}>{busy?'Requesting…':'Request veto reset'}</button></>}
    {error && <p role="alert" className="text-red-400 mt-2">{error}</p>}
   </div>}
-  <div className="border-t border-white/10 pt-2 text-white/60"><TimeoutBrowserAlerts requests={alerts} onSelect={openTimeouts}/></div>
  </section>;
 }
 
