@@ -74,7 +74,7 @@ const listingResponse=await fetch(`${base}/api/matches/public?status=completed&l
 assert.equal(listingResponse.status,200);const listing=await listingResponse.json();
 assert.equal(listing.pagination.count,listing.matches.length);assert.ok(listing.matches.some(match=>match.id===id));
 const logResponse=await fetch(`${base}/public/log/${id}`);assert.equal(logResponse.status,200);
-const logHtml=await logResponse.text();assert.ok(logHtml.includes('Match Veto Log'));assert.ok(logHtml.includes('Codex QA Alpha'));assert.ok(logHtml.includes('was left as the Decider'));
+const logHtml=await logResponse.text();assert.ok(logHtml.includes('Veto log'));assert.ok(logHtml.includes('Picked by'));assert.ok(logHtml.includes('Codex QA Alpha'));assert.ok(logHtml.includes('was left as the Decider'));
 console.log('PASS public outputs: ordered veto actions, map names, completed-match listing and rendered public log');
 const reopenPayload={match_id:id,token:tokens.admin,operation:'reopen_step',target_step:2,current_step:session.state.current_step,turn_started_at:session.state.turn_started_at,request_id:randomUUID(),reason:'Codex HTTP disputed selection'};
 for(const role of ['team_a','team_b','referee','observer'])await post('/api/veto/admin/override',{...reopenPayload,token:tokens[role]},403);

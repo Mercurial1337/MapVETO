@@ -34,9 +34,9 @@ export function SideSelectionModal({
     return (
         <section aria-label="Side selection" className="match-panel w-full">
             <div className="max-w-lg mx-auto text-center">
-                <h2 className="text-xl font-bold text-white mb-1">Side Selection</h2>
+                <h2 className="panel-head justify-center">Side selection</h2>
                 <p className="text-sm text-white/70 mb-4">
-                    <span className="text-yellow-400 font-semibold">{teamName}</span> is choosing side for <span className="font-bold text-white">{mapName}</span>
+                    <span className="text-team-a font-semibold">{teamName}</span> is choosing side for <span className="font-bold text-white">{mapName}</span>
                 </p>
 
                 <div className="flex gap-3 justify-center mb-4">
@@ -69,7 +69,7 @@ export function SideSelectionModal({
                     <button
                         onClick={handleConfirm}
                         disabled={isSubmitting}
-                        className="w-full py-3 rounded font-bold text-black bg-white hover:bg-gray-200 transition-colors uppercase tracking-wider text-sm disabled:opacity-50"
+                        className="btn-cta w-full text-sm"
                     >
                         {isSubmitting ? 'Confirming...' : 'Confirm Pick'}
                     </button>

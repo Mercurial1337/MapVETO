@@ -82,7 +82,7 @@ export function MapCard({
                 'w-[96px] sm:w-[120px] md:w-[160px] lg:w-[180px] xl:w-[200px]',
                 isInteractive && 'cursor-pointer',
                 state === 'banned' && 'cursor-not-allowed opacity-40 grayscale',
-                state === 'active' && 'border-2 border-yellow-400'
+                state === 'active' && 'border-2 border-lime'
             )}
         >
             {/* Map Image */}
