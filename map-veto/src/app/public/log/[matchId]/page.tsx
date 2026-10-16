@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import Link from 'next/link';
+import { MapCard } from '@/components/match/MapCard';
 import type { Match, MatchState, VetoTemplate, VetoActor, SideChoice } from '@/types';
 interface LogEntry {type:'ban'|'pick'|'side'|'decider';actor:VetoActor;mapName:string;side?:SideChoice;}
 
@@ -60,7 +61,7 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
     }
 
     // Fetch Map Names
-    const { data: mapsData } = await supabase.from('maps').select('id, name');
+    const { data: mapsData } = await supabase.from('maps').select('id, name, image_url');
     const mapNames = (mapsData || []).reduce<Record<string,string>>((acc, m) => {
         acc[m.id] = m.name;
         return acc;
@@ -139,53 +140,50 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
         return '';
     };
 
+    // Same map cards as the live veto: picked maps in playing order with team and side, bans greyed.
+    const teamName = (actor?: string | null) => actor === 'team_a' ? match.team_a_name : actor === 'team_b' ? match.team_b_name : undefined;
+    const poolIds = [...new Set([...(state?.available_maps || []), ...bannedMaps.map(b => b.map_id), ...pickedMaps.map(p => p.map_id)])];
+    const cards = poolIds.map(id => {
+        const pick = pickedMaps.find(p => p.map_id === id);
+        const map = (mapsData || []).find(m => m.id === id);
+        return { id, name: map?.name || 'Unknown', image_url: map?.image_url || '', pick };
+    }).sort((x, y) => (x.pick?.map_number ?? 99) - (y.pick?.map_number ?? 99));
+
     return (
-        <div className="min-h-screen flex flex-col items-center py-12 px-4 max-w-2xl mx-auto">
-
-            {/* Header */}
-            <div className="w-full mb-8 text-center">
-                {match.event_id && (
-                    <div className="mb-4">
-                        <Link
-                            href={`/events/${match.event_id}`}
-                            className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
-                        >
-                            ← Back to {match.events?.name || 'Event'}
-                        </Link>
-                    </div>
-                )}
-
-                <h1 className="text-2xl font-bold text-white mb-1">Match Veto Log</h1>
-                <div className="flex items-center justify-center gap-3 text-lg font-medium text-white/80">
-                    <span>{match.team_a_name}</span>
-                    <span className="text-sm text-white/30">vs</span>
-                    <span>{match.team_b_name}</span>
-                </div>
-                <div className="text-xs text-white/40 mt-2 uppercase tracking-wider">
-                    {match.format} Format • Completed
+        <div className="min-h-screen flex flex-col min-w-0">
+            <header className="border-b border-white/10 px-4 md:px-6 py-3 flex items-center justify-between gap-3">
+                {match.event_id ? <Link href={`/events/${match.event_id}`} className="text-sm text-cyan-400 hover:text-cyan-300">← {match.events?.name || 'Event'}</Link> : <span />}
+                <span className="text-xs md:text-sm text-white/60 uppercase">{match.format} · Veto complete</span>
+            </header>
+            <div className="bg-black/40 border-b border-white/5 px-4 md:px-6 py-4 md:py-6">
+                <div className="max-w-4xl mx-auto flex items-center justify-center gap-3 md:gap-8">
+                    <div className="flex-1 min-w-0 text-right"><h1 className="text-base md:text-2xl font-bold break-words">{match.team_a_name}</h1><span className="text-xs text-team-a uppercase tracking-wider font-semibold">Team A</span></div>
+                    <div className="text-lg md:text-2xl text-white/30 shrink-0">VS</div>
+                    <div className="flex-1 min-w-0"><h2 className="text-base md:text-2xl font-bold break-words">{match.team_b_name}</h2><span className="text-xs text-team-b uppercase tracking-wider font-semibold">Team B</span></div>
                 </div>
             </div>
-
-            {/* Action Log List */}
-            <div className="w-full max-w-lg bg-white/5 border border-white/10 rounded overflow-hidden p-6 font-mono text-sm leading-relaxed text-white/90">
-                {entries.length === 0 ? (
-                    <div className="text-center text-white/50">No logs found for this match.</div>
-                ) : (
-                    <div className="space-y-3">
-                        {entries.map((entry, index) => (
-                            <div key={index} className="flex gap-4">
-                                <span className="text-white/30 shrink-0 select-none">
-                                    {(index + 1).toString().padStart(2, '0')}.
-                                </span>
-                                <span>
-                                    {generateLogText(entry)}
-                                </span>
-                            </div>
+            <main className="flex-1 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] items-start w-full max-w-[1600px] mx-auto px-4 md:px-6 py-4 md:py-6 gap-5">
+                <div className="min-w-0 flex flex-col items-center gap-4">
+                    <div className="flex flex-wrap gap-2 md:gap-3 justify-center w-full max-w-5xl">
+                        {cards.map(card => (
+                            <MapCard key={card.id} map={card} state={card.pick ? 'picked' : 'banned'} side={card.pick?.side} mapNumber={card.pick?.map_number}
+                                pickedBy={card.pick ? teamName(card.pick.picked_by) || 'Decider' : undefined} sidePickedBy={teamName(card.pick?.side_picked_by)}
+                                teamColor={card.pick?.picked_by === 'team_a' ? 'var(--team-a)' : card.pick?.picked_by === 'team_b' ? 'var(--team-b)' : 'var(--brand-mist)'} canInteract={false} />
                         ))}
                     </div>
-                )}
-            </div>
-
+                    <ol aria-label="Veto steps" className="match-panel w-full flex overflow-x-auto gap-2 text-xs">
+                        {vetoSteps.map((step, index) => <li key={index} className="shrink-0 px-3 py-2 border rounded border-green-700 text-green-300"><span className="font-semibold">{index + 1}. {step.action}</span><span className="block mt-1">{getActorName(step.actor)}</span></li>)}
+                    </ol>
+                </div>
+                <aside aria-label="Veto log" className="match-panel min-w-0">
+                    <div className="panel-head"><h2>Veto log</h2></div>
+                    {entries.length === 0 ? <p className="text-white/60">No selections recorded.</p> : (
+                        <ol className="space-y-2 text-sm">
+                            {entries.map((entry, index) => <li key={index} className="flex gap-3"><span className="text-white/40 shrink-0 tabular-nums">{String(index + 1).padStart(2, '0')}.</span><span>{generateLogText(entry)}</span></li>)}
+                        </ol>
+                    )}
+                </aside>
+            </main>
         </div>
     );
 }

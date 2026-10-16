@@ -40,9 +40,16 @@ export function TurnTimer({currentStep,stateUpdatedAt,teamAName,teamBName,matchI
   return ()=>{cancelled=true;clearTimeout(timer);document.removeEventListener('visibilitychange',recover);window.removeEventListener('focus',recover);stopSound();};
  },[currentStep,stateUpdatedAt,matchId,token,isInProgress,isComplete,isPaused,pausedRemainingSeconds,actorName,playTick,stopSound,clock,clockReady,expireTurn]);
  if(!currentStep || !isInProgress || isComplete) return null;
- return <div role="status" className="border border-white/20 bg-[#18181b] max-w-full px-4 py-2 rounded flex flex-wrap items-center justify-center gap-3 text-sm">
-  <span className="min-w-0 break-words">{actorName} · {currentStep.description || currentStep.action}</span>
-  <strong className={`shrink-0 font-mono tabular-nums ${remaining!==null && remaining<=15?'text-yellow-400':''}`}>{isPaused?'Paused':remaining===null?'Syncing…':`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`}</strong>
-  {remaining!==null && remaining<=15 && !isPaused && <span className="text-yellow-400 text-sm">Time is running out</span>}
+ // Green with time to spare, yellow from 30 s, red for the final 15 s (when the ticks start).
+ const level=remaining===null || isPaused?'idle':remaining>30?'safe':remaining>15?'warn':'danger';
+ const tone={idle:'#a1a1aa',safe:'#22c55e',warn:'#eab308',danger:'#ef4444'}[level];
+ const fraction=remaining===null?1:Math.max(0,Math.min(1,remaining/60));
+ return <div role="status" className="timer-box max-w-full w-[min(100%,28rem)] rounded border bg-[#18181b] px-4 py-2 text-sm" style={{borderColor:tone}}>
+  <div className="flex flex-wrap items-center justify-center gap-3">
+   <span className="min-w-0 break-words">{actorName} · {currentStep.description || currentStep.action}</span>
+   <strong className="shrink-0 font-mono tabular-nums text-xl" style={{color:tone}}>{isPaused?'Paused':remaining===null?'Syncing…':`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`}</strong>
+   {level==='danger' && <span className="text-sm font-semibold" style={{color:tone}}>Time is running out</span>}
+  </div>
+  <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden" aria-hidden="true"><div className="h-full rounded-full transition-[width] duration-1000 ease-linear" style={{width:`${fraction*100}%`,background:tone}}/></div>
  </div>;
 }
