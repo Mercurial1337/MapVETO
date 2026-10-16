@@ -11,7 +11,7 @@ import { CoinTossModal } from '@/components/match/CoinTossModal';
 import { PositionSelectionModal } from '@/components/match/PositionSelectionModal';
 import { SideSelectionModal } from '@/components/match/SideSelectionModal';
 import { ReadyCheckModal } from '@/components/match/ReadyCheckModal';
-import { MatchActivity, TimeoutRequestButton } from '@/components/match/TimeoutRequests';
+import { ActionLog } from '@/components/match/ActionLog';
 import { AdminPanel } from '@/components/match/AdminPanel';
 import {RefereePanel,ResetApproval} from '@/components/match/ResetApproval';
 import { TeamPasswordScreen } from '@/components/match/TeamPasswordScreen';
@@ -46,7 +46,7 @@ interface MatchVetoInterfaceProps {
 }
 
 function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
-    const { match, state, maps, eventBranding, isLoading, error, userRole } = useMatchData();
+    const { match, state, maps, logs, eventBranding, isLoading, error, userRole } = useMatchData();
     const { banMap, pickMap, pickSide, coinToss, readyUp, isSubmitting } = useVetoActions();
     const { isConnected } = useConnectionStatus();
     const { passwordRequired } = useRealtime();
@@ -340,7 +340,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 </div>
             </header>
 
-            {(userRole==='observer' || userRole==='admin' || userRole==='referee') && <p role="status" className="px-4 py-2 border-b border-white/20 text-sm text-white/70">Read-only view{isAdmin?' · Head Admin controls available.':isReferee?' · Referee: reset requests and timeout acknowledgment.':''}</p>}
+            {(userRole==='observer' || userRole==='admin' || userRole==='referee') && <p role="status" className="px-4 py-2 border-b border-white/20 text-sm text-white/70">Read-only view{isAdmin?' · Head Admin controls available.':isReferee?' · Referee: veto reset requests only.':''}</p>}
             {/* Teams Banner */}
             <div className="bg-black/40 border-b border-white/5 px-4 md:px-6 py-4 md:py-6">
                 <div className="max-w-4xl mx-auto flex items-center justify-center gap-3 md:gap-8">
@@ -354,14 +354,14 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                         )}
                         <div className="min-w-0">
                             <h2 className="text-base md:text-2xl font-bold text-white break-words">{displayedTeams.teamA}</h2>
-                            <span className="text-xs text-[#00FFFF] uppercase tracking-wider font-semibold">Team A</span>
+                            <span className="text-xs text-team-a uppercase tracking-wider font-semibold">Team A</span>
                         </div>
                     </div>
                     <div className="text-lg md:text-2xl text-white/30 shrink-0">VS</div>
                     <div className="text-center flex-1 min-w-0 flex items-center justify-start gap-2 md:gap-3">
                         <div className="min-w-0">
                             <h2 className="text-base md:text-2xl font-bold text-white break-words">{displayedTeams.teamB}</h2>
-                            <span className="text-xs text-[#CCFF00] uppercase tracking-wider font-semibold">Team B</span>
+                            <span className="text-xs text-team-b uppercase tracking-wider font-semibold">Team B</span>
                         </div>
                         {displayedTeams.logoB && (
                             <img
@@ -375,8 +375,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             </div>
 
             <div className="w-full max-w-[1600px] mx-auto px-4 md:px-6 pt-4 space-y-4">
-                <TimeoutRequestButton matchId={matchId} token={token}/>
-                <SideSelectionModal
+                <SideSelectionModal key={`side-${state?.current_step}-${state?.turn_started_at}`}
                     isOpen={showSideSelection}
                     mapName={pendingSidePickMap?.mapName || ''}
                     teamName={getCurrentTurnTeamName()}
@@ -475,7 +474,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                                     sidePickedBy={mapState.sidePickedBy}
                                     pickedBy={mapState.pickedBy}
                                     mapNumber={mapState.mapNumber}
-                                    teamColor={mapState.pickedBy === displayedTeams.teamA ? '#ef4444' : mapState.pickedBy === displayedTeams.teamB ? '#3b82f6' : '#8b5cf6'}
+                                    teamColor={mapState.pickedBy === displayedTeams.teamA ? 'var(--team-a)' : mapState.pickedBy === displayedTeams.teamB ? 'var(--team-b)' : 'var(--brand-mist)'}
                                     canInteract={canInteract}
                                     onSelect={() => handleMapSelect(map.id)}
                                     action={currentStepDef?.action}
@@ -491,19 +490,12 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                             <div
                                 className="flex flex-wrap items-center justify-center gap-3 match-panel"
                             >
-                                <span className="text-white/80 text-sm font-medium">
-                                    {mapNames[selectedMapId] || 'Map'}
-                                </span>
                                 <button
                                     onClick={handleConfirm}
                                     disabled={isSubmitting || !!state?.is_paused}
-                                    className={`px-8 py-2.5 rounded-lg font-bold text-white text-sm uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                                        currentStepDef.action === 'ban'
-                                            ? 'bg-[#25252a]      '
-                                            : 'bg-[#25252a]      '
-                                    }`}
+                                    className="btn-cta text-sm"
                                 >
-                                    {isSubmitting ? 'Confirming...' : 'Confirm'}
+                                    {isSubmitting ? 'Confirming…' : `Confirm ${currentStepDef.action} · ${mapNames[selectedMapId] || 'map'}`}
                                 </button>
                             </div>
                         )}
@@ -527,7 +519,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     {isAdmin && <AdminPanel matchId={matchId} matchStatus={match.status} isPaused={state?.is_paused} token={token}/>}
                     {isReferee && !isAdmin && <RefereePanel matchId={matchId} token={token}/>}
                     <section aria-label="Match activity" className="match-panel">
-                    <MatchActivity mapNames={mapNames} isAdmin={isAdmin} canAcknowledge={isAdmin || isReferee} matchId={matchId} token={token}/>
+                    <div className="panel-head"><h2>Action log</h2></div><ActionLog logs={logs} dbTeamAName={match.team_a_name} dbTeamBName={match.team_b_name} displayTeam1Name={match.team_a_name} displayTeam2Name={match.team_b_name} mapNames={mapNames}/>
                     </section>
                 </aside>
             </div>

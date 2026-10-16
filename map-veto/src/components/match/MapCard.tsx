@@ -82,7 +82,7 @@ export function MapCard({
                 'w-[96px] sm:w-[120px] md:w-[160px] lg:w-[180px] xl:w-[200px]',
                 isInteractive && 'cursor-pointer',
                 state === 'banned' && 'cursor-not-allowed opacity-40 grayscale',
-                state === 'active' && 'border-2 border-yellow-400'
+                state === 'active' && 'border-2 border-lime'
             )}
         >
             {/* Map Image */}
@@ -193,14 +193,14 @@ export function MapCard({
                 <div className="absolute inset-0 rounded border-2 border-white/40 pointer-events-none" />
             )}
 
-            {/* Hover Overlay for Interactive Cards */}
+            {/* Hover Overlay for Interactive Cards: a corner tag on narrow cards keeps the map name readable */}
             {isInteractive && !isSelected && (
                 <div
-                    className="absolute inset-0 bg-white/10 flex items-center justify-center"
+                    className="absolute inset-0 bg-white/10 flex items-start justify-end p-1 sm:items-center sm:justify-center sm:p-0"
                 >
                     <div
                         className={cn(
-                            "px-6 py-3  rounded-full text-white font-semibold border",
+                            "px-1.5 py-0.5 text-[10px] leading-tight whitespace-nowrap sm:px-6 sm:py-3 sm:text-base rounded-full text-white font-semibold border",
                             hoverColor
                         )}
                     >
@@ -216,11 +216,11 @@ export function MapCard({
                 >
                     <div
                         className={cn(
-                            "w-10 h-10 rounded-full flex items-center justify-center",
+                            "w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center",
                             action === 'ban' ? 'bg-red-500' : action === 'pick' ? 'bg-green-500' : 'bg-white/30'
                         )}
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-6 sm:w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                         </svg>
                     </div>

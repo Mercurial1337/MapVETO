@@ -17,7 +17,6 @@ A real-time competitive map veto system for esports tournaments. Built with Next
 - **🎲 Coin Toss Integration** - Fair randomized starting position selection
 - **🗺️ Multiple Formats** - Support for Bo1, Bo3, and Bo5 match formats
 - **🔗 Magic Links** - Secure, unique URLs for each team and observers
-- **📺 Stream Overlay** - OBS-ready transparent overlays for broadcasts
 - **👑 Admin Dashboard** - Full match management and monitoring
 - **⚡ Rate Limiting** - Optional Upstash Redis integration for API protection
 
@@ -91,22 +90,6 @@ UPSTASH_REDIS_REST_TOKEN=your_upstash_token
 4. Side selection occurs after each pick
 5. Final results display to all participants
 
-### Stream Overlay
-
-1. Go to **Admin** → **Stream Overlay**
-2. Select your match and background mode
-3. Copy the generated URL
-4. In OBS: Add **Browser Source** with the URL
-5. Recommended dimensions: `1920x1080`
-
-#### Overlay URL Parameters
-
-| Parameter | Values | Description |
-|-----------|--------|-------------|
-| `bg` | `transparent`, `chroma` | Background mode |
-| `banned` | `true`, `false` | Show/hide banned maps |
-| `animate` | `true`, `false` | Enable/disable animations |
-
 ## 🔗 URL Reference
 
 | Page | Path |
@@ -115,9 +98,7 @@ UPSTASH_REDIS_REST_TOKEN=your_upstash_token
 | Admin Dashboard | `/admin` |
 | Create Match | `/admin/matches/new` |
 | Matches List | `/admin/matches` |
-| Stream Settings | `/admin/stream` |
 | Match Veto | `/match/[id]?token=xxx` |
-| Stream Overlay | `/match/[id]/stream` |
 
 ## 🛠️ Tech Stack
 

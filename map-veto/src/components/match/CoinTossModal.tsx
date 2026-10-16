@@ -19,7 +19,7 @@ export function CoinTossModal({isOpen,teamAName,teamBName,isAdmin,onFlip,inline=
  }
  return <div className={inline?'w-full':'fixed inset-0 z-40 bg-black/80 flex items-center justify-center p-4 overflow-y-auto'}>
   <section role={inline?'region':'dialog'} aria-modal={inline?undefined:true} aria-labelledby="coin-title" className={`match-panel ${inline?'':'w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto'}`}>
-   <h2 id="coin-title" className="text-xl font-bold mb-3">Coin toss</h2>
+   <div className="panel-head"><h2 id="coin-title">Coin toss</h2></div>
    <p className="mb-4 text-white/70">The winner chooses Team A or Team B.</p>
    {error && <p role="alert" className="text-red-400 mb-3">{error}</p>}
    {isAdmin ? <button className="btn-primary px-4 py-2" disabled={busy} onClick={()=>flip()}>{busy?'Submitting…':'Flip coin'}</button> : <p>Both teams are ready. Waiting for an administrator to flip the coin.</p>}

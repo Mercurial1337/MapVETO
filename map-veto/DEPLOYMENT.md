@@ -70,14 +70,6 @@ Add these environment variables in Vercel dashboard:
 4. Side selection happens after each pick
 5. Final results shown to all viewers
 
-### OBS Stream Overlay
-
-1. Go to **Admin** → **Stream Overlay**
-2. Select your match and background mode
-3. Copy the generated URL
-4. In OBS: Add **Browser Source** with URL
-5. Set dimensions: `1920x1080` (results) or `1920x200` (live bar)
-
 ---
 
 ## 🎮 Veto Formats
@@ -98,16 +90,6 @@ Add these environment variables in Vercel dashboard:
 | Admin Dashboard | `/admin` |
 | Create Match | `/admin/matches/new` |
 | Matches List | `/admin/matches` |
-| Stream Settings | `/admin/stream` |
 | Match Veto | `/match/[id]?token=xxx` |
-| Stream Overlay | `/match/[id]/stream` |
-| Live Bar | `/match/[id]/overlay` |
 
 ---
-
-## ⚡ Tips
-
-- **Transparent background**: Add `?bg=transparent` to overlay URLs
-- **Chroma key**: Use `?bg=chroma` for green screen
-- **Hide banned maps**: Add `?banned=false`
-- **No animations**: Add `?animate=false`
