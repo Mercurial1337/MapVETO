@@ -28,7 +28,8 @@ export function PositionSelectionModal({isOpen,teamAName,teamBName,coinTossWinne
  return <div className={inline?'w-full':'fixed inset-0 z-40 bg-black/80 flex items-center justify-center p-4 overflow-y-auto'}>
   <section role={inline?'region':'dialog'} aria-modal={inline?undefined:true} aria-labelledby="position-title" className={`match-panel ${inline?'':'w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto'}`}>
    <h2 id="position-title" className="panel-head break-words">{winnerName} chooses Team A or Team B</h2>
-   <p className="mb-4 text-white/70">{isSeeded?'Higher seed':'Coin toss winner'} · confirm your role within 60 seconds.</p>
+   {/* Name the winner explicitly so the losing team never reads this as addressed to them. */}
+   <p className="mb-4 text-white/70 break-words">{userRole===coinTossWinner?`You (${winnerName}) ${isSeeded?'are the higher seed':'won the coin toss'} · confirm your role within 60 seconds.`:`${winnerName} ${isSeeded?'is the higher seed':'won the coin toss'} · they have 60 seconds to choose.`}</p>
    <TurnTimer soundEnabled={userRole==='team_a' || userRole==='team_b'} currentStep={positionStep} stateUpdatedAt={turnStartedAt || ''} teamAName={winnerName} teamBName={winnerName} matchId={matchId} token={token} isInProgress={isOpen} isComplete={false} isPaused={isPaused} pausedRemainingSeconds={pausedRemainingSeconds}/>
    {error && <p role="alert" className="text-red-400 mt-3">{error}</p>}
    {userRole===coinTossWinner ? <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4"><button disabled={busy || isPaused} className="btn-team-a min-h-12 px-4 py-2" onClick={()=>choose(true)}>Confirm Team A</button><button disabled={busy || isPaused} className="btn-team-b min-h-12 px-4 py-2" onClick={()=>choose(false)}>Confirm Team B</button></div> : <p className="mt-4 text-sm text-white/70 break-words">Waiting for {winnerName} to choose.</p>}
