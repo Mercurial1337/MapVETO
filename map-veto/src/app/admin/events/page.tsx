@@ -168,6 +168,7 @@ export default function EventsPage() {
 
                             {/* Actions */}
                             <div className="grid grid-cols-2 gap-2 mt-auto [&>a]:min-w-0 [&>a]:min-h-11 [&>a]:justify-center [&>a]:text-center [&>button]:min-w-0 [&>button]:min-h-11 [&>button]:justify-center">
+                                <Link href={`/admin/events/${event.id}/analytics`} className="btn-secondary flex items-center px-3 py-2 text-sm">Veto analytics</Link>
                                 <Link
                                     href={`/admin/matches?event=${event.id}`}
                                     className="px-3 py-2 bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-sm text-purple-400 flex items-center gap-1.5 transition-colors"
