@@ -47,7 +47,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 }
 
-// Get magic links for a match (admin only)
+// Staff can retrieve match links; referees get only team and referee links.
 export async function POST(request: NextRequest, { params }: RouteParams) {
     try {
         const { id: matchId } = await params;
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         const magicLinks: Record<string, { token: string; url: string; label: string }> = {};
 
         for (const link of links || []) {
-            if(staff.role==='referee' && link.link_type!=='referee')continue;
+            if(staff.role==='referee' && !['team_a','team_b','referee'].includes(link.link_type))continue;
             const label = link.link_type === 'team_a'
                 ? match.team_a_name
                 : link.link_type === 'team_b'

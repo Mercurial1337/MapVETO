@@ -220,7 +220,7 @@ export default function MatchesPage() {
             const response = await fetch(`/api/matches/${matchId}`, { method: 'POST' });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || 'Could not load match links.');
-            const links = matchLinkUrls(data.links, window.location.origin, matchId, data.staff_role==='referee'?['referee']:undefined);
+            const links = matchLinkUrls(data.links, window.location.origin, matchId, data.staff_role==='referee'?['team_a','team_b','referee']:undefined);
             setSelectedMatchLinks({ matchId, links });
         } catch (error) {
             alert(error instanceof Error ? error.message : 'Could not load match links.');
@@ -524,19 +524,10 @@ export default function MatchesPage() {
                                         >
                                             {loadingLinks === match.id ? '...' : 'Links'}
                                         </button>
-                                        {(match.status === 'in_progress' || match.status === 'coin_toss' || match.status === 'completed') && (
-                                            <a
-                                                href={`/match/${match.id}?token=observer`}
-                                                target="_blank"
-                                                className="px-3 py-1 text-xs bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
-                                            >
-                                                View
-                                            </a>
-                                        )}
                                         <button
                                             onClick={() => deleteMatch(match.id, match.team_a_name, match.team_b_name)}
                                             disabled={deletingMatch === match.id || events.some(event => event.id === match.event_id && event.role === 'referee')}
-                                            className="px-2 py-1 text-xs bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors disabled:opacity-50"
+                                            className="ml-6 px-2 py-1 text-xs bg-red-500/10 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors disabled:opacity-50"
                                             title="Delete match"
                                         >
                                             {deletingMatch === match.id ? '...' : <Trash2 size={14} />}

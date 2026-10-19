@@ -15,6 +15,7 @@
     "test:bulk-http": "node tests/bulk-http.test.mjs",
     "test:password-http": "node tests/team-password-http.test.mjs",
     "test:privacy-http": "node tests/match-privacy-http.test.mjs",
+    "test:referee-links-http": "node tests/referee-links-http.test.mjs",
     "test:normal-http": "node tests/normal-creation-http.test.mjs",
     "test:analytics-http": "node tests/analytics-http.test.mjs"
   },
