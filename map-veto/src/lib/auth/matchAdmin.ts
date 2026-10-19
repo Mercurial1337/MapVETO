@@ -4,12 +4,15 @@ import { getEventRole } from '@/lib/auth/eventAuth';
 // An authenticated account is not automatically an administrator of every match.
 export async function matchStaffAccess(matchId: string, token?: string): Promise<{role:'admin'|'referee';token:string}|null> {
     const db = createServiceClient();
-    if (token) {
+    // An explicit link fixes the view's role. Never upgrade observer/team links
+    // using the signed-in account (including a match creator or event owner).
+    if (token !== undefined) {
         const { data: link } = await db.from('match_links').select('token,link_type,expires_at').eq('match_id', matchId).eq('token', token).single();
         if (link && ['admin','referee'].includes(link.link_type)) {
             if (link.expires_at && Date.parse(link.expires_at)<=Date.now()) return null;
             return {role:link.link_type as 'admin'|'referee',token:link.token};
         }
+        return null;
     }
     const { data: { user } } = await (await createClient()).auth.getUser();
     if (!user) return null;

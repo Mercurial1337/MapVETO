@@ -51,11 +51,34 @@ try {
   const cookie=referee.cookie+'; '+unlocked.cookie;
   const snapshot=(await post('/api/veto/session',credentials,cookie,200)).data;
   assert.equal(snapshot.userRole,role);assert.equal(snapshot.match.can_admin,false);
+  assert.equal(snapshot.match.can_referee,false);
   const other=role==='team_a'?'team_b':'team_a';
   assert.equal((await post('/api/veto/session',{match_id:matchId,token:result.links[other].token},cookie,401)).data.password_required,true);
  }
+ // Observer links remain read-only even for a creator/owner signed in to the app.
+ const observer={match_id:matchId,token:all.links.observer.token};
+ for(const user of [owner,referee]) {
+  const snapshot=(await post('/api/veto/session',observer,user.cookie,200)).data;
+  assert.equal(snapshot.userRole,'observer');
+  assert.equal(snapshot.match.can_admin,false);assert.equal(snapshot.match.can_referee,false);
+  const page=await (await fetch(`${base}/match/${matchId}?token=${observer.token}`,{headers:{Cookie:user.cookie}})).text();
+  assert.ok(!page.includes('Head Admin override controls'));assert.ok(!page.includes('Request veto reset'));
+  for(const token of [observer.token,result.links.referee.token,randomUUID()]) {
+   await post('/api/veto/admin/override',{match_id:matchId,token,operation:'pause',reason:'Observer must stay read-only'},user.cookie,403);
+  }
+ }
+ // A referee creating a standalone match is its owner, but its observer link
+ // still must not inherit that creator's Head Admin access.
+ assert.ifError((await db.from('matches').update({event_id:null,created_by:referee.id}).eq('id',matchId)).error);
+ const creatorView=(await post('/api/veto/session',observer,referee.cookie,200)).data;
+ assert.equal(creatorView.match.can_admin,false);assert.equal(creatorView.match.can_referee,false);
+ await post('/api/veto/admin/override',{...observer,operation:'pause',reason:'Creator observer must stay read-only'},referee.cookie,403);
+ for(const [role,cookie] of [['admin',owner.cookie],['referee',referee.cookie]]) {
+  const staffView=(await post('/api/veto/session',{match_id:matchId,token:all.links[role].token},cookie,200)).data;
+  assert.equal(staffView.match.can_admin,role==='admin');assert.equal(staffView.match.can_referee,role==='referee');
+ }
  await post('/api/veto/admin/override',{match_id:matchId,token:result.links.referee.token,operation:'pause',reason:'Must not elevate'},referee.cookie,403);
- console.log('PASS referee links: both team links and referee link copyable, Head Admin/observer links withheld, outsiders denied, signed-in referees still need each team password, cross-team sessions denied, admin controls denied');
+ console.log('PASS referee links: scoped link sharing, team passwords, observer/team links never inherit staff controls, creator observer remains read-only, explicit staff links retain their roles and cannot be upgraded');
 } finally {
  assert.ifError((await db.from('matches').delete().eq('id',matchId)).error);
  assert.ifError((await db.from('events').delete().eq('id',eventId)).error);
