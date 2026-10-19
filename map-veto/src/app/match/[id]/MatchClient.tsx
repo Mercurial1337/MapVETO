@@ -18,22 +18,6 @@ import { TeamPasswordScreen } from '@/components/match/TeamPasswordScreen';
 import { RealtimeProvider, useMatchData, useVetoActions, useConnectionStatus, useRealtime } from '@/lib/realtime';
 import type { MapCardState, VetoStep, VetoActor, Match, VetoTemplate } from '@/types';
 
-// Map name to local image fallback
-const MAP_IMAGE_FALLBACKS: Record<string, string> = {
-    'Abyss': '/maps/valorant/Abyss.webp',
-    'Bind': '/maps/valorant/Bind.webp',
-    'Haven': '/maps/valorant/Haven.webp',
-    'Pearl': '/maps/valorant/Pearl.webp',
-    'Corrode': '/maps/valorant/Corrode.webp',
-    'Split': '/maps/valorant/Split.webp',
-    'Sunset': '/maps/valorant/Sunset.webp',
-    'Ascent': '/maps/valorant/Ascent.webp',
-    'Icebox': '/maps/valorant/Icebox.webp',
-    'Breeze': '/maps/valorant/Breeze.webp',
-    'Fracture': '/maps/valorant/Fracture.webp',
-    'Lotus': '/maps/valorant/Lotus.webp',
-};
-
 // Extended match type that includes joined data from Supabase
 interface MatchWithTemplate extends Omit<Match, 'coin_toss_winner'> {
     veto_templates?: Pick<VetoTemplate, 'id' | 'name' | 'format' | 'sequence'>;
@@ -244,12 +228,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
             ...state.picked_maps.map(p => p.map_id)
         ]);
 
-        return maps
-            .filter(map => poolMapIds.has(map.id))
-            .map(map => ({
-                ...map,
-                image_url: map.image_url || MAP_IMAGE_FALLBACKS[map.name] || '/maps/valorant/default.webp'
-            }));
+        return maps.filter(map => poolMapIds.has(map.id));
     }, [maps, state]);
 
     // Create map name lookup

@@ -3,22 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import type { MapCardState, SideChoice } from '@/types';
-
-// Map name to local image fallback
-const MAP_IMAGE_FALLBACKS: Record<string, string> = {
-    'Abyss': '/maps/valorant/Abyss.webp',
-    'Bind': '/maps/valorant/Bind.webp',
-    'Haven': '/maps/valorant/Haven.webp',
-    'Pearl': '/maps/valorant/Pearl.webp',
-    'Corrode': '/maps/valorant/Corrode.webp',
-    'Split': '/maps/valorant/Split.webp',
-    'Sunset': '/maps/valorant/Sunset.webp',
-    'Ascent': '/maps/valorant/Ascent.webp',
-    'Icebox': '/maps/valorant/Icebox.webp',
-    'Breeze': '/maps/valorant/Breeze.webp',
-    'Fracture': '/maps/valorant/Fracture.webp',
-    'Lotus': '/maps/valorant/Lotus.webp',
-};
+import {mapImageSource} from '@/lib/maps/images';
 
 interface MapCardProps {
     map: {
@@ -61,9 +46,7 @@ export function MapCard({
 
     // Use fallback image if needed
     const [imgError, setImgError] = useState(false);
-    const imageUrl = imgError || !map.image_url
-        ? (MAP_IMAGE_FALLBACKS[map.name] || '/maps/valorant/default.webp')
-        : map.image_url;
+    const imageUrl = mapImageSource(map.name,map.image_url,imgError);
 
     // Determine hover text
     const hoverText = action === 'ban' ? 'Ban Map' : action === 'pick' ? 'Pick Map' : 'Select Map';
@@ -91,7 +74,8 @@ export function MapCard({
                 alt={map.name}
                 fill
                 className="object-cover"
-                sizes="(max-width: 640px) 96px, (max-width: 768px) 120px, (max-width: 1024px) 160px, 200px"
+                sizes="(max-width: 639px) 96px, (max-width: 767px) 120px, (max-width: 1023px) 160px, (max-width: 1279px) 180px, 200px"
+                placeholder={typeof imageUrl==='string'?'empty':'blur'}
                 onError={() => setImgError(true)}
             />
 

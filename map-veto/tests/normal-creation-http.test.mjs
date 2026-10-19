@@ -41,6 +41,8 @@ try {
   await post('/api/veto/position-choice',{...team(winner),pick_first:true});
   session=await post('/api/veto/session',team('observer'));assert.equal(session.match.status,'in_progress');
   assert.equal(session.state.available_maps.length,7);
+  const {data:poolMaps,error:poolError}=await db.from('maps').select('name').in('id',session.state.available_maps);assert.ifError(poolError);
+  assert.deepEqual(poolMaps.map(map=>map.name).sort(),['Abyss','Bind','Corrode','Haven','Lotus','Summit','Sunset']);
  }
  console.log('PASS normal creation: BO1/BO3/BO5 auto toss after both ready only, one toss on retries, winner chooses role, A/B higher seeds preserved, five links and seven maps');
 } finally {

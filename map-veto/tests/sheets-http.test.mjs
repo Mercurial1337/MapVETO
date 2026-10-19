@@ -30,7 +30,7 @@ try{
  const {data:matches}=await db.from('matches').select('id,format,auto_coin_toss,coin_toss_forced').eq('event_id',eventId);assert.equal(matches.length,1);assert.equal(matches[0].format,'bo3');assert.equal(matches[0].auto_coin_toss,true);
  const {data:links}=await db.from('match_links').select('link_type,token').eq('match_id',matches[0].id);assert.equal(links.length,5);
  const {data:state}=await db.from('match_state').select('available_maps').eq('match_id',matches[0].id).single();assert.equal(state.available_maps.length,7);
- const {data:poolMaps}=await db.from('maps').select('name').in('id',state.available_maps);assert.deepEqual(poolMaps.map(m=>m.name).sort(),['Abyss','Bind','Breeze','Corrode','Haven','Pearl','Split']);
+ const {data:poolMaps}=await db.from('maps').select('name').in('id',state.available_maps);assert.deepEqual(poolMaps.map(m=>m.name).sort(),['Abyss','Bind','Corrode','Haven','Lotus','Summit','Sunset']);
  const history=await api(referee,'?tab='+tab.id);const excluded=preview.rows.find(row=>!choices.some(c=>c.source_id===row.source_id));assert.equal(history.sources.find(s=>s.source_id===excluded.source_id).approved,false);if(pending)assert.equal(history.sources.find(s=>s.source_id===pending.source_id).selection,'A');
  await api(referee,'',{operation:'sync'},403);await api(owner,'',{operation:'sync'});assert.equal((await db.from('matches').select('id').eq('event_id',eventId)).data.length,1);
  // The public experiment sheet has owner-edited passwords. Assign a known
