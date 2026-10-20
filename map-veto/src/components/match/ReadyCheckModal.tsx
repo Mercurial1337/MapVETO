@@ -26,7 +26,7 @@ export function ReadyCheckModal({isOpen,teamAName,teamBName,teamAReady,teamBRead
     <p className="text-white/70">Teams must check in within ten (10) minutes of the scheduled Map Veto time.</p>
     <ul className="list-disc pl-5 space-y-2 text-white/70">
      <li>If one team misses the deadline, all of that team’s Map Veto choices will be randomized for the entire veto. The team that checked in will make its choices normally.</li>
-     <li>If both teams miss the deadline, the first three (3) maps in the Map Pool in alphabetical order will be played, with randomized starting sides. For Best-of-Five matches, the first five (5) maps will be used; for Best-of-One matches, the first map will be used.</li>
+     <li>If both teams miss the deadline, the first three (3) maps in the Map Pool in alphabetical order will be played, with randomized starting sides. For Best-of-Five matches, the first five (5) maps will be used.</li>
     </ul>
    </div>}
    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
