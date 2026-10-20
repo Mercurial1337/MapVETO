@@ -23,7 +23,7 @@ export async function GET(request:NextRequest,{params}:Context){
 }
 const schema=z.discriminatedUnion('operation',[
  z.object({operation:z.literal('connect'),sheet:z.string().max(300)}),
- z.object({operation:z.literal('confirm'),tab:z.number().int().nonnegative(),hash:z.string().length(64),choices:z.array(z.object({source_id:z.string().min(1).max(100),selection:z.enum(['A','B','C'])})).max(500)}),
+ z.object({operation:z.literal('confirm'),tab:z.number().int().nonnegative(),hash:z.string().length(64),choices:z.array(z.object({source_id:z.string().min(1).max(100),selection:z.enum(['A','B','C']),scheduled_at:z.iso.datetime().nullable().optional()})).max(500)}),
  z.object({operation:z.literal('sync')}),z.object({operation:z.literal('stop'),tab:z.number().int().nonnegative()}),
  z.object({operation:z.literal('link'),source:z.string().uuid(),match:z.string().uuid()}),
  z.object({operation:z.literal('password'),tab:z.number().int().nonnegative(),hash:z.string().length(64),source:z.string().uuid()}),

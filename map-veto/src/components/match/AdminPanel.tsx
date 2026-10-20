@@ -12,7 +12,7 @@ export function AdminPanel({matchId,matchStatus,isPaused,token}:Props) {
   const quick=operation==='pause' || operation==='resume';
   if(!quick && !reason.trim()) {setError('Enter a reason for this action.');return;}
   const note=reason.trim() || (operation==='pause'?'Paused by Head Admin':'Resumed by Head Admin');
-  if(operation==='reset' && !confirm('Restart this veto? Selections will be cleared and the history retained.')) return;
+  if(operation==='reset' && !confirm('Restart this veto? Selections will be cleared, scheduled check-in/no-show restrictions will be removed, and both teams can check in normally. History is retained.')) return;
   setBusy(true);setError('');
   try {
    const response=await fetch('/api/veto/admin/override',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({match_id:matchId,token,operation,reason:note,turn_started_at:state?.turn_started_at})});

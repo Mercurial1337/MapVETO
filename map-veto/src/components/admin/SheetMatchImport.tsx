@@ -2,20 +2,22 @@
 import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import type {SheetRow} from '@/lib/sheets/parse';
+import {parseVetoTime,vetoTimeInput,formatVetoTime} from '@/lib/sheets/parse';
 interface Tab{id:number;title:string;}
-interface Source{id:string;source_id:string;tab_id:number;approved:boolean;selection:'A'|'B'|'C';status:string;issue:string;match_id:string|null;was_created:boolean;password_update:boolean;}
+interface Source{id:string;source_id:string;tab_id:number;approved:boolean;selection:'A'|'B'|'C';status:string;issue:string;match_id:string|null;was_created:boolean;password_update:boolean;schedule_overridden?:boolean;schedule_override?:string|null;created_schedule?:string|null;}
 const PASSWORD_LABELS:Record<SheetRow['password_status'],string>={supplied:'Both team passwords supplied',missing:'Team password missing',invalid:'Team password invalid',not_used:'No password column'};
 interface Info{connection:{spreadsheet_id:string;active_tabs:Tab[];last_sync_at:string|null;last_error:string|null}|null;tabs:Tab[];role:string;serviceAccount:string|null;backgroundSync:boolean;}
 interface Preview{tab:Tab;rows:SheetRow[];hash:string;sources:Source[];existing:{id:string;team_a_name:string;team_b_name:string;format:string}[];}
 type Outcome='created'|'already_imported'|'waiting'|'conflict'|'deleted';
 const OUTCOMES:[Outcome,string][]=[['created','Created now'],['already_imported','Already imported — no duplicate created'],['waiting','Approved, waiting for both opponents'],['conflict','Not created — needs review'],['deleted','Not recreated — the veto was deleted']];
-const REVIEWED:(keyof SheetRow)[]=['team_a','team_b','format','status','password_status','round'];
+const REVIEWED:(keyof SheetRow)[]=['team_a','team_b','format','status','password_status','round','mapveto_time'];
 // Rows that may be checked: ready or waiting, not yet created, and owned by this day tab.
 const eligible=(row:SheetRow,saved:Source|undefined,day:string)=>['ready','waiting'].includes(row.status) && !saved?.was_created && !(saved && saved.tab_id!==Number(day));
 export function SheetMatchImport({eventId}:{eventId:string}) {
  const [info,setInfo]=useState<Info|null>(null),[sheet,setSheet]=useState(''),[tab,setTab]=useState(''),[preview,setPreview]=useState<Preview|null>(null);
  const [choices,setChoices]=useState<Record<string,'A'|'B'|'C'>>({}),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [changed,setChanged]=useState<Set<string>>(new Set()),[result,setResult]=useState<Partial<Record<Outcome,string[]>>|null>(null);
+ const [times,setTimes]=useState<Record<string,string>>({});
  const url=`/api/events/${eventId}/sheet`,readOnly=info?.role==='referee';
  async function request(path:string,body?:unknown){const response=await fetch(path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});const data=await response.json();if(!response.ok)throw Object.assign(new Error(data.error||'Sheet request failed.'),{stale:!!data.stale});return data;}
  useEffect(()=>{let disposed=false;fetch(url,{cache:'no-store'}).then(async r=>{const data=await r.json();if(!r.ok)throw new Error(data.error);if(!disposed){setInfo(data);setSheet(data.connection?.spreadsheet_id||'');}}).catch(e=>{if(!disposed)setError(e.message);});return()=>{disposed=true;};},[url]);
@@ -28,7 +30,8 @@ export function SheetMatchImport({eventId}:{eventId:string}) {
   const selected:Record<string,'A'|'B'|'C'>={};
   for(const row of data.rows){if(!eligible(row,saved(row),day))continue;if(before){if(choices[row.source_id])selected[row.source_id]=choices[row.source_id];}else if(saved(row)?.approved ?? true)selected[row.source_id]=saved(row)?.selection||'C';}
   setChanged(new Set(before?data.rows.filter(row=>{const old=before.get(row.source_id);return !old || REVIEWED.some(key=>old[key]!==row[key]);}).map(row=>row.source_id):[]));
-  setPreview(data);setChoices(selected);
+  const nextTimes:Record<string,string>={};for(const row of data.rows){const source=saved(row);if(before && times[row.source_id]!==undefined)nextTimes[row.source_id]=times[row.source_id];else if(source?.schedule_overridden)nextTimes[row.source_id]=vetoTimeInput(source.schedule_override||null);}
+  setTimes(nextTimes);setPreview(data);setChoices(selected);
  }
  // A stale preview is refreshed in place and must be reviewed again before confirming.
  async function guarded(action:()=>Promise<void>){try{await action();}catch(e){if(e instanceof Error && (e as Error&{stale?:boolean}).stale && tab)await loadPreview(tab,true);throw e;}}
@@ -43,6 +46,7 @@ export function SheetMatchImport({eventId}:{eventId:string}) {
    </form>
    <p className="text-sm text-white/70">Add <strong>MapVETO Match ID</strong> and <strong>Format</strong> columns. Put a unique permanent ID and BO1/BO3/BO5 on the first team row of each match.</p>
    <p className="text-sm text-white/70">In the <strong>Password</strong> column, enter each team’s own password on its team row. Both rows need a valid password before importing a protected match.</p>
+   <p className="text-sm text-white/70"><strong>MapVETO Time:</strong> use YYYY-MM-DD HH:mm, for example 2026-10-24 18:00. All times are GMT+3. Leave blank for an unscheduled veto. Review or change each time below before confirming.</p>
    {info?.serviceAccount?<p className="text-sm text-white/70">For a private workbook, share Viewer access with {info.serviceAccount}.</p>:<p className="text-sm text-white/70">Public sheets work now. Private sheets require Google service-account credentials on the server.</p>}
   </section>
   {error && <p role="alert" className="border border-red-400/50 p-3 text-red-300">{error}</p>}
@@ -65,9 +69,15 @@ export function SheetMatchImport({eventId}:{eventId:string}) {
    {changed.size>0 && <p role="alert" className="border border-amber-400/50 p-3 text-amber-200">The sheet changed since your last review. {changed.size} row{changed.size===1?' is':'s are'} marked “Changed since review”. Your checks were kept for rows that can still be created; new rows are unchecked. Review them, then confirm again.</p>}
    {!info?.serviceAccount && preview.rows.some(row=>row.password_status==='supplied') && <p role="alert" className="border border-amber-400/50 p-3 text-amber-200">This workbook is read through public link access, so anyone with its link can read these passwords. For a real tournament, use a private workbook shared with the website’s service account.</p>}
    {!readOnly && <div className="flex gap-3"><button className="btn-secondary min-h-11 px-3 py-2" disabled={busy} onClick={()=>{const all:Record<string,'A'|'B'|'C'>={};for(const row of preview.rows)if(eligible(row,preview.sources.find(s=>s.source_id===row.source_id),tab))all[row.source_id]=choices[row.source_id]||'C';setChoices(all);}}>Select all eligible</button><button className="btn-secondary min-h-11 px-3 py-2" disabled={busy} onClick={()=>setChoices({})}>Uncheck all</button></div>}
-   <div className="overflow-x-auto border border-white/20 rounded"><table className="w-full text-sm text-left"><thead className="bg-white/5"><tr>{['Create','Match ID / round','Team A','Team B','Format','Team passwords','Higher seed / toss','Status'].map(text=><th className="p-3" key={text}>{text}</th>)}</tr></thead><tbody>{preview.rows.map(row=>{const saved=preview.sources.find(s=>s.source_id===row.source_id),locked=!eligible(row,saved,tab),status=saved?.was_created?saved.status:row.status,wasChanged=changed.has(row.source_id);return <tr className={`border-t border-white/10 ${wasChanged?'border-l-4 border-l-amber-400':''}`} key={row.row}>
+   <div className="overflow-x-auto border border-white/20 rounded"><table className="w-full text-sm text-left"><thead className="bg-white/5"><tr>{['Create','Match ID / round','Team A','Team B','Format','MapVETO Time (GMT+3)','Team passwords','Higher seed / toss','Status'].map(text=><th className="p-3" key={text}>{text}</th>)}</tr></thead><tbody>{preview.rows.map(row=>{const saved=preview.sources.find(s=>s.source_id===row.source_id),locked=!eligible(row,saved,tab),status=saved?.was_created?saved.status:row.status,wasChanged=changed.has(row.source_id);return <tr className={`border-t border-white/10 ${wasChanged?'border-l-4 border-l-amber-400':''}`} key={row.row}>
     <td className="p-3"><input type="checkbox" className="h-5 w-5" aria-label={`Create ${row.source_id||'row '+row.row}`} checked={!!choices[row.source_id]} disabled={busy||readOnly||locked} onChange={e=>setChoices(previous=>{const next={...previous};if(e.target.checked)next[row.source_id]=saved?.selection||'C';else delete next[row.source_id];return next;})}/></td>
     <td className="p-3">{row.source_id||'Missing ID'}<span className="block text-white/60">{row.round} · row {row.row}</span></td><td className="p-3">{row.team_a||'—'}</td><td className="p-3">{row.team_b||'—'}</td><td className="p-3">{row.format?.toUpperCase()||'Missing format'}</td>
+    <td className="p-3 min-w-64">{saved?.was_created?<span>{formatVetoTime(saved.created_schedule||null)}<span className="block text-xs text-white/50">Creation schedule; a full restart disables enforcement.</span></span>:<>
+     <input type="datetime-local" aria-label={`MapVETO time ${row.source_id} GMT+3`} className="match-input" value={times[row.source_id]??vetoTimeInput(row.scheduled_at)} disabled={busy||readOnly||locked} onChange={e=>setTimes(previous=>({...previous,[row.source_id]:e.target.value}))}/>
+     <span className="block text-xs text-white/60 mt-1">GMT+3 · Sheet: {row.mapveto_time||'No schedule'}</span>
+     {times[row.source_id]===undefined && row.schedule_error && <span className="block text-xs text-red-300">{row.schedule_error}</span>}
+     {!readOnly && !locked && <button type="button" className="underline text-xs min-h-8" onClick={()=>setTimes(previous=>({...previous,[row.source_id]:''}))}>Use no schedule</button>}
+    </>}</td>
     <td className="p-3"><span className={row.password_status==='missing' || row.password_status==='invalid'?'text-red-300':''}>{PASSWORD_LABELS[row.password_status]}</span>
     {saved?.password_update && <span className="block text-xs text-amber-300">New team passwords awaiting approval</span>}
     {!readOnly && saved?.password_update && <button disabled={busy} className="underline block min-h-11 text-left" onClick={()=>{if(confirm(`Replace both team passwords for ${row.source_id}? Each team must enter its own password; existing team sessions end.`))void run(()=>guarded(async()=>{await request(url,{operation:'password',tab:Number(tab),hash:preview.hash,source:saved.id});await loadPreview(tab);setNotice(`${row.source_id}: new team passwords are active. Each team must enter its own password again.`);}));}}>Approve team passwords</button>}
@@ -80,7 +90,10 @@ export function SheetMatchImport({eventId}:{eventId:string}) {
    {preview.sources.filter(s=>s.tab_id===Number(tab)&&!preview.rows.some(r=>r.source_id===s.source_id)).map(s=><p key={s.source_id} className="text-amber-300">{s.source_id}: Missing from the sheet. Existing veto and import history remain.</p>)}
    {!readOnly && <div className="border border-white/20 rounded p-4 space-y-3">
     <p className="text-sm text-white/70">Ready matches are created when you confirm. Checked fixtures that are still waiting for opponents are approved now and created automatically, once, when the sheet shows both teams. Unchecked and newly added fixtures are never created without another confirmation. The workbook is re-read on confirmation; if anything changed, you will be asked to review again.</p>
-    <button className="btn-primary min-h-11 px-4 py-2" disabled={busy||!preview.rows.length} onClick={()=>void run(()=>guarded(async()=>{setResult(null);const response=await request(url,{operation:'confirm',tab:Number(tab),hash:preview.hash,choices:Object.entries(choices).map(([source_id,selection])=>({source_id,selection}))});
+    <p className="text-sm text-white/70">Check-in opens at the scheduled time. Ten minutes later, absent teams remain automated until a Head Admin restarts the entire veto. For two absent teams, alphabetical maps and random sides apply.</p>
+    <button className="btn-primary min-h-11 px-4 py-2" disabled={busy||!preview.rows.length} onClick={()=>void run(()=>guarded(async()=>{const selected=Object.entries(choices).map(([source_id,selection])=>{const row=preview.rows.find(r=>r.source_id===source_id)!;if(times[source_id]===undefined){if(row.schedule_error)throw new Error(`${source_id}: correct MapVETO Time or choose Use no schedule.`);return {source_id,selection};}const parsed=parseVetoTime(times[source_id]);if(parsed.schedule_error)throw new Error(`${source_id}: ${parsed.schedule_error}`);return {source_id,selection,scheduled_at:parsed.scheduled_at};});
+     const expired=selected.some(choice=>{const at='scheduled_at' in choice?choice.scheduled_at:preview.rows.find(r=>r.source_id===choice.source_id)?.scheduled_at;return at && Date.parse(at)+600000<=Date.now();});if(expired && !confirm('Some MapVETO check-in deadlines have already passed. Creating these matches will immediately apply the no-show rules. Continue?'))return;
+     setResult(null);const response=await request(url,{operation:'confirm',tab:Number(tab),hash:preview.hash,choices:selected});
      const grouped:Partial<Record<Outcome,string[]>>={};for(const item of (response.results||[]) as {source_id:string;outcome:Outcome}[])(grouped[item.outcome]??=[]).push(item.source_id);
      setResult(grouped);await reload();await loadPreview(tab);setNotice(`Confirmed: ${response.created} created, ${response.waiting} approved and waiting, ${response.conflicts} need review.`);}))}>{busy?'Working…':'Confirm selected matches'}</button>
     <p className="text-sm text-white/60">Confirmation saves your checked and unchecked choices. Existing matches are never recreated or silently changed. If confirmation fails, your selection is kept so you can correct it.</p>

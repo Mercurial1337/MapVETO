@@ -131,11 +131,12 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     }, [state?.current_turn, match]);
 
     const paused=state?.is_paused;
+    const noShow=!!(userRole && match?.veto_no_show_teams?.includes(userRole));
     // Determine if it's user's turn based on their token role
     const isMyTurn = useCallback((turn: VetoActor | null) => {
         if (!userRole || userRole === 'observer') return false;
-        return !paused && turn === userRole;
-    }, [userRole, paused]);
+        return !paused && !noShow && turn === userRole;
+    }, [userRole, paused, noShow]);
 
     // Determine map states
     const mapStates = useMemo(() => {
@@ -290,6 +291,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     return (
         <div className="min-h-screen flex flex-col min-w-0">
             {error && <p role="alert" className="border-b border-red-800 px-4 py-2 text-red-300">{error}</p>}
+            {!!match.veto_no_show_teams?.length && <p role="status" className="border-b border-amber-700 px-4 py-3 text-sm text-amber-200">Scheduled check-in deadline missed by {match.veto_no_show_teams.map(team=>team==='team_a'?match.team_a_name:match.team_b_name).join(' and ')}. No-show choices are automatic until a Head Admin restarts the entire veto.</p>}
             {/* Header */}
             <header className="glass-dark border-b border-white/10 px-4 md:px-6 py-3 md:py-4">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -370,6 +372,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 teamBReady={state?.team_b_ready || false}
                 userRole={userRole}
                 onReady={readyUp}
+                  scheduledAt={match.veto_schedule_enforced?match.veto_scheduled_at:null}
             />
 
             {/* Coin Toss Modal */}

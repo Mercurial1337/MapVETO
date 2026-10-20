@@ -12,7 +12,7 @@ export function formatLog(entry: MatchLog, teams: Record<string,string>, maps: R
   case 'pick':text=`${actor} confirmed pick: ${map}`;break;
   case 'side':text=`${actor} confirmed ${entry.side_choice}: ${map}`;break;
   case 'decider':text=`Decider: ${map}`;break;
-  case 'admin_action':text=`${metadata.staff_role==='referee'?'Referee (both teams approved)':'Head Admin'} ${metadata.action_details || 'override'}`;break;
+  case 'admin_action':text=`${entry.actor==='system'?'System':metadata.staff_role==='referee'?'Referee (both teams approved)':'Head Admin'} ${metadata.action_details || 'override'}`;break;
   case 'reset_request':text=`Referee requested veto reset: ${metadata.reason || ''}`;break;
   case 'reset_answer':text=`${actor} ${metadata.approved?'approved':'declined'} the veto reset`;break;
   case 'timeout_request':text=`${actor} requested a timeout: ${metadata.reason || ''}`;break;
@@ -21,7 +21,8 @@ export function formatLog(entry: MatchLog, teams: Record<string,string>, maps: R
   default:text=`${actor}: ${entry.action_type}`;
  }
  if(metadata.map_number) text+=` (map ${metadata.map_number})`;
- if(metadata.timeout) text+=' [move timer expired: random selection]';
+ if(metadata.scheduled_no_show) text+=' [scheduled no-show rule]';
+ else if(metadata.timeout) text+=' [move timer expired: random selection]';
  else if(metadata.is_auto) text+=' [automatic]';
  if(metadata.admin_override) text+=' [Head Admin override]';
  if(metadata.superseded) text+=' [superseded]';

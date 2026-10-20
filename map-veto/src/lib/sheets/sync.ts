@@ -6,7 +6,7 @@ import type {ParsedRow,SheetFormat} from './parse';
 import {COMPETITIVE_MAPS} from '@/lib/maps/pools';
 import {accessSecret} from '@/lib/auth/teamAccess';
 import {hashPassword,passwordFingerprint} from '@/lib/auth/teamPassword';
-type Choice={source_id:string;selection:'A'|'B'|'C'};
+type Choice={source_id:string;selection:'A'|'B'|'C';scheduled_at?:string|null};
 interface SavedSource {source_id:string;approved:boolean;was_created:boolean;}
 export async function withCompetitiveMaps<T extends {format:SheetFormat|null}>(rows:T[]) {
  const db=createServiceClient(),format=rows.find(row=>row.format)?.format||'bo3';
@@ -38,7 +38,7 @@ export async function loadDay(eventId:string,tabId:number) {
  const tabs=await listTabs(connection.spreadsheet_id),tab=tabs.find(t=>t.id===tabId);
  if(!tab)throw new Error('Day tab not found. Refresh the connection.');
  const rows=parseDay(await readTab(connection.spreadsheet_id,tab)),safe=await fingerprinted(rows);
- const {data:saved,error:sourceError}=await db.from('sheet_match_sources').select('id,source_id,tab_id,approved,selection,status,issue,match_id,was_created,created_password:created_snapshot->>password_fingerprint').eq('event_id',eventId).eq('spreadsheet_id',connection.spreadsheet_id);
+ const {data:saved,error:sourceError}=await db.from('sheet_match_sources').select('id,source_id,tab_id,approved,selection,status,issue,match_id,was_created,schedule_overridden,schedule_override,created_schedule:created_snapshot->>scheduled_at,created_password:created_snapshot->>password_fingerprint').eq('event_id',eventId).eq('spreadsheet_id',connection.spreadsheet_id);
  if(sourceError)throw new Error('Could not load import history.');
  // Fingerprints stay on the server; the preview only learns that a new password awaits approval.
  const sources=(saved||[]).map(({created_password,...source})=>{const fingerprint=safe.find(row=>row.source_id===source.source_id)?.password_fingerprint;return {...source,password_update:!!(source.was_created && source.match_id && fingerprint && fingerprint!==created_password)};});

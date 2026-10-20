@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
                 rpcError.message.includes('deadline') ||
                 rpcError.message.includes('Observer') ||
                 rpcError.message.includes('Not your turn') ||
+                rpcError.message.includes('No-show') ||
                 rpcError.message.includes('Expected action') ||
                 rpcError.message.includes('not found') ||
                 rpcError.message.includes('required') ||
