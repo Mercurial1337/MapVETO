@@ -21,8 +21,14 @@ assert.equal(locked[3].status,'ready');assert.equal(locked[3].password,'abcd');a
 assert.equal(locked[4].status,'invalid');assert.equal(locked[4].password_status,'invalid');assert.equal(locked[4].password,null);
 assert.equal(locked[5].status,'skipped');assert.equal(locked[5].password_status,'missing');
 assert.equal(locked[6].password,null);assert.equal(locked[6].status,'invalid');assert.equal(locked[6].password_status,'missing');
-const short=structuredClone(secured);short[1][5]='abc';assert.equal(parseDay(short)[0].password_status,'invalid');
+for(const password of ['a','0','ab','abc','é','🔑','a'.repeat(128)]){
+ const short=structuredClone(secured);short[1][5]=password;short[2][5]=password;
+ const result=parseDay(short)[0];assert.equal(result.password_status,'supplied');assert.equal(result.status,'ready');assert.equal(result.password,password);assert.equal(result.team_b_password,password);
+}
+for(const password of ['a'.repeat(129),'a\nb']){
+ const invalid=structuredClone(secured);invalid[2][5]=password;assert.equal(parseDay(invalid)[0].password_status,'invalid');
+}
 assert.ok(locked.map(visibleRow).every(r=>!('password' in r) && !('team_b_password' in r) && !JSON.stringify(r).includes('0042') && 'password_status' in r));
 assert.equal(parseDay(csvValues('Status,Names,MapVETO Match ID,Format,Password\r\n,A,X1,BO3,0007\r\n,B,,,b007'))[0].password,'0007');
-console.log('PASS sheet passwords: leading zeros, case and special characters unchanged, separate team-row values preserved, missing/short/padded cells blocked, waiting fixtures need passwords, skipped rows unaffected, preview rows omit plaintext');
+console.log('PASS sheet passwords: 1–128 characters accepted for both teams, leading zeros, case and special characters unchanged, separate team-row values preserved, missing/oversized/control/padded cells blocked, waiting fixtures need passwords, skipped rows unaffected, preview rows omit plaintext');
 console.log('PASS sheet parser: two-row layout, BO1/BO3/BO5, shifted headers, round sections, unresolved/formula errors, duplicate IDs, stable IDs after movement and CSV quoting');

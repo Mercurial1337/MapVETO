@@ -33,7 +33,7 @@ export function parseDay(values:unknown[][]):ParsedRow[] {
   // Passwords are case-sensitive and never trimmed; surrounding spaces are reported instead.
   const firstPassword=pass<0?'':raw(values[i]?.[pass]),secondPassword=pass<0?'':raw(values[i+1]?.[pass]);
   let password:string|null=null,team_b_password:string|null=null,password_status:PasswordStatus='not_used';
-  const invalidPassword=(value:string)=>value!==value.trim() || [...value].length<4 || [...value].length>128 || /[\u0000-\u001f\u007f]/.test(value);
+  const invalidPassword=(value:string)=>value!==value.trim() || [...value].length<1 || [...value].length>128 || /[\u0000-\u001f\u007f]/.test(value);
   if(pass>=0){if(!firstPassword.trim() || !secondPassword.trim())password_status='missing';else if(invalidPassword(firstPassword) || invalidPassword(secondPassword))password_status='invalid';else{password=firstPassword;team_b_password=secondPassword;password_status='supplied';}}
   let state:SheetRow['status']='ready',issue='';
   if(id<0 || !/^[\w.-]{1,100}$/.test(source_id)){state='invalid';issue='Add a permanent MapVETO Match ID on the first team row.';}
@@ -43,7 +43,7 @@ export function parseDay(values:unknown[][]):ParsedRow[] {
   else if(!a || !b || [a,b].some(team=>/^(winner\b|loser\b|tbd\b|tba\b|pending\b|unknown\b|#|0$|[-—]$)/i.test(team))){state='waiting';issue='Waiting for both team names to resolve in the sheet.';}
   else if(a.toLocaleLowerCase()===b.toLocaleLowerCase()){state='invalid';issue='Both teams are the same.';}
   if((state==='ready' || state==='waiting') && password_status==='missing'){state='invalid';issue='Add each team’s password on its own team row.';}
-  else if((state==='ready' || state==='waiting') && password_status==='invalid'){state='invalid';issue='Use a password of 4–128 characters without leading or trailing spaces.';}
+  else if((state==='ready' || state==='waiting') && password_status==='invalid'){state='invalid';issue='Use a password of 1–128 characters without leading or trailing spaces.';}
   if(clean(values[i+1]?.[id]) && clean(values[i+1]?.[id])!==source_id){state='invalid';issue='Two-row match has conflicting IDs.';}
   if(clean(values[i+1]?.[fmt]) && clean(values[i+1]?.[fmt]).toLowerCase().replace(/\s/g,'')!==rawFormat){state='invalid';issue='Two-row match has conflicting formats.';}
   const timeColumn=headers.indexOf('mapvetotime'),timeA=timeColumn<0?'':clean(values[i]?.[timeColumn]),timeB=timeColumn<0?'':clean(values[i+1]?.[timeColumn]);

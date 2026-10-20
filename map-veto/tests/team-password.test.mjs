@@ -5,6 +5,7 @@ const hash=await hashPassword('0042'),again=await hashPassword('0042');
 assert.match(hash,/^scrypt\$16384\$8\$1\$[\w-]+\$[\w-]+$/);assert.ok(!hash.includes('0042'));assert.notEqual(hash,again);
 assert.equal(await verifyPassword('0042',hash),true);assert.equal(await verifyPassword('42',hash),false);assert.equal(await verifyPassword('0042 ',hash),false);
 const special=await hashPassword('Pa$$ w0rd!é');assert.equal(await verifyPassword('Pa$$ w0rd!é',special),true);assert.equal(await verifyPassword('pa$$ w0rd!é',special),false);
+const single=await hashPassword('a');assert.equal(await verifyPassword('a',single),true);assert.equal(await verifyPassword('A',single),false);assert.equal(await verifyPassword('',single),false);
 for(const broken of ['','plain','scrypt$16384$8$1$$','bcrypt$x$y$z$a$b','scrypt$4194304$8$1$c2FsdA$aGFzaA'])assert.equal(await verifyPassword('0042',broken),false);
 assert.equal(passwordFingerprint('0042',secret),passwordFingerprint('0042',secret));assert.notEqual(passwordFingerprint('0042',secret),passwordFingerprint('42',secret));
 assert.notEqual(passwordFingerprint('0042',secret),passwordFingerprint('0042',other));assert.match(passwordFingerprint('0042',secret),/^[0-9a-f]{64}$/);

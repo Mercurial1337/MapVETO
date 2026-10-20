@@ -8,7 +8,7 @@ Keep the existing **Password** column. Enter a value on **each team's row**:
 | Sentinels | | | example-B-0071 |
 
 These are examples, not production passwords. Passwords are case-sensitive;
-leading zeros are preserved. Both values must be 4–128 characters, without
+leading zeros are preserved. Both values must be 1–128 characters, without
 leading/trailing spaces or control characters. Missing or invalid values block
 creation for that pairing. Waiting matches also need both values before approval.
 

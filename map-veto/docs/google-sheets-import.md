@@ -14,7 +14,7 @@ A workbook entered when creating or editing an event is connected automatically.
 - Put a permanent ID (letters, numbers, dots, underscores, hyphens; up to 100 characters) on the first team row. IDs must be unique across the entire workbook and must never be reused for another fixture. Move the ID with its two rows when rearranging fixtures.
 - Put `BO1`, `BO3`, or `BO5` on the first team row. A matching value on the second row is allowed.
 - Blank opponents, winner/loser placeholders, TBD/TBA and formula errors wait. Started/ended/forfeit/cancelled fixtures and byes are skipped.
-- Optional `Password` column: when present, every fixture on that day tab needs a team password on the first team row. The second row may be blank or repeat it; different values are a validation error. Format the column as plain text so leading zeros survive. Passwords are case-sensitive, 4–128 characters, and are never trimmed or altered; surrounding spaces, control characters and missing values block the row in the preview.
+- Optional `Password` column: when present, every fixture on that day tab needs a password on each team's row, used for that team's link. Format the column as plain text so leading zeros survive. Passwords are case-sensitive, 1–128 characters, and are never trimmed or altered; surrounding spaces, control characters and missing values block the row in the preview.
 - Google Sheets remains responsible for tournament results and bracket progression. Its calculated Names cells must only resolve to actual participants when the upstream results are final. Veto completion does not decide the tournament winner.
 
 The experiment workbook has 36 IDs, D1-M01 through D7-M01 as appropriate. Days 1–6 are BO3; Day 7 is BO5. Existing formulas remain in place.
