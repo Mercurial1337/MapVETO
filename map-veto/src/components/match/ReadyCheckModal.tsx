@@ -19,7 +19,16 @@ export function ReadyCheckModal({isOpen,teamAName,teamBName,teamAReady,teamBRead
  return <div className={inline?'w-full':'fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 overflow-y-auto'}>
   <section role={inline?'region':'dialog'} aria-modal={inline?undefined:true} aria-labelledby="ready-check-title" className={`match-panel space-y-4 ${inline?'':'w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto'}`}>
    <div className="panel-head"><h2 id="ready-check-title">Team check-in</h2></div><p className="text-sm text-white/70 text-center">Both teams must check in before the veto begins.</p>
-   {scheduledAt && <div className="border border-white/20 rounded p-3 text-sm space-y-2"><p>Check-in opens: <strong>{formatVetoTime(scheduledAt)}</strong></p><p>Deadline: <strong>{formatVetoTime(new Date(Date.parse(scheduledAt)+600000).toISOString())}</strong></p><p className="text-white/70">{notOpen?'Check-in has not opened yet.':closed?'The deadline has passed. Applying no-show rules…':'Check-in is open.'} Missing teams’ choices stay automatic until a Head Admin restarts the entire veto.</p></div>}
+   {scheduledAt && <div className="border border-white/20 rounded p-3 text-sm space-y-2">
+    <p>Check-in opens: <strong>{formatVetoTime(scheduledAt)}</strong></p>
+    <p>Deadline: <strong>{formatVetoTime(new Date(Date.parse(scheduledAt)+600000).toISOString())}</strong></p>
+    <p className="text-white/70">{notOpen?'Check-in has not opened yet.':closed?'The deadline has passed. Applying no-show rules…':'Check-in is open.'}</p>
+    <p className="text-white/70">Teams must check in within ten (10) minutes of the scheduled Map Veto time.</p>
+    <ul className="list-disc pl-5 space-y-2 text-white/70">
+     <li>If one team misses the deadline, all of that team’s Map Veto choices will be randomized for the entire veto. The team that checked in will make its choices normally.</li>
+     <li>If both teams miss the deadline, the first three (3) maps in the Map Pool in alphabetical order will be played, with randomized starting sides. For Best-of-Five matches, the first five (5) maps will be used; for Best-of-One matches, the first map will be used.</li>
+    </ul>
+   </div>}
    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
     {[{name:teamAName,ready:teamAReady,label:'Team A'},{name:teamBName,ready:teamBReady,label:'Team B'}].map(team=><div key={team.label} className="border border-white/15 rounded p-3 flex items-center justify-between gap-3 min-w-0"><div className="min-w-0"><p className="font-semibold break-words">{team.name}</p><p className={`text-xs font-bold uppercase tracking-wider mt-1 ${team.label==='Team A'?'text-team-a':'text-team-b'}`}>{team.label}</p></div><span className={`shrink-0 text-sm ${team.ready?'text-green-300':'text-white/60'}`}>{team.ready?'✓ Ready':'Waiting'}</span></div>)}
    </div>
