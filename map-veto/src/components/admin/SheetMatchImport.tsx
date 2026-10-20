@@ -3,6 +3,7 @@ import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import type {SheetRow} from '@/lib/sheets/parse';
 import {parseVetoTime,vetoTimeInput,formatVetoTime} from '@/lib/sheets/parse';
+import {VetoSchedulePicker} from './VetoSchedulePicker';
 interface Tab{id:number;title:string;}
 interface Source{id:string;source_id:string;tab_id:number;approved:boolean;selection:'A'|'B'|'C';status:string;issue:string;match_id:string|null;was_created:boolean;password_update:boolean;schedule_overridden?:boolean;schedule_override?:string|null;created_schedule?:string|null;}
 const PASSWORD_LABELS:Record<SheetRow['password_status'],string>={supplied:'Both team passwords supplied',missing:'Team password missing',invalid:'Team password invalid',not_used:'No password column'};
@@ -73,7 +74,7 @@ export function SheetMatchImport({eventId}:{eventId:string}) {
     <td className="p-3"><input type="checkbox" className="h-5 w-5" aria-label={`Create ${row.source_id||'row '+row.row}`} checked={!!choices[row.source_id]} disabled={busy||readOnly||locked} onChange={e=>setChoices(previous=>{const next={...previous};if(e.target.checked)next[row.source_id]=saved?.selection||'C';else delete next[row.source_id];return next;})}/></td>
     <td className="p-3">{row.source_id||'Missing ID'}<span className="block text-white/60">{row.round} · row {row.row}</span></td><td className="p-3">{row.team_a||'—'}</td><td className="p-3">{row.team_b||'—'}</td><td className="p-3">{row.format?.toUpperCase()||'Missing format'}</td>
     <td className="p-3 min-w-64">{saved?.was_created?<span>{formatVetoTime(saved.created_schedule||null)}<span className="block text-xs text-white/50">Creation schedule; a full restart disables enforcement.</span></span>:<>
-     <input type="datetime-local" aria-label={`MapVETO time ${row.source_id} GMT+3`} className="match-input" value={times[row.source_id]??vetoTimeInput(row.scheduled_at)} disabled={busy||readOnly||locked} onChange={e=>setTimes(previous=>({...previous,[row.source_id]:e.target.value}))}/>
+     <VetoSchedulePicker matchLabel={row.source_id} value={times[row.source_id]??vetoTimeInput(row.scheduled_at)} disabled={busy||readOnly||locked} onChange={value=>setTimes(previous=>({...previous,[row.source_id]:value}))}/>
      <span className="block text-xs text-white/60 mt-1">GMT+3 · Sheet: {row.mapveto_time||'No schedule'}</span>
      {times[row.source_id]===undefined && row.schedule_error && <span className="block text-xs text-red-300">{row.schedule_error}</span>}
      {!readOnly && !locked && <button type="button" className="underline text-xs min-h-8" onClick={()=>setTimes(previous=>({...previous,[row.source_id]:''}))}>Use no schedule</button>}
