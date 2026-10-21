@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {parseDay,csvValues,spreadsheetId,visibleRow} from '../src/lib/sheets/parse.ts';
+import {scopeDayPreview} from '../src/lib/sheets/preview.ts';
 const rows=[['Round','Status','Names','MapVETO Match ID','Format'],['R1','','Fnatic','D1-M01','BO1'],['','','LOUD','',''],['R2','','Winner from #1','D1-M02','BO3'],['','','Sentinels','',''],['GF','','G2','D1-M03','BO5'],['','','Liquid','','']];
 let parsed=parseDay(rows);assert.deepEqual(parsed.map(r=>[r.source_id,r.format,r.status]),[['D1-M01','bo1','ready'],['D1-M02','bo3','waiting'],['D1-M03','bo5','ready']]);assert.equal(parsed[1].round,'R2');
 const moved=[rows[0],...rows.slice(5),...rows.slice(1,5)];assert.equal(parseDay(moved)[0].source_id,'D1-M03');
@@ -32,3 +33,9 @@ assert.ok(locked.map(visibleRow).every(r=>!('password' in r) && !('team_b_passwo
 assert.equal(parseDay(csvValues('Status,Names,MapVETO Match ID,Format,Password\r\n,A,X1,BO3,0007\r\n,B,,,b007'))[0].password,'0007');
 console.log('PASS sheet passwords: 1–128 characters accepted for both teams, leading zeros, case and special characters unchanged, separate team-row values preserved, missing/oversized/control/padded cells blocked, waiting fixtures need passwords, skipped rows unaffected, preview rows omit plaintext');
 console.log('PASS sheet parser: two-row layout, BO1/BO3/BO5, shifted headers, round sections, unresolved/formula errors, duplicate IDs, stable IDs after movement and CSV quoting');
+const previewSources=[{source_id:'D1-M01',tab_id:1,tab_title:'D1 - Matches',was_created:true,password_update:true},{source_id:'D1-M03',tab_id:2,tab_title:'D2 - Matches',was_created:true}];
+const scoped=scopeDayPreview(parsed.map(visibleRow),previewSources,2);
+assert.equal(scoped.rows[0].status,'invalid');assert.match(scoped.rows[0].issue,/D1-M01.*D1 - Matches/);
+assert.equal(scoped.rows[1].status,'waiting');assert.equal(scoped.rows[2].status,'ready');
+assert.deepEqual(scoped.sources,[previewSources[1]]);assert.equal(parsed[0].status,'ready');
+console.log('PASS day preview: cross-day IDs show a named conflict, other-day matches are not counted as imported and cannot expose password approval controls, original parsed rows unchanged');

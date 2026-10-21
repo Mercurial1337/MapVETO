@@ -59,5 +59,31 @@ try{
  await apply([row,waiting],[{source_id:'WAIT',selection:'A',scheduled_at:'2099-10-24T17:00:00.000Z'}]);
  assert.equal((await apply([row,{...waiting,team_b:'Waiting Beta',status:'ready'}],null)).created,1);
  const waitMatch=(await db.query(`SELECT m.veto_scheduled_at FROM matches m WHERE m.event_id=$1 AND team_a_name='Waiting Alpha'`,[event])).rows[0];assert.equal(waitMatch.veto_scheduled_at.toISOString(),'2099-10-24T17:00:00.000Z');
+ // A copied Day 1 ID must not block the only selected Day 2 match or mutate Day 1.
+ const sourceBefore=(await db.query('SELECT * FROM sheet_match_sources WHERE event_id=$1 AND source_id=$2',[event,'S1'])).rows[0];
+ const day2=(rows,choices)=>rpc('sheet_apply_day',[event,owner,sheet,2,'D2 - Matches',JSON.stringify(rows),choices===null?null:JSON.stringify(choices)]);
+ const d2row=(id,extra={})=>({...row,source_id:id,team_a:id+' Alpha',team_b:id+' Beta',scheduled_at:null,...extra});
+ const foreign={...row,team_a:'Wrong copied team',scheduled_at:'2099-11-01T15:00:00.000Z'};
+ const day2Rows=[d2row('D2-M01'),foreign,d2row('D2-WAIT',{status:'waiting',team_b:'Winner #2'}),d2row('D2-UNCHECKED')];
+ const confirmed=await day2(day2Rows,[{source_id:'D2-M01',selection:'C'},{source_id:'D2-WAIT',selection:'A'}]);
+ assert.equal(confirmed.created,1);assert.equal(confirmed.waiting,1);
+ assert.deepEqual(confirmed.results,[{source_id:'D2-M01',outcome:'created'},{source_id:'D2-WAIT',outcome:'waiting'}]);
+ assert.deepEqual((await db.query('SELECT * FROM sheet_match_sources WHERE id=$1',[sourceBefore.id])).rows[0],sourceBefore);
+ assert.equal((await db.query("SELECT count(*)::int n FROM sheet_match_sources WHERE event_id=$1 AND tab_id=2 AND source_id='S1'",[event])).rows[0].n,0);
+ assert.equal((await day2(day2Rows,[{source_id:'D2-M01',selection:'C'},{source_id:'D2-WAIT',selection:'A'}])).created,0);
+ const resolved=day2Rows.map(r=>r.source_id==='D2-WAIT'?{...r,status:'ready',team_b:'Resolved Beta'}:r);
+ assert.equal((await day2(resolved,null)).created,1);assert.equal((await day2(resolved,null)).created,0);
+ assert.equal((await db.query("SELECT count(*)::int n FROM matches WHERE event_id=$1 AND team_a_name='D2-UNCHECKED Alpha'",[event])).rows[0].n,0);
+ await assert.rejects(()=>day2(day2Rows,[{source_id:'S1',selection:'C'}]),/Selected Match ID conflicts: S1 \(registered on D1\)/);
+ const duplicates=[d2row('DUP'),d2row('DUP'),d2row('D2-VALID')];
+ assert.equal((await day2(duplicates,[{source_id:'D2-VALID',selection:'C'}])).created,1);
+ await assert.rejects(()=>day2(duplicates,[{source_id:'DUP',selection:'C'}]),/selected Match ID appears more than once/);
+ // Even an excluded foreign source must be skipped without taking its ownership.
+ await apply([row,waiting,d2row('D1-EXCLUDED')],[]);
+ const excludedBefore=(await db.query("SELECT * FROM sheet_match_sources WHERE event_id=$1 AND source_id='D1-EXCLUDED'",[event])).rows[0];
+ assert.equal((await day2([d2row('D1-EXCLUDED'),d2row('D2-LAST')],[{source_id:'D2-LAST',selection:'C'}])).created,1);
+ assert.deepEqual((await db.query('SELECT * FROM sheet_match_sources WHERE id=$1',[excludedBefore.id])).rows[0],excludedBefore);
+ for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'sheet_apply_day_without_schedule(uuid,uuid,text,bigint,text,jsonb,jsonb)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+ console.log('PASS selected sheet imports: unchecked cross-day and duplicate IDs do not block chosen matches, selected conflicts rejected with ID/day, foreign history unchanged, approved-only sync, repeat confirmation creates no duplicates, excluded foreign IDs never claimed and service-only grants preserved');
  console.log('PASS scheduled veto: strict GMT+3 parsing, future check-in blocked, BO1/3/5 alphabetical defaults, randomized sides, immediate no-show automation, late-team denial, absent winner, idempotency, reset, importer overrides, waiting sync persistence, no rearming and RPC privacy');
 }finally{await db.close();}
