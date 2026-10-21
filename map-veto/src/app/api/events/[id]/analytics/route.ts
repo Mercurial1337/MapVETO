@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { getEventRole } from '@/lib/auth/eventAuth';
 import { aggregateVeto, type AnalyticsMatch } from '@/lib/analytics/veto';
+import { isSuperAdmin, SUPER_ADMIN_ONLY } from '@/lib/auth/superAdminRole';
 
 const querySchema = z.object({
   format: z.enum(['bo1', 'bo3', 'bo5']).optional(),
@@ -21,6 +22,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (!z.uuid().safeParse(id).success) return NextResponse.json({ error: 'Invalid event ID.' }, { status: 400, headers });
     const auth = await createClient();
     const { data: { user } } = await auth.auth.getUser();
+    if (isSuperAdmin(user)) return NextResponse.json({ error: SUPER_ADMIN_ONLY }, { status: 403 });
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers });
     if (!await getEventRole(user.id, id)) return NextResponse.json({ error: 'Event not found' }, { status: 404, headers });
     const parsed = querySchema.safeParse(Object.fromEntries(request.nextUrl.searchParams));

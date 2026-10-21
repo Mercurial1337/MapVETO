@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import { canAccessEvent } from '@/lib/auth/eventAuth';
 import {COMPETITIVE_MAPS,ALL_MAPS} from '@/lib/maps/pools';
+import { isSuperAdmin, SUPER_ADMIN_ONLY } from '@/lib/auth/superAdminRole';
 
 // Request validation schema
 const CreateMatchSchema = z.object({
@@ -41,6 +42,7 @@ export async function POST(request: NextRequest) {
         // Get the authenticated user who is creating this match
         const authClient = await createClient();
         const { data: { user } } = await authClient.auth.getUser();
+        if (isSuperAdmin(user)) return NextResponse.json({ error: SUPER_ADMIN_ONLY }, { status: 403 });
 
         if (!user) return NextResponse.json({error:'Authentication required'},{status:401});
         if(data.event_id && !await canAccessEvent(user.id,data.event_id)) return NextResponse.json({error:'Event administrator required'},{status:403});

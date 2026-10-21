@@ -45,9 +45,24 @@ try {
  const withPassword=await call('/api/super-admin/accounts','POST',{email:chosen,password:'Chosen!0042xyz'},superCookie,201);
  users.push((await db.auth.admin.listUsers({page:1,perPage:1000})).data.users.find(u=>u.email===chosen).id);
  assert.equal(withPassword.password,undefined);assert.ok(await signIn(chosen,'Chosen!0042xyz'));
+ // Everything other than account creation is closed to the super admin, in pages and APIs.
+ for(const path of ['/admin','/admin/matches','/admin/events','/admin/matches/new','/admin/events/new',`/admin/events/${event}/edit`,'/']) {
+  const response=await fetch(base+path,{redirect:'manual',headers:{Cookie:superCookie}});
+  assert.equal(response.status,307,path);assert.equal(new URL(response.headers.get('location'),base).pathname,'/admin/accounts',path);
+ }
+ assert.equal((await fetch(base+'/admin/accounts',{redirect:'manual',headers:{Cookie:superCookie}})).status,200);
+ for(const [path,method,body] of [['/api/events','GET'],['/api/events','POST',{name:'Blocked'}],['/api/matches','POST',{team_a_name:'A',team_b_name:'B',format:'bo1'}],['/api/admin/notifications','GET'],
+  [`/api/events/${event}`,'GET'],[`/api/events/${event}/admins`,'POST',{email,role:'admin'}],[`/api/events/${event}/teams`,'GET'],[`/api/events/${event}/sheet`,'GET'],[`/api/events/${event}/bulk-matches`,'POST',{}],[`/api/events/${event}/analytics`,'GET']]) {
+  const response=await fetch(base+path,{method,headers:{'Content-Type':'application/json',Cookie:superCookie},body:body?JSON.stringify(body):undefined});
+  assert.equal(response.status,403,`${method} ${path}`);
+ }
+ const {count:superEvents}=await db.from('events').select('id',{count:'exact',head:true}).eq('name','Blocked');assert.equal(superEvents,0);
+ // Ordinary accounts are unaffected.
+ assert.equal((await fetch(base+'/api/events',{headers:{Cookie:ownerCookie}})).status,200);
+ assert.equal((await fetch(base+'/admin',{redirect:'manual',headers:{Cookie:ownerCookie}})).status,200);
  // The tournament owner adds the new account from the event page as usual.
  const ownerAdd=await call(`/api/events/${event}/admins`,'POST',{email,role:'referee'},ownerCookie,201);assert.equal(ownerAdd.admin.role,'referee');
- console.log('PASS super admin HTTP: only the super admin can create accounts, no listing/assignment/reset endpoints, generated or chosen password signs in immediately, new accounts start without tournaments, owners add them from the event page');
+ console.log('PASS super admin HTTP: only the super admin can create accounts, every other admin page redirects it to Accounts and every staff API returns 403 to it while owners are unaffected, no listing/assignment/reset endpoints, generated or chosen password signs in immediately, new accounts start without tournaments, owners add them from the event page');
 } finally {
  if(events.length)await db.from('events').delete().in('id',events);
  for(const id of users)await db.auth.admin.deleteUser(id);

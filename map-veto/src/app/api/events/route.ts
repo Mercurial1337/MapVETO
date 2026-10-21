@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { optionalSpreadsheetId } from '@/lib/sheets/input';
+import { isSuperAdmin, SUPER_ADMIN_ONLY } from '@/lib/auth/superAdminRole';
 
 // Request validation schema for creating an event
 const CreateEventSchema = z.object({
@@ -18,6 +19,7 @@ export async function GET() {
     try {
         const authClient = await createClient();
         const { data: { user } } = await authClient.auth.getUser();
+        if (isSuperAdmin(user)) return NextResponse.json({ error: SUPER_ADMIN_ONLY }, { status: 403 });
 
         if (!user) {
             return NextResponse.json(
@@ -95,6 +97,7 @@ export async function POST(request: NextRequest) {
     try {
         const authClient = await createClient();
         const { data: { user } } = await authClient.auth.getUser();
+        if (isSuperAdmin(user)) return NextResponse.json({ error: SUPER_ADMIN_ONLY }, { status: 403 });
 
         if (!user) {
             return NextResponse.json(

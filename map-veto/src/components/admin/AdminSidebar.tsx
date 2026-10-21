@@ -48,14 +48,16 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
         { href: '/admin/matches', icon: Gamepad2, label: 'Matches' },
         { href: '/admin/events', icon: Calendar, label: 'Events' },
         { href: '/admin/matches/new', icon: PlusCircle, label: 'Create Match' },
-        ...(isSuperAdmin(user) ? [{ href: '/admin/accounts', icon: Users, label: 'Accounts' }] : []),
     ];
+    // The super admin account only creates accounts.
+    const superAdmin = isSuperAdmin(user);
+    if (superAdmin) navItems.splice(0, navItems.length, { href: '/admin/accounts', icon: Users, label: 'Accounts' });
 
     return (
         <div className="min-h-screen flex flex-col md:flex-row">
             {/* Mobile Header */}
             <header className="md:hidden flex items-center justify-between px-4 py-3 bg-black/40 border-b border-white/10">
-                <Link href="/admin" className="flex items-center">
+                <Link href={superAdmin ? '/admin/accounts' : '/admin'} className="flex items-center">
                     <img
                         src="/CLASH26 PLATFORM HEADER.png"
                         alt="EMEA Clash"
@@ -86,7 +88,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
             `}>
                 <div className="hidden md:block p-6 border-b border-white/10">
-                    <Link href="/admin" className="flex items-center">
+                    <Link href={superAdmin ? '/admin/accounts' : '/admin'} className="flex items-center">
                         <img
                             src="/CLASH26 PLATFORM HEADER.png"
                             alt="EMEA Clash"
@@ -151,13 +153,13 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col min-h-0 min-w-0">
-                <div className="flex justify-end px-4 py-2 border-b border-white/10"><StaffNotifications/></div>
+                {!superAdmin && <div className="flex justify-end px-4 py-2 border-b border-white/10"><StaffNotifications/></div>}
                 {/* Top Bar (desktop only) */}
                 <header className="hidden md:flex h-16 border-b border-white/10 px-6 items-center justify-between bg-black/20">
                     <div className="flex items-center gap-4">
-                        <h1 className="text-lg font-semibold text-white">Admin Dashboard</h1>
+                        <h1 className="text-lg font-semibold text-white">{superAdmin ? 'Account management' : 'Admin Dashboard'}</h1>
                     </div>
-                    <div className="flex items-center gap-4">
+                    {!superAdmin && <div className="flex items-center gap-4">
                         <Link
                             href={searchParams.get('event')
                                 ? `/admin/matches/new?event=${searchParams.get('event')}`
@@ -167,7 +169,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
                         >
                             + New Match
                         </Link>
-                    </div>
+                    </div>}
                 </header>
 
                 {/* Content */}

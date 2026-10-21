@@ -1,5 +1,6 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { getEventRole } from '@/lib/auth/eventAuth';
+import { isSuperAdmin } from './superAdminRole';
 
 // An authenticated account is not automatically an administrator of every match.
 export async function matchStaffAccess(matchId: string, token?: string): Promise<{role:'admin'|'referee';token:string}|null> {
@@ -15,7 +16,7 @@ export async function matchStaffAccess(matchId: string, token?: string): Promise
         return null;
     }
     const { data: { user } } = await (await createClient()).auth.getUser();
-    if (!user) return null;
+    if (!user || isSuperAdmin(user)) return null;
     const { data: match } = await db.from('matches').select('created_by,event_id').eq('id', matchId).single();
     if (!match) return null;
     const membership=match.event_id?await getEventRole(user.id,match.event_id):null;
