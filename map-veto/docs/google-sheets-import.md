@@ -1,5 +1,19 @@
 # Google Sheets match imports
 
+## Optional team logos
+
+The existing **Logo** column can contain inserted images anchored to each team's row. The importer reads those pictures from Google's XLSX export; no image URLs or extra columns are needed. PNG, JPEG, WebP, GIF (first frame) and AVIF pictures are supported. Missing, unsupported, ambiguous or corrupt pictures never block a match.
+
+Matches are committed first. After the response, a background task extracts images for created matches, checks the team names and row positions, converts them to WebP at most 128×128, and stores them in `event-assets/sheet-team-logos/` under a content hash. Existing match/roster logos are preserved. Identical pictures reuse the same immutable public asset. The workbook itself and its passwords are never uploaded to storage.
+
+Successful checks (including rows without pictures) are remembered, so routine sync does not export the workbook again for those matches. New matches and newly resolved approved fixtures are checked after creation. Export/storage failures retry after an hour; a short lease prevents overlapping workers from repeating the export. At most 50 matches are checked per day/job, with remaining work picked up on later syncs. This captures logos at import; later sheet changes do not silently replace existing logos.
+
+For private workbooks, the same service account needs Viewer access and the Google Drive API enabled in its Google Cloud project. The export uses the read-only Drive scope; public workbooks can fall back to Google's public export. The account's access remains limited to files shared with it. Logo work runs on the server, never in team/observer browsers.
+
+Validation: `node tests/sheet-logos.test.mjs` covers extraction and failures. With a local server and VG Veto credentials, `node --env-file=.env.vgveto.local tests/sheet-logos-http.test.mjs` creates a disposable D2-M02 fixture, checks cached images and observer data, then deletes the test event/account.
+
+## Match selection and confirmation
+
 Confirmation validates duplicate IDs for the matches you select. Unchecked IDs belonging to another day are blocked in the preview with their registered day, but do not stop valid selections. They are skipped by the importer and background sync, so the other day's history, approvals and vetoes remain unchanged. A selected cross-day ID is rejected with the ID and registered day. Duplicate IDs within the same tab are also blocked individually; unchecked duplicates do not prevent unrelated selections.
 
 Open Events → Sheet matches. Connect a workbook URL, choose a day tab, check the desired matches, choose A/B/C, and confirm. Ready pairings create vetoes immediately; approved unresolved pairings create later. Unchecked pairings stay excluded until another confirmation selects them.

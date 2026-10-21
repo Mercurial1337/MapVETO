@@ -24,3 +24,22 @@ export async function readTab(id:string,tab:SheetTab):Promise<unknown[][]> {
  const text=await publicText(`https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${tab.id}`);
  if(/^\s*</.test(text))throw new Error('Google returned a sign-in page. Share the workbook for viewing.');return csvValues(text);
 }
+/** Optional image export. Credentials are never sent to the public fallback. */
+export async function exportLogoWorkbook(id:string):Promise<Uint8Array> {
+ if(!/^[\w-]{20,100}$/.test(id))throw new Error('Invalid spreadsheet ID');
+ const limit=10*1024*1024;
+ if(process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY){
+  try {
+   const {JWT}=await import('google-auth-library');
+   const auth=new JWT({email:process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL.trim(),key:process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g,'\n'),scopes:['https://www.googleapis.com/auth/drive.readonly']});
+   const response=await auth.request<ArrayBuffer>({url:`https://www.googleapis.com/drive/v3/files/${id}/export`,params:{mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'},responseType:'arraybuffer',timeout:12000,retry:false});
+   const bytes=new Uint8Array(response.data);if(bytes.length>limit)throw new Error('Logo export too large');return bytes;
+  }catch{/* Public experiment sheets can still export without Drive API access. */}
+ }
+ const response=await fetch(`https://docs.google.com/spreadsheets/d/${id}/export?format=xlsx`,{cache:'no-store',signal:AbortSignal.timeout(12000)});
+ if(!response.ok || !response.body || Number(response.headers.get('content-length')||0)>limit)throw new Error('Logo export unavailable');
+ const reader=response.body.getReader(),chunks:Uint8Array[]=[];let length=0;
+ try {while(true){const {done,value}=await reader.read();if(done)break;length+=value.length;if(length>limit)throw new Error('Logo export too large');chunks.push(value);}}
+ finally {await reader.cancel();}
+ const bytes=new Uint8Array(length);let offset=0;for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.length;}return bytes;
+}

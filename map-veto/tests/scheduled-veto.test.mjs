@@ -84,6 +84,14 @@ try{
  assert.equal((await day2([d2row('D1-EXCLUDED'),d2row('D2-LAST')],[{source_id:'D2-LAST',selection:'C'}])).created,1);
  assert.deepEqual((await db.query('SELECT * FROM sheet_match_sources WHERE id=$1',[excludedBefore.id])).rows[0],excludedBefore);
  for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'sheet_apply_day_without_schedule(uuid,uuid,text,bigint,text,jsonb,jsonb)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+ const claim=async()=> (await db.query('SELECT * FROM sheet_claim_logos($1,$2,2)',[event,sheet])).rows;
+ const firstClaim=await claim();assert.ok(firstClaim.length>0);assert.deepEqual(await claim(),[],'leases prevent duplicate logo exports');
+ const sourceIds=firstClaim.map(item=>item.source_id);assert.ok(sourceIds.every(id=>id!==sourceBefore.id));
+ await db.query('UPDATE sheet_match_sources SET logos_checked_at=now() WHERE id=$1',[sourceIds[0]]);
+ await db.query("UPDATE sheet_match_sources SET logos_retry_after=now()-interval '1 second' WHERE event_id=$1 AND tab_id=2",[event]);
+ assert.equal((await claim()).length,sourceIds.length-1,'finished images stay cached while expired leases retry');
+ for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'sheet_claim_logos(uuid,text,bigint)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+ console.log('PASS logo queue: only created matches from requested event/day, private RPC, exclusive leases, retry after lease expiry and completed imports never re-export');
  console.log('PASS selected sheet imports: unchecked cross-day and duplicate IDs do not block chosen matches, selected conflicts rejected with ID/day, foreign history unchanged, approved-only sync, repeat confirmation creates no duplicates, excluded foreign IDs never claimed and service-only grants preserved');
  console.log('PASS scheduled veto: strict GMT+3 parsing, future check-in blocked, BO1/3/5 alphabetical defaults, randomized sides, immediate no-show automation, late-team denial, absent winner, idempotency, reset, importer overrides, waiting sync persistence, no rearming and RPC privacy');
 }finally{await db.close();}

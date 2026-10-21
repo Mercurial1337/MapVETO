@@ -7,6 +7,7 @@ import {COMPETITIVE_MAPS} from '@/lib/maps/pools';
 import {accessSecret} from '@/lib/auth/teamAccess';
 import {hashPassword,passwordFingerprint} from '@/lib/auth/teamPassword';
 import {scopeDayPreview} from './preview';
+import {queueSheetLogos} from './logos';
 type Choice={source_id:string;selection:'A'|'B'|'C';scheduled_at?:string|null};
 interface SavedSource {source_id:string;approved:boolean;was_created:boolean;}
 export async function withCompetitiveMaps<T extends {format:SheetFormat|null}>(rows:T[]) {
@@ -58,6 +59,7 @@ export async function syncConnection(connection:{event_id:string;spreadsheet_id:
    const rows=await withCompetitiveMaps(await protectRows(parsed,sources,null));
    const {data,error}=await db.rpc('sheet_apply_day',{p_event:connection.event_id,p_user:connection.connected_by,p_spreadsheet:connection.spreadsheet_id,p_tab:tab.id,p_title:tab.title,p_rows:rows,p_choices:null});
    if(error)throw new Error(error.message);created+=data.created;waiting+=data.waiting;conflicts+=data.conflicts;
+   queueSheetLogos(connection.event_id,connection.spreadsheet_id,tab);
   }
   const {error}=await db.from('event_sheet_connections').update({last_sync_at:new Date().toISOString(),last_error:null,lease_until:null}).eq('event_id',connection.event_id).eq('spreadsheet_id',connection.spreadsheet_id);
   if(error)throw new Error('Could not save sync status.');return {created,waiting,conflicts};

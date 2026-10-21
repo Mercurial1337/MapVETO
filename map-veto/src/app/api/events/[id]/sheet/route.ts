@@ -7,6 +7,7 @@ import {listTabs} from '@/lib/sheets/google';
 import {loadDay,configureWorker,syncConnection,withCompetitiveMaps,protectRows} from '@/lib/sheets/sync';
 import {accessSecret} from '@/lib/auth/teamAccess';
 import {hashPassword,passwordFingerprint} from '@/lib/auth/teamPassword';
+import {queueSheetLogos} from '@/lib/sheets/logos';
 interface Context{params:Promise<{id:string}>;}
 export const maxDuration=60;
 async function access(id:string,write=false){const {data:{user}}=await (await createClient()).auth.getUser();if(!user)return {error:NextResponse.json({error:'Authentication required'},{status:401})};const role=await getEventRole(user.id,id);if(!role || (write && role==='referee'))return {error:NextResponse.json({error:'Head Admin access required'},{status:403})};return {user,role};}
@@ -49,6 +50,7 @@ export async function POST(request:NextRequest,{params}:Context){
    const {data,error}=await db.rpc('sheet_apply_day',{p_event:id,p_user:auth.user!.id,p_spreadsheet:day.connection.spreadsheet_id,p_tab:day.tab.id,p_title:day.tab.title,p_rows:await withCompetitiveMaps(await protectRows(day.rows,day.sources,body.choices)),p_choices:body.choices});if(error)return NextResponse.json({error:error.message},{status:409});
    // The most recent Head Admin approval remains the authority for future syncs.
    const {error:updateError}=await db.from('event_sheet_connections').update({connected_by:auth.user!.id}).eq('event_id',id);if(updateError)throw new Error(updateError.message);
+   queueSheetLogos(id,day.connection.spreadsheet_id,day.tab);
    return json({success:true,...data,backgroundSync:await configureWorker()});
   }
   // Approving a changed sheet password replaces the active one and signs out both teams.

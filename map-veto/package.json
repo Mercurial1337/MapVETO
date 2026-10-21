@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node tests/scheduled-veto.test.mjs && node tests/analytics.test.mjs && node tests/performance-monitoring.test.mjs && node tests/deployment-routing.test.mjs && node tests/event-sheet-connection.test.mjs && node tests/sheets.test.mjs && node tests/team-password.test.mjs && node tests/clock.test.mjs && node tests/countdown-sound.test.mjs && node tests/notification-sound.test.mjs && node tests/clipboard.test.mjs && node tests/bulk.test.mjs && node tests/notifications.test.mjs && node tests/veto.test.mjs",
+    "test": "node tests/sheet-logos.test.mjs && node tests/scheduled-veto.test.mjs && node tests/analytics.test.mjs && node tests/performance-monitoring.test.mjs && node tests/deployment-routing.test.mjs && node tests/event-sheet-connection.test.mjs && node tests/sheets.test.mjs && node tests/team-password.test.mjs && node tests/clock.test.mjs && node tests/countdown-sound.test.mjs && node tests/notification-sound.test.mjs && node tests/clipboard.test.mjs && node tests/bulk.test.mjs && node tests/notifications.test.mjs && node tests/veto.test.mjs",
     "test:sheets-http": "node tests/sheets-http.test.mjs",
     "test:remote": "node tests/veto.test.mjs --remote",
     "test:http": "node tests/http.test.mjs",
@@ -19,7 +19,8 @@
     "test:map-images-http": "node tests/map-images-http.test.mjs",
     "test:normal-http": "node tests/normal-creation-http.test.mjs",
     "test:analytics-http": "node tests/analytics-http.test.mjs",
-    "test:super-admin-http": "node tests/super-admin-http.test.mjs"
+    "test:super-admin-http": "node tests/super-admin-http.test.mjs",
+    "test:sheet-logos-http": "node tests/sheet-logos-http.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
@@ -27,12 +28,15 @@
     "@upstash/ratelimit": "^2.0.7",
     "@upstash/redis": "^1.36.0",
     "@vercel/speed-insights": "2.0.0",
+    "fast-xml-parser": "5.11.2",
+    "fflate": "0.8.3",
     "google-auth-library": "^10.5.0",
     "googleapis": "^170.1.0",
     "lucide-react": "^0.563.0",
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "sharp": "0.34.5",
     "sonner": "^2.0.8",
     "uuid": "^13.0.0",
     "zod": "^4.3.5"
