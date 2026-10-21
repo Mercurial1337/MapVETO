@@ -42,9 +42,11 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <img
-            src="/429px-VALORANT_EMEA_Clash_allmode.png"
-            alt="EMEA Clash"
-            className="h-20 mx-auto mb-4"
+            src="/vgveto-logo.webp"
+            alt="Vanguard"
+            width={600}
+            height={192}
+            className="w-[280px] max-w-full h-auto mx-auto mb-4"
           />
           <p className="text-white/50">Admin Portal</p>
         </div>
@@ -108,7 +110,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-white/30 text-sm mt-8">
-          EMEA Clash Map Veto System
+          VG Veto Map Veto System
         </p>
       </div>
     </div>

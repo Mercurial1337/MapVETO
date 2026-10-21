@@ -59,9 +59,11 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
             <header className="md:hidden flex items-center justify-between px-4 py-3 bg-black/40 border-b border-white/10">
                 <Link href={superAdmin ? '/admin/accounts' : '/admin'} className="flex items-center">
                     <img
-                        src="/CLASH26 PLATFORM HEADER.png"
-                        alt="EMEA Clash"
-                        className="h-8 object-contain"
+                        src="/vgveto-logo.webp"
+                        alt="Vanguard"
+                        width={600}
+                        height={192}
+                        className="w-[150px] h-auto object-contain"
                     />
                 </Link>
                 <button
@@ -90,9 +92,11 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
                 <div className="hidden md:block p-6 border-b border-white/10">
                     <Link href={superAdmin ? '/admin/accounts' : '/admin'} className="flex items-center">
                         <img
-                            src="/CLASH26 PLATFORM HEADER.png"
-                            alt="EMEA Clash"
-                            className="h-10 object-contain"
+                            src="/vgveto-logo.webp"
+                            alt="Vanguard"
+                            width={600}
+                            height={192}
+                            className="w-full h-auto object-contain"
                         />
                     </Link>
                 </div>
