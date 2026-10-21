@@ -92,7 +92,8 @@ export const config = {
          * Match all request paths except for the ones starting with:
          * - _next/static (static files)
          * - _next/image (image optimization files)
+         * - public files such as images and fonts (every branch above passes them through unchanged)
          */
-        '/((?!_next/static|_next/image).*)',
+        '/((?!_next/static|_next/image|.*\\.(?:png|jpe?g|gif|svg|webp|avif|ico|txt|xml|woff2?)$).*)',
     ],
 };
