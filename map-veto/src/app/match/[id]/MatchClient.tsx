@@ -85,7 +85,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     }, [match]);
 
     const currentStepDef = state ? templateSteps[state.current_step] : null;
-    // Team A/B labels only mean something once the toss winner has chosen a role.
+    // Team A/B labels only mean something once the toss winner has chosen a role; before that the teams are Green and Purple.
     const rolesAssigned = match?.status === 'in_progress' || match?.status === 'completed';
 
     // Get displayed team names and logos based on actor_mapping
@@ -337,14 +337,14 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                         )}
                         <div className="min-w-0">
                             <h2 className="text-base md:text-2xl font-bold text-white break-words">{displayedTeams.teamA}</h2>
-                            {rolesAssigned && <span className="text-xs text-team-a uppercase tracking-wider font-semibold">Team A</span>}
+                            <span className="text-xs text-team-a uppercase tracking-wider font-semibold">{rolesAssigned?'Team A':'Green'}</span>
                         </div>
                     </div>
                     <div className="text-lg md:text-2xl text-white/30 shrink-0">VS</div>
                     <div className="text-center flex-1 min-w-0 flex items-center justify-start gap-2 md:gap-3">
                         <div className="min-w-0">
                             <h2 className="text-base md:text-2xl font-bold text-white break-words">{displayedTeams.teamB}</h2>
-                            {rolesAssigned && <span className="text-xs text-team-b uppercase tracking-wider font-semibold">Team B</span>}
+                            <span className="text-xs text-team-b uppercase tracking-wider font-semibold">{rolesAssigned?'Team B':'Purple'}</span>
                         </div>
                         {displayedTeams.logoB && (
                             <img

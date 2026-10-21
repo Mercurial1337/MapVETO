@@ -36,7 +36,7 @@ export function ReadyCheckModal({isOpen,teamAName,teamBName,teamAReady,teamBRead
     </ul>
    </div>}
    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-    {[{name:teamAName,ready:teamAReady,key:'a'},{name:teamBName,ready:teamBReady,key:'b'}].map(team=><div key={team.key} className="border border-white/15 rounded p-3 flex items-center justify-between gap-3 min-w-0"><div className="min-w-0"><p className="font-semibold break-words">{team.name}</p></div><span className={`shrink-0 text-sm ${team.ready?'text-green-300':'text-white/60'}`}>{team.ready?'✓ Ready':'Waiting'}</span></div>)}
+    {[{name:teamAName,ready:teamAReady,key:'a',label:'Green'},{name:teamBName,ready:teamBReady,key:'b',label:'Purple'}].map(team=><div key={team.key} className="border border-white/15 rounded p-3 flex items-center justify-between gap-3 min-w-0"><div className="min-w-0"><p className="font-semibold break-words">{team.name}</p><p className={`text-xs font-bold uppercase tracking-wider mt-1 ${team.key==='a'?'text-team-a':'text-team-b'}`}>{team.label}</p></div><span className={`shrink-0 text-sm ${team.ready?'text-green-300':'text-white/60'}`}>{team.ready?'✓ Ready':'Waiting'}</span></div>)}
    </div>
    <div className="flex justify-center pt-1">{player&&!ready?<button className="btn-cta min-w-[min(100%,16rem)] text-base" disabled={busy||syncing||notOpen||closed} onClick={()=>void checkIn()}>{busy?'Confirming…':syncing?'Syncing…':notOpen?'Check-in not open':closed?'Check-in closed':'Check In'}</button>:<p className="text-sm text-white/70 text-center">{player?'Waiting for opponent…':'Waiting for teams to check in…'}</p>}</div>
   </section>
