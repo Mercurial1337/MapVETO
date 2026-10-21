@@ -8,7 +8,7 @@ import { FileSpreadsheet, Trash2 } from 'lucide-react';
 import { ExportModal } from '@/components/admin/ExportModal';
 import { BulkMatchImport } from '@/components/admin/BulkMatchImport';
 import type { MatchStatus } from '@/types';
-import { copyText, matchLinkUrls } from '@/lib/clipboard';
+import { MatchLinksDialog } from '@/components/admin/MatchLinksDialog';
 interface ImportBatch {id:string;file_name:string;match_count:number;format:string;created_at:string;}
 
 interface Event {
@@ -31,14 +31,6 @@ interface Match {
     events: { name: string } | null;
 }
 
-interface MatchLinks {
-    team_a: string;
-    team_b: string;
-    observer: string;
-    admin: string;
-    referee: string;
-}
-
 type SortOrder = 'newest' | 'oldest';
 
 export default function MatchesPage() {
@@ -59,8 +51,7 @@ export default function MatchesPage() {
     const effectiveEvent=eventFilter || (eventFilterLocal!=='all' && eventFilterLocal!=='none'?eventFilterLocal:null);
     const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedMatchLinks, setSelectedMatchLinks] = useState<{ matchId: string; links: MatchLinks } | null>(null);
-    const [loadingLinks, setLoadingLinks] = useState<string | null>(null);
+    const [selectedMatchLinks, setSelectedMatchLinks] = useState<string | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [deletingMatch, setDeletingMatch] = useState<string | null>(null);
@@ -208,30 +199,6 @@ export default function MatchesPage() {
         }
         void loadBatches();return ()=>controller.abort();
     },[effectiveEvent,batchReload,refereeEvent]);
-
-    const fetchMatchLinks = async (matchId: string) => {
-        setLoadingLinks(matchId);
-        try {
-            const response = await fetch(`/api/matches/${matchId}`, { method: 'POST' });
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Could not load match links.');
-            const links = matchLinkUrls(data.links, window.location.origin, matchId, data.staff_role==='referee'?['team_a','team_b','referee']:undefined);
-            setSelectedMatchLinks({ matchId, links });
-        } catch (error) {
-            alert(error instanceof Error ? error.message : 'Could not load match links.');
-        } finally {
-            setLoadingLinks(null);
-        }
-    };
-
-    const copyToClipboard = async (text: string, label: string) => {
-        try {
-            await copyText(text);
-            alert(`${label} link copied!`);
-        } catch (error) {
-            alert(error instanceof Error ? error.message : 'Copy failed. Please try again.');
-        }
-    };
 
     const deleteMatch = async (matchId: string, teamA: string, teamB: string) => {
         const confirmed = window.confirm(
@@ -401,69 +368,7 @@ export default function MatchesPage() {
             </div>
 
             {/* Links Modal */}
-            {selectedMatchLinks && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
-                    onClick={() => setSelectedMatchLinks(null)}
-                >
-                    <div
-                        className="glass rounded p-6 max-w-lg w-full mx-4"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <h3 className="text-xl font-bold text-white mb-4">Match Links</h3>
-                        <div className="space-y-3">
-                            {(() => {
-                                const match = matches.find(m => m.id === selectedMatchLinks.matchId);
-                                const colorStyles = {
-                                    red: {
-                                        container: 'bg-red-500/5 border-red-500/10',
-                                        label: 'text-red-400',
-                                        button: 'bg-red-500/10 hover:bg-red-500/20 text-red-300',
-                                    },
-                                    blue: {
-                                        container: 'bg-blue-500/5 border-blue-500/10',
-                                        label: 'text-blue-400',
-                                        button: 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-300',
-                                    },
-                                    purple: {
-                                        container: 'bg-purple-500/5 border-purple-500/10',
-                                        label: 'text-purple-400',
-                                        button: 'bg-purple-500/10 hover:bg-purple-500/20 text-purple-300',
-                                    },
-                                };
-                                return [
-                                    { label: match?.team_a_name || 'Team 1', key: 'team_a' as const, color: 'red' as const },
-                                    { label: match?.team_b_name || 'Team 2', key: 'team_b' as const, color: 'blue' as const },
-                                    { label: 'Observer', key: 'observer' as const, color: 'purple' as const },
-                                    { label: 'Head Admin', key: 'admin' as const, color: 'purple' as const },
-                                    { label: 'Referee', key: 'referee' as const, color: 'purple' as const },
-                                ].filter(({key})=>Boolean(selectedMatchLinks.links[key])).map(({ label, key, color }) => {
-                                    const styles = colorStyles[color];
-                                    return (
-                                        <div key={key} className={`p-3 ${styles.container} border rounded-lg`}>
-                                            <div className="flex items-center justify-between">
-                                                <span className={`${styles.label} font-medium text-sm`}>{label}</span>
-                                                <button
-                                                    onClick={() => copyToClipboard(selectedMatchLinks.links[key], label)}
-                                                    className={`text-xs px-2 py-1 ${styles.button} rounded`}
-                                                >
-                                                    Copy
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                });
-                            })()}
-                        </div>
-                        <button
-                            onClick={() => setSelectedMatchLinks(null)}
-                            className="mt-4 w-full py-2 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
-                        >
-                            Close
-                        </button>
-                    </div>
-                </div>
-            )}
+            {selectedMatchLinks && <MatchLinksDialog key={selectedMatchLinks} matchId={selectedMatchLinks} onClose={() => setSelectedMatchLinks(null)} />}
 
             {/* Matches List */}
             <div className="glass rounded overflow-hidden">
@@ -513,11 +418,10 @@ export default function MatchesPage() {
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-2">
                                         <button
-                                            onClick={() => fetchMatchLinks(match.id)}
-                                            disabled={loadingLinks === match.id}
+                                            onClick={() => setSelectedMatchLinks(match.id)}
                                             className="px-3 py-1 text-xs bg-purple-500/20 hover:bg-purple-500/30 rounded-lg text-purple-300 transition-colors disabled:opacity-50"
                                         >
-                                            {loadingLinks === match.id ? '...' : 'Links'}
+                                            Links
                                         </button>
                                         <button
                                             onClick={() => deleteMatch(match.id, match.team_a_name, match.team_b_name)}

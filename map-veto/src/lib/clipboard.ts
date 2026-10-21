@@ -12,7 +12,7 @@ export async function copyText(text: string): Promise<void> {
         textarea.style.position = 'fixed';
         textarea.style.opacity = '0';
         textarea.setAttribute('readonly', '');
-        document.body.appendChild(textarea);
+        (document.querySelector('dialog[open]') || document.body).appendChild(textarea);
         try {
             textarea.focus();
             textarea.select();

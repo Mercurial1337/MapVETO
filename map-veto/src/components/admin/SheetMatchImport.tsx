@@ -3,6 +3,7 @@ import {useEffect,useState} from 'react';
 import Link from 'next/link';
 import type {SheetRow} from '@/lib/sheets/parse';
 import {parseVetoTime,vetoTimeInput,formatVetoTime} from '@/lib/sheets/parse';
+import {MatchLinksDialog} from './MatchLinksDialog';
 import {VetoSchedulePicker} from './VetoSchedulePicker';
 interface Tab{id:number;title:string;}
 interface Source{id:string;source_id:string;tab_id:number;approved:boolean;selection:'A'|'B'|'C';status:string;issue:string;match_id:string|null;was_created:boolean;password_update:boolean;schedule_overridden?:boolean;schedule_override?:string|null;created_schedule?:string|null;}
@@ -18,6 +19,7 @@ export function SheetMatchImport({eventId}:{eventId:string}) {
  const [info,setInfo]=useState<Info|null>(null),[sheet,setSheet]=useState(''),[tab,setTab]=useState(''),[preview,setPreview]=useState<Preview|null>(null);
  const [choices,setChoices]=useState<Record<string,'A'|'B'|'C'>>({}),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const [changed,setChanged]=useState<Set<string>>(new Set()),[result,setResult]=useState<Partial<Record<Outcome,string[]>>|null>(null);
+ const [linksMatch,setLinksMatch]=useState<string|null>(null);
  const [times,setTimes]=useState<Record<string,string>>({});
  const url=`/api/events/${eventId}/sheet`,readOnly=info?.role==='referee';
  async function request(path:string,body?:unknown){const response=await fetch(path,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});const data=await response.json();if(!response.ok)throw Object.assign(new Error(data.error||'Sheet request failed.'),{stale:!!data.stale});return data;}
@@ -38,6 +40,7 @@ export function SheetMatchImport({eventId}:{eventId:string}) {
  async function guarded(action:()=>Promise<void>){try{await action();}catch(e){if(e instanceof Error && (e as Error&{stale?:boolean}).stale && tab)await loadPreview(tab,true);throw e;}}
  async function run(action:()=>Promise<void>){if(busy)return;setBusy(true);setError('');setNotice('');try{await action();}catch(e){setError(e instanceof Error?e.message:'Connection failed. Retry.');}finally{setBusy(false);}}
  return <div className="space-y-5">
+  {linksMatch && <MatchLinksDialog key={linksMatch} matchId={linksMatch} onClose={()=>setLinksMatch(null)}/>}
   <div className="flex items-center justify-between"><h1 className="text-2xl font-bold">Google Sheets matches</h1><Link href={`/admin/matches?event=${eventId}`} className="btn-secondary px-3 py-2">Event matches</Link></div>
   <p className="text-sm text-white/70">Select a day, review its matches, then confirm. Approved matches with unresolved opponents wait until the sheet provides both names. New vetoes use the system competitive map pool.</p>
   <section className="border border-white/20 rounded p-4 space-y-3">
@@ -84,7 +87,7 @@ export function SheetMatchImport({eventId}:{eventId:string}) {
     {!readOnly && saved?.password_update && <button disabled={busy} className="underline block min-h-11 text-left" onClick={()=>{if(confirm(`Replace both team passwords for ${row.source_id}? Each team must enter its own password; existing team sessions end.`))void run(()=>guarded(async()=>{await request(url,{operation:'password',tab:Number(tab),hash:preview.hash,source:saved.id});await loadPreview(tab);setNotice(`${row.source_id}: new team passwords are active. Each team must enter its own password again.`);}));}}>Approve team passwords</button>}
     </td>
     <td className="p-3"><select aria-label={`Selection ${row.source_id||'row '+row.row}`} className="min-h-11 bg-black border border-white/30 p-2" value={choices[row.source_id]||saved?.selection||'C'} disabled={busy||readOnly||locked||!choices[row.source_id]} onChange={e=>setChoices(previous=>({...previous,[row.source_id]:e.target.value as 'A'|'B'|'C'}))}><option value="C">C — Automatic toss</option><option value="A">A — First team higher seed</option><option value="B">B — Second team higher seed</option></select></td>
-    <td className="p-3">{wasChanged && <span className="block text-xs font-semibold text-amber-300">Changed since review</span>}{saved?.was_created?status:row.status==='invalid'?'Blocked':saved?.status==='conflict'?'Needs review':choices[row.source_id]?status:'Excluded'}<span className="block text-xs text-white/60">{saved?.was_created||saved?.status==='conflict'?saved.issue:row.issue}</span>{saved?.match_id && <Link className="underline block" href={`/admin/matches?event=${eventId}&match=${saved.match_id}`}>Get match links</Link>}
+    <td className="p-3">{wasChanged && <span className="block text-xs font-semibold text-amber-300">Changed since review</span>}{saved?.was_created?status:row.status==='invalid'?'Blocked':saved?.status==='conflict'?'Needs review':choices[row.source_id]?status:'Excluded'}<span className="block text-xs text-white/60">{saved?.was_created||saved?.status==='conflict'?saved.issue:row.issue}</span>{saved?.match_id && <button type="button" className="underline block text-left min-h-8" onClick={()=>setLinksMatch(saved.match_id)}>Get match links</button>}
     {!readOnly && saved?.status==='conflict' && !saved.was_created && preview.existing.filter(m=>m.team_a_name.toLowerCase()===row.team_a.toLowerCase()&&m.team_b_name.toLowerCase()===row.team_b.toLowerCase()&&m.format===row.format).map(m=><button key={m.id} disabled={busy} className="underline block min-h-11 text-left" onClick={()=>void run(async()=>{await request(url,{operation:'link',source:saved.id,match:m.id});await loadPreview(tab);setNotice('Existing match linked. No duplicate was created.');})}>Link existing match {m.id.slice(0,8)}</button>)}
     </td>
    </tr>;})}</tbody></table></div>

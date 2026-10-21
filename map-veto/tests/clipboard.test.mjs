@@ -15,9 +15,11 @@ for(const link of Object.values(links)){await copyText(link);assert.equal(clipbo
 globalThis.HTMLElement=class{};
 let appended=false,removed=false,focused=false,selected=false,fallbackResult=true;
 const previous=new HTMLElement();previous.focus=()=>{focused=true;};
-globalThis.document={activeElement:previous,body:{appendChild:()=>{appended=true;}},createElement:()=>({value:'',style:{},setAttribute:()=>{},focus:()=>{},select(){selected=true;clipboard=this.value;},remove(){removed=true;}}),execCommand:command=>{assert.equal(command,'copy');return fallbackResult;}};
+globalThis.document={querySelector:()=>null,activeElement:previous,body:{appendChild:()=>{appended=true;}},createElement:()=>({value:'',style:{},setAttribute:()=>{},focus:()=>{},select(){selected=true;clipboard=this.value;},remove(){removed=true;}}),execCommand:command=>{assert.equal(command,'copy');return fallbackResult;}};
 navigator.clipboard.writeText=async()=>{throw new Error('Permission denied');};
 await copyText(links.team_a);assert.equal(clipboard,links.team_a);assert.ok(appended && removed && selected && focused);
 fallbackResult=false;removed=false;await assert.rejects(copyText(links.admin),/Copy failed/);assert.ok(removed);
 delete navigator.clipboard;fallbackResult=true;await copyText(links.observer);assert.equal(clipboard,links.observer);
+let dialogAppend=false;document.querySelector=selector=>{assert.equal(selector,'dialog[open]');return {appendChild:()=>{dialogAppend=true;}};};
+await copyText(links.referee);assert.ok(dialogAppend);assert.equal(clipboard,links.referee);
 console.log('PASS clipboard: all five full links, missing/empty links rejected, exact contents, denied/unavailable API fallback, failed copy reported and focus restored');
