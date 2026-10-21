@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, getSessionUser } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { Plus, Pencil, Trash2, Image as ImageIcon, Eye, FileSpreadsheet, Shield, Crown } from 'lucide-react';
 import { ExportModal } from '@/components/admin/ExportModal';
@@ -45,7 +45,7 @@ export default function EventsPage() {
 
     useEffect(() => {
         const initUser = async () => {
-            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            const currentUser = await getSessionUser(supabase);
             if (currentUser) {
                 setUser(currentUser);
                 fetchEvents();

@@ -28,16 +28,22 @@ export async function GET() {
 
         const supabase = createServiceClient();
 
-        // Fetch events the user owns
-        const { data: ownedEvents, error: ownedError } = await supabase
-            .from('events')
-            .select(`
-                *,
-                matches:matches(count)
-            `)
-            .eq('created_by', user.id)
-            .eq('is_active', true)
-            .order('created_at', { ascending: false });
+        // Owned events and staff memberships are independent: load them together.
+        const [{ data: ownedEvents, error: ownedError }, { data: adminEntries }] = await Promise.all([
+            supabase
+                .from('events')
+                .select(`
+                    *,
+                    matches:matches(count)
+                `)
+                .eq('created_by', user.id)
+                .eq('is_active', true)
+                .order('created_at', { ascending: false }),
+            supabase
+                .from('event_admins')
+                .select('event_id,role')
+                .eq('user_id', user.id),
+        ]);
 
         if (ownedError) {
             console.error('Error fetching owned events:', ownedError);
@@ -46,12 +52,6 @@ export async function GET() {
                 { status: 500 }
             );
         }
-
-        // Fetch events the user is an admin of
-        const { data: adminEntries } = await supabase
-            .from('event_admins')
-            .select('event_id,role')
-            .eq('user_id', user.id);
 
         const adminEventIds = (adminEntries || []).map(e => e.event_id);
 

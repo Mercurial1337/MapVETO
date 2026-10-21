@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, getSessionUser } from '@/lib/supabase/client';
 import {StaffNotifications} from './StaffNotifications';
 import type { User } from '@supabase/supabase-js';
 import { LayoutDashboard, Gamepad2, PlusCircle, LogOut, Menu, X, Calendar, Users } from 'lucide-react';
@@ -19,12 +19,12 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
     const searchParams = useSearchParams();
     const [user, setUser] = useState<User | null>(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [signingOut, setSigningOut] = useState(false);
     const supabase = createClient();
 
     useEffect(() => {
         const getUser = async () => {
-            const { data: { user: currentUser } } = await supabase.auth.getUser();
-            setUser(currentUser);
+            setUser(await getSessionUser(supabase));
         };
         getUser();
     }, [supabase]);
@@ -37,8 +37,10 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
     }
 
     const handleLogout = async () => {
+        if (signingOut) return;
+        setSigningOut(true);
         await supabase.auth.signOut();
-        router.push('/');
+        router.replace('/');
     };
 
     const navItems = [
@@ -138,10 +140,11 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
                     )}
                     <button
                         onClick={handleLogout}
+                        disabled={signingOut}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded text-white/70 hover:text-white hover:bg-red-500/10 transition-colors"
                     >
                         <LogOut size={20} />
-                        <span>Sign Out</span>
+                        <span>{signingOut ? 'Signing out…' : 'Sign Out'}</span>
                     </button>
                 </div>
             </aside>

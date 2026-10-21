@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, getSessionUser } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { PlusCircle, ClipboardList, RefreshCw, FileSpreadsheet } from 'lucide-react';
 import { ExportModal } from '@/components/admin/ExportModal';
@@ -40,26 +40,14 @@ export default function AdminDashboard() {
     const fetchData = useCallback(async (userId: string) => {
         setIsLoading(true);
 
-        // Fetch matches created by the current user
-        const { data: ownedMatches, error } = await supabase
-            .from('matches')
-            .select('*')
-            .eq('created_by', userId)
-            .order('created_at', { ascending: false });
-
-        // Fetch event IDs where user is admin (via event_admins table)
-        const { data: adminEntries } = await supabase
-            .from('event_admins')
-            .select('event_id')
-            .eq('user_id', userId);
+        // Owned matches, staff memberships and owned events are independent: load them together.
+        const [{ data: ownedMatches, error }, { data: adminEntries }, { data: ownedEvents }] = await Promise.all([
+            supabase.from('matches').select('*').eq('created_by', userId).order('created_at', { ascending: false }),
+            supabase.from('event_admins').select('event_id').eq('user_id', userId),
+            supabase.from('events').select('id').eq('created_by', userId),
+        ]);
 
         const adminEventIds = (adminEntries || []).map(e => e.event_id);
-
-        // Fetch event IDs where user is the owner
-        const { data: ownedEvents } = await supabase
-            .from('events')
-            .select('id')
-            .eq('created_by', userId);
 
         const ownedEventIds = (ownedEvents || []).map(e => e.id);
 
@@ -109,7 +97,7 @@ export default function AdminDashboard() {
         let channel: ReturnType<typeof supabase.channel> | null = null;
 
         const initUser = async () => {
-            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            const currentUser = await getSessionUser(supabase);
             if (currentUser) {
                 setUser(currentUser);
                 fetchData(currentUser.id);

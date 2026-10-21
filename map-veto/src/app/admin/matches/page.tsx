@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { createClient, getSessionUser } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import { FileSpreadsheet, Trash2 } from 'lucide-react';
 import { ExportModal } from '@/components/admin/ExportModal';
@@ -107,15 +107,10 @@ export default function MatchesPage() {
 
         try {
             // 1. Fetch event IDs where user is an admin or owner
-            const { data: adminEntries } = await supabase
-                .from('event_admins')
-                .select('event_id')
-                .eq('user_id', userId);
-
-            const { data: ownedEvents } = await supabase
-                .from('events')
-                .select('id')
-                .eq('created_by', userId);
+            const [{ data: adminEntries }, { data: ownedEvents }] = await Promise.all([
+                supabase.from('event_admins').select('event_id').eq('user_id', userId),
+                supabase.from('events').select('id').eq('created_by', userId),
+            ]);
 
             const adminEventIds = (adminEntries || []).map(e => e.event_id);
             const ownedEventIds = (ownedEvents || []).map(e => e.id);
@@ -162,7 +157,7 @@ export default function MatchesPage() {
         let disposed = false;
 
         const initUser = async () => {
-            const { data: { user: currentUser } } = await supabase.auth.getUser();
+            const currentUser = await getSessionUser(supabase);
             if (disposed) return;
             if (currentUser) {
                 setUser(currentUser);
