@@ -11,6 +11,7 @@ The creation preview shows the sheet value and an editable date/time field label
 For scheduled matches:
 
 - Check-in is unavailable before the scheduled time. Team links display the opening and ten-minute deadline using the synchronized server clock.
+- While check-in is open, a 10:00 countdown to the deadline turns from green to yellow at 5:00 and red at 2:30. Teams that have not checked in hear the same final-15-second ticks as a veto turn.
 - Teams checked in before the deadline may begin immediately once both are ready.
 - At the ten-minute deadline, one absent team's remaining selections, including its position choice, are randomized automatically. The present team keeps its normal turns. Late arrival does not remove the restriction.
 - With both teams absent, the first three maps (five for BO5; one for BO1) from that match's actual map pool, sorted alphabetically, become the ordered results. Starting sides are randomized independently. Team A is the reference for the stored starting side.

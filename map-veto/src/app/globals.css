@@ -44,9 +44,9 @@ button,a,input,select,textarea,[role=button] {touch-action:manipulation;}
 .scrollbar-hide {scrollbar-width:none;}.scrollbar-hide::-webkit-scrollbar{display:none;}
 select {color-scheme:dark;} select option {background:var(--panel);color:#ededed;}
 .match-panel {min-width:0;padding:1rem;background:var(--panel);border:1px solid var(--panel-border);border-radius:4px;}
-/* Brand panel heading: lime bar with ink text and a cut top-right corner. */
+/* Brand panel heading: lime bar with ink text. */
 .panel-head {display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin:-1rem -1rem 1rem;padding:.6rem 1rem;background:var(--brand-lime);color:var(--brand-ink);
- font-weight:900;text-transform:uppercase;letter-spacing:.04em;clip-path:polygon(0 0,calc(100% - 16px) 0,100% 16px,100% 100%,0 100%);}
+ font-weight:900;text-transform:uppercase;letter-spacing:.04em;}
 .match-input {display:block;width:100%;min-width:0;padding:.65rem;background:var(--input);border:1px solid #4b4256;border-radius:4px;color:#ededed;resize:vertical;}
 .match-panel [role=tab] {color:#a1a1aa;}
 .match-panel [role=tab][aria-selected=true] {background:#322a3b;border-color:var(--brand-lime);color:#fafafa;}

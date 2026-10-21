@@ -40,14 +40,18 @@ export function TurnTimer({currentStep,stateUpdatedAt,teamAName,teamBName,matchI
   return ()=>{cancelled=true;clearTimeout(timer);document.removeEventListener('visibilitychange',recover);window.removeEventListener('focus',recover);stopSound();};
  },[currentStep,stateUpdatedAt,matchId,token,isInProgress,isComplete,isPaused,pausedRemainingSeconds,actorName,playTick,stopSound,clock,clockReady,expireTurn]);
  if(!currentStep || !isInProgress || isComplete) return null;
- // Green with time to spare, yellow from 30 s, red for the final 15 s (when the ticks start).
- const level=remaining===null || isPaused?'idle':remaining>30?'safe':remaining>15?'warn':'danger';
+ return <TimerBox label={`${actorName} · ${currentStep.description || currentStep.action}`} remaining={remaining} total={60} paused={isPaused}/>;
+}
+// Green for the first half, yellow for the next quarter, red for the final quarter
+// (the last 15 s of a 60 s turn, when the ticks start). Shared with the check-in countdown.
+export function TimerBox({label,remaining,total,paused}:{label:string;remaining:number|null;total:number;paused?:boolean}) {
+ const level=remaining===null || paused?'idle':remaining>total/2?'safe':remaining>total/4?'warn':'danger';
  const tone={idle:'#a1a1aa',safe:'#22c55e',warn:'#eab308',danger:'#ef4444'}[level];
- const fraction=remaining===null?1:Math.max(0,Math.min(1,remaining/60));
+ const fraction=remaining===null?1:Math.max(0,Math.min(1,remaining/total));
  return <div role="status" className="timer-box max-w-full w-[min(100%,28rem)] rounded border bg-[#18181b] px-4 py-2 text-sm" style={{borderColor:tone}}>
   <div className="flex flex-wrap items-center justify-center gap-3">
-   <span className="min-w-0 break-words">{actorName} · {currentStep.description || currentStep.action}</span>
-   <strong className="shrink-0 font-mono tabular-nums text-xl" style={{color:tone}}>{isPaused?'Paused':remaining===null?'Syncing…':`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`}</strong>
+   <span className="min-w-0 break-words">{label}</span>
+   <strong className="shrink-0 font-mono tabular-nums text-xl" style={{color:tone}}>{paused?'Paused':remaining===null?'Syncing…':`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`}</strong>
    {level==='danger' && <span className="text-sm font-semibold" style={{color:tone}}>Time is running out</span>}
   </div>
   <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden" aria-hidden="true"><div className="h-full rounded-full transition-[width] duration-1000 ease-linear" style={{width:`${fraction*100}%`,background:tone}}/></div>
