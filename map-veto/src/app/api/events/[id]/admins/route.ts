@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, createClient } from '@/lib/supabase/server';
 import { getEventRole } from '@/lib/auth/eventAuth';
 import { z } from 'zod';
+import { isSuperAdmin, SUPER_ADMIN_ONLY } from '@/lib/auth/superAdminRole';
 
 const AddAdminSchema = z.object({
     email: z.string().email(),
@@ -18,6 +19,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const { id: eventId } = await params;
         const authClient = await createClient();
         const { data: { user } } = await authClient.auth.getUser();
+        if (isSuperAdmin(user)) return NextResponse.json({ error: SUPER_ADMIN_ONLY }, { status: 403 });
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -66,6 +68,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         const { id: eventId } = await params;
         const authClient = await createClient();
         const { data: { user } } = await authClient.auth.getUser();
+        if (isSuperAdmin(user)) return NextResponse.json({ error: SUPER_ADMIN_ONLY }, { status: 403 });
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -165,6 +168,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         const { id: eventId } = await params;
         const authClient = await createClient();
         const { data: { user } } = await authClient.auth.getUser();
+        if (isSuperAdmin(user)) return NextResponse.json({ error: SUPER_ADMIN_ONLY }, { status: 403 });
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

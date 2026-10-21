@@ -3,6 +3,7 @@ import { createServiceClient, createClient } from '@/lib/supabase/server';
 import { getEventRole } from '@/lib/auth/eventAuth';
 import { z } from 'zod';
 import { optionalSpreadsheetId } from '@/lib/sheets/input';
+import { isSuperAdmin, SUPER_ADMIN_ONLY } from '@/lib/auth/superAdminRole';
 
 // Request validation schema for updating an event
 const UpdateEventSchema = z.object({
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const { id } = await params;
         const authClient = await createClient();
         const { data: { user } } = await authClient.auth.getUser();
+        if (isSuperAdmin(user)) return NextResponse.json({ error: SUPER_ADMIN_ONLY }, { status: 403 });
 
         if (!user) {
             return NextResponse.json(
@@ -71,6 +73,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         const { id } = await params;
         const authClient = await createClient();
         const { data: { user } } = await authClient.auth.getUser();
+        if (isSuperAdmin(user)) return NextResponse.json({ error: SUPER_ADMIN_ONLY }, { status: 403 });
 
         if (!user) {
             return NextResponse.json(
@@ -148,6 +151,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         const { id } = await params;
         const authClient = await createClient();
         const { data: { user } } = await authClient.auth.getUser();
+        if (isSuperAdmin(user)) return NextResponse.json({ error: SUPER_ADMIN_ONLY }, { status: 403 });
 
         if (!user) {
             return NextResponse.json(

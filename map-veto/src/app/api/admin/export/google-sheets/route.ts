@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import { createServiceClient, createClient } from '@/lib/supabase/server';
 import { getEventRole } from '@/lib/auth/eventAuth';
+import { isSuperAdmin, SUPER_ADMIN_ONLY } from '@/lib/auth/superAdminRole';
 
 interface MatchData {
     id: string;
@@ -18,6 +19,7 @@ export async function POST(req: NextRequest) {
 
         const supabase = await createClient();
         const { data: { user } } = await supabase.auth.getUser();
+        if (isSuperAdmin(user)) return NextResponse.json({ error: SUPER_ADMIN_ONLY }, { status: 403 });
 
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
