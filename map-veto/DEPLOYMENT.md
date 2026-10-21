@@ -50,7 +50,7 @@ Add these environment variables in Vercel dashboard:
 
 ### Step 5: Create the super admin account
 
-The platform has one super admin (`superadmin@vg.com`) who creates staff accounts and adds them to tournaments from **Admin → Accounts**. Create it once per Supabase project with the service role key:
+The platform has one super admin (`superadmin@vg.com`) whose only extra ability is creating accounts from **Admin → Accounts**; accounts are added to tournaments from the event page as usual. Create it once per Supabase project with the service role key:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node scripts/create-super-admin.mjs

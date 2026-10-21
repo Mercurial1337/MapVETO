@@ -1,9 +1,11 @@
 import {NextResponse} from 'next/server';
 import {createClient,createServiceClient} from '@/lib/supabase/server';
+import { isSuperAdmin, SUPER_ADMIN_ONLY } from '@/lib/auth/superAdminRole';
 
 // Completion timestamps are the persistent source of truth; no extra write/poll per player.
 export async function GET() {
     const {data:{user}} = await (await createClient()).auth.getUser();
+    if (isSuperAdmin(user)) return NextResponse.json({ error: SUPER_ADMIN_ONLY }, { status: 403 });
     if (!user) return NextResponse.json({error:'Unauthorized'}, {status:401});
     const db=createServiceClient();
     const [owned,memberships]=await Promise.all([

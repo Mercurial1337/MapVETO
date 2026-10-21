@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { isSuperAdmin } from '@/lib/auth/superAdminRole';
 
 export async function updateSession(request: NextRequest) {
     let supabaseResponse = NextResponse.next({
@@ -41,6 +42,14 @@ export async function updateSession(request: NextRequest) {
             url.pathname = '/';
             return NextResponse.redirect(url);
         }
+    }
+
+    // The super admin account only creates accounts: every other admin page leads to Accounts.
+    if (isSuperAdmin(user) && (request.nextUrl.pathname === '/' || (request.nextUrl.pathname.startsWith('/admin') && request.nextUrl.pathname !== '/admin/accounts'))) {
+        const url = request.nextUrl.clone();
+        url.pathname = '/admin/accounts';
+        url.search = '';
+        return NextResponse.redirect(url);
     }
 
     // Redirect authenticated users away from login page

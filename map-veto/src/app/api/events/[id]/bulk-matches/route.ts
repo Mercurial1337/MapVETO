@@ -4,10 +4,12 @@ import { canAccessEvent } from '@/lib/auth/eventAuth';
 import { parseBulkFile, BulkFileError, BULK_MAX_BYTES } from '@/lib/matches/bulk';
 import { z } from 'zod';
 import {COMPETITIVE_MAPS} from '@/lib/maps/pools';
+import {isSuperAdmin,SUPER_ADMIN_ONLY} from '@/lib/auth/superAdminRole';
 interface Context {params:Promise<{id:string}>;}
 async function access(eventId:string) {
  const {data:{user}}=await (await createClient()).auth.getUser();
  if(!user) return {error:NextResponse.json({error:'Authentication required'},{status:401})};
+ if(isSuperAdmin(user)) return {error:NextResponse.json({error:SUPER_ADMIN_ONLY},{status:403})};
  if(!z.string().uuid().safeParse(eventId).success || !await canAccessEvent(user.id,eventId))return {error:NextResponse.json({error:'Event administrator required'},{status:403})};
  return {user};
 }
