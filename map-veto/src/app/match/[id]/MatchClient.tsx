@@ -85,6 +85,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     }, [match]);
 
     const currentStepDef = state ? templateSteps[state.current_step] : null;
+    // Team A/B labels only mean something once the toss winner has chosen a role.
+    const rolesAssigned = match?.status === 'in_progress' || match?.status === 'completed';
 
     // Get displayed team names and logos based on actor_mapping
     // After position choice, teams may have swapped roles
@@ -291,7 +293,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     return (
         <div className="min-h-screen flex flex-col min-w-0">
             {error && <p role="alert" className="border-b border-red-800 px-4 py-2 text-red-300">{error}</p>}
-            {!!match.veto_no_show_teams?.length && <p role="status" className="border-b border-amber-700 px-4 py-3 text-sm text-amber-200">Scheduled check-in deadline missed by {match.veto_no_show_teams.map(team=>team==='team_a'?match.team_a_name:match.team_b_name).join(' and ')}. No-show choices are automatic until a Head Admin restarts the entire veto.</p>}
+            {!!match.veto_no_show_teams?.length && <p role="status" className="border-b border-amber-700 px-4 py-3 text-sm text-amber-200">Scheduled check-in deadline missed by {match.veto_no_show_teams.map(team=>team==='team_a'?match.team_a_name:match.team_b_name).join(' and ')}. No-show choices are automatic.</p>}
             {/* Header */}
             <header className="glass-dark border-b border-white/10 px-4 md:px-6 py-3 md:py-4">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -335,14 +337,14 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                         )}
                         <div className="min-w-0">
                             <h2 className="text-base md:text-2xl font-bold text-white break-words">{displayedTeams.teamA}</h2>
-                            <span className="text-xs text-team-a uppercase tracking-wider font-semibold">Team A</span>
+                            {rolesAssigned && <span className="text-xs text-team-a uppercase tracking-wider font-semibold">Team A</span>}
                         </div>
                     </div>
                     <div className="text-lg md:text-2xl text-white/30 shrink-0">VS</div>
                     <div className="text-center flex-1 min-w-0 flex items-center justify-start gap-2 md:gap-3">
                         <div className="min-w-0">
                             <h2 className="text-base md:text-2xl font-bold text-white break-words">{displayedTeams.teamB}</h2>
-                            <span className="text-xs text-team-b uppercase tracking-wider font-semibold">Team B</span>
+                            {rolesAssigned && <span className="text-xs text-team-b uppercase tracking-wider font-semibold">Team B</span>}
                         </div>
                         {displayedTeams.logoB && (
                             <img
@@ -482,8 +484,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                             </div>
                         )}
                     </Fragment>
-            {/* Timeline */}
-            <div className="match-panel w-full min-w-0 !p-0">
+            {/* Timeline (Head Admin only) */}
+            {isAdmin && <div className="match-panel w-full min-w-0 !p-0">
                 <VetoTimeline
                     steps={templateSteps}
                     currentStep={state?.current_step || 0}
@@ -491,7 +493,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     teamBName={displayedTeams.teamB}
                     headAdmin={isAdmin && match ? {matchId,token,status:match.status,clock:state?.turn_started_at} : undefined}
                 />
-            </div>
+            </div>}
 
 
                 </div>

@@ -171,9 +171,6 @@ export default async function PublicMatchLogPage({ params }: PageProps) {
                                 teamColor={card.pick?.picked_by === 'team_a' ? 'var(--team-a)' : card.pick?.picked_by === 'team_b' ? 'var(--team-b)' : 'var(--brand-mist)'} canInteract={false} />
                         ))}
                     </div>
-                    <ol aria-label="Veto steps" className="match-panel w-full flex overflow-x-auto gap-2 text-xs">
-                        {vetoSteps.map((step, index) => <li key={index} className="shrink-0 px-3 py-2 border rounded border-green-700 text-green-300"><span className="font-semibold">{index + 1}. {step.action}</span><span className="block mt-1">{getActorName(step.actor)}</span></li>)}
-                    </ol>
                 </div>
                 <aside aria-label="Veto log" className="match-panel min-w-0">
                     <div className="panel-head"><h2>Veto log</h2></div>

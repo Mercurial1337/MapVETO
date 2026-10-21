@@ -18,7 +18,8 @@
     "test:referee-links-http": "node tests/referee-links-http.test.mjs",
     "test:map-images-http": "node tests/map-images-http.test.mjs",
     "test:normal-http": "node tests/normal-creation-http.test.mjs",
-    "test:analytics-http": "node tests/analytics-http.test.mjs"
+    "test:analytics-http": "node tests/analytics-http.test.mjs",
+    "test:super-admin-http": "node tests/super-admin-http.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

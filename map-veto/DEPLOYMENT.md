@@ -48,6 +48,16 @@ Add these environment variables in Vercel dashboard:
    - `UPSTASH_REDIS_REST_URL`
    - `UPSTASH_REDIS_REST_TOKEN`
 
+### Step 5: Create the super admin account
+
+The platform has one super admin (`superadmin@vg.com`) who creates staff accounts and adds them to tournaments from **Admin → Accounts**. Create it once per Supabase project with the service role key:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… node scripts/create-super-admin.mjs
+```
+
+The script prints a generated password once. Run it again with `SUPER_ADMIN_PASSWORD=…` to set a new password. See [docs/super-admin.md](docs/super-admin.md).
+
 ---
 
 ## 📖 How to Use

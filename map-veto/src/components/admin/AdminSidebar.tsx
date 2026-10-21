@@ -6,7 +6,8 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {StaffNotifications} from './StaffNotifications';
 import type { User } from '@supabase/supabase-js';
-import { LayoutDashboard, Gamepad2, PlusCircle, LogOut, Menu, X, Calendar } from 'lucide-react';
+import { LayoutDashboard, Gamepad2, PlusCircle, LogOut, Menu, X, Calendar, Users } from 'lucide-react';
+import { isSuperAdmin } from '@/lib/auth/superAdminRole';
 
 interface AdminSidebarProps {
     children: React.ReactNode;
@@ -45,6 +46,7 @@ export function AdminSidebar({ children }: AdminSidebarProps) {
         { href: '/admin/matches', icon: Gamepad2, label: 'Matches' },
         { href: '/admin/events', icon: Calendar, label: 'Events' },
         { href: '/admin/matches/new', icon: PlusCircle, label: 'Create Match' },
+        ...(isSuperAdmin(user) ? [{ href: '/admin/accounts', icon: Users, label: 'Accounts' }] : []),
     ];
 
     return (
