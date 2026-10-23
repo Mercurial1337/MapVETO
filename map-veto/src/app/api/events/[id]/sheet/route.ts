@@ -11,7 +11,7 @@ import {queueSheetLogos} from '@/lib/sheets/logos';
 import {isSuperAdmin,SUPER_ADMIN_ONLY} from '@/lib/auth/superAdminRole';
 interface Context{params:Promise<{id:string}>;}
 export const maxDuration=60;
-async function access(id:string,write=false){const {data:{user}}=await (await createClient()).auth.getUser();if(!user)return {error:NextResponse.json({error:'Authentication required'},{status:401})};if(isSuperAdmin(user))return {error:NextResponse.json({error:SUPER_ADMIN_ONLY},{status:403})};const role=await getEventRole(user.id,id);if(!role || (write && role==='referee'))return {error:NextResponse.json({error:'Head Admin access required'},{status:403})};return {user,role};}
+async function access(id:string,write=false){const {data:{user}}=await (await createClient()).auth.getUser();if(!user)return {error:NextResponse.json({error:'Authentication required'},{status:401})};if(isSuperAdmin(user))return {error:NextResponse.json({error:SUPER_ADMIN_ONLY},{status:403})};const role=await getEventRole(user.id,id);if(!role || (write && role==='referee'))return {error:NextResponse.json({error:'Head Ref access required'},{status:403})};return {user,role};}
 const json=(data:unknown)=>NextResponse.json(data,{headers:{'Cache-Control':'no-store'}});
 export async function GET(request:NextRequest,{params}:Context){
  const {id}=await params,auth=await access(id);if(auth.error)return auth.error;
@@ -49,7 +49,7 @@ export async function POST(request:NextRequest,{params}:Context){
    if(body.hash!==day.hash)return stale();
    if(new Set(body.choices.map(c=>c.source_id)).size!==body.choices.length)return NextResponse.json({error:'Duplicate selection IDs'},{status:400});
    const {data,error}=await db.rpc('sheet_apply_day',{p_event:id,p_user:auth.user!.id,p_spreadsheet:day.connection.spreadsheet_id,p_tab:day.tab.id,p_title:day.tab.title,p_rows:await withCompetitiveMaps(await protectRows(day.rows,day.sources,body.choices)),p_choices:body.choices});if(error)return NextResponse.json({error:error.message},{status:409});
-   // The most recent Head Admin approval remains the authority for future syncs.
+   // The most recent Head Ref approval remains the authority for future syncs.
    const {error:updateError}=await db.from('event_sheet_connections').update({connected_by:auth.user!.id}).eq('event_id',id);if(updateError)throw new Error(updateError.message);
    queueSheetLogos(id,day.connection.spreadsheet_id,day.tab);
    return json({success:true,...data,backgroundSync:await configureWorker()});

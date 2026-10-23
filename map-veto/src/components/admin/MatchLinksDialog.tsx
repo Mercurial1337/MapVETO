@@ -5,7 +5,7 @@ import {copyText, matchLinkUrls, MATCH_LINK_ROLES} from '@/lib/clipboard';
 
 type Role = typeof MATCH_LINK_ROLES[number];
 interface Entry {role: Role; label: string; url: string;}
-const DEFAULT_LABELS: Record<Role, string> = {team_a:'Team 1', team_b:'Team 2', observer:'Observer', admin:'Head Admin', referee:'Referee'};
+const DEFAULT_LABELS: Record<Role, string> = {team_a:'Team 1', team_b:'Team 2', observer:'Observer', admin:'Head Ref', referee:'Referee'};
 const STYLES = {
  red: 'bg-red-500/5 border-red-500/10 text-red-400',
  blue: 'bg-blue-500/5 border-blue-500/10 text-blue-400',

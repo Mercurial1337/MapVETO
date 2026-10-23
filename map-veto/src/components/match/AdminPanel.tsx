@@ -11,7 +11,7 @@ export function AdminPanel({matchId,matchStatus,isPaused,token}:Props) {
   // Pause and resume act instantly; other overrides need a reason for the audit log.
   const quick=operation==='pause' || operation==='resume';
   if(!quick && !reason.trim()) {setError('Enter a reason for this action.');return;}
-  const note=reason.trim() || (operation==='pause'?'Paused by Head Admin':'Resumed by Head Admin');
+  const note=reason.trim() || (operation==='pause'?'Paused by Head Ref':'Resumed by Head Ref');
   if(operation==='reset' && !confirm('Restart this veto? Selections will be cleared, scheduled check-in/no-show restrictions will be removed, and both teams can check in normally. History is retained.')) return;
   setBusy(true);setError('');
   try {
@@ -22,8 +22,8 @@ export function AdminPanel({matchId,matchStatus,isPaused,token}:Props) {
   } catch {setError('Connection failed. Please retry.');}
   finally {setBusy(false);}
  }
- return <section aria-label="Head Admin override controls" className="match-panel space-y-4">
-  <div className="panel-head"><h2>Head Admin controls</h2><button aria-expanded={open} aria-controls="head-admin-controls-panel" className="min-h-9 px-3 py-1 text-xs font-bold uppercase border border-[#161616] rounded" onClick={()=>setOpen(!open)}>{open?'Hide':'Show'}</button></div>
+ return <section aria-label="Head Ref override controls" className="match-panel space-y-4">
+  <div className="panel-head"><h2>Head Ref controls</h2><button aria-expanded={open} aria-controls="head-admin-controls-panel" className="min-h-9 px-3 py-1 text-xs font-bold uppercase border border-[#161616] rounded" onClick={()=>setOpen(!open)}>{open?'Hide':'Show'}</button></div>
   {open && <div id="head-admin-controls-panel" className="space-y-3">
    <form className="space-y-2" onSubmit={e=>{e.preventDefault();if(['in_progress','side_selection','coin_toss'].includes(matchStatus))void action(isPaused?'resume':'pause');}}>
     <label className="block text-sm text-white/70">Reason <span className="text-white/50">(optional to pause or resume)</span><input className="match-input min-h-11 mt-1" maxLength={500} value={reason} onChange={e=>setReason(e.target.value)} placeholder="e.g. Player reconnecting"/></label>

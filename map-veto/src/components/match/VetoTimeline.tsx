@@ -22,7 +22,7 @@ export function VetoTimeline({steps,currentStep,teamAName,teamBName,headAdmin}:P
   finally{submitting.current=false;setBusy(false);}
  }
  return <>
- {canReopen && <p className="px-4 pt-3 text-xs text-white/70">Head Admin: select a completed team step to reopen it.</p>}
+ {canReopen && <p className="px-4 pt-3 text-xs text-white/70">Head Ref: select a completed team step to reopen it.</p>}
  <ol aria-label="Veto steps" className="flex overflow-x-auto gap-2 px-4 py-3 text-xs">
   {steps.map((step,index)=><li key={step.step ?? index} aria-current={index===currentStep?'step':undefined} className={`shrink-0 px-3 py-2 border rounded ${index===currentStep?'border-lime text-lime':index<currentStep?'border-green-700 text-green-300':'border-white/20 text-white/50'}`}>
    {canReopen && index<currentStep && step.action!=='decider' ? <button className="text-left cursor-pointer hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-white" aria-label={`Reopen step ${index+1}: ${step.action}`} onClick={()=>{setTarget({index,clock:headAdmin!.clock!,current:currentStep});setReason('');setError('');requestId.current=crypto.randomUUID();}}><span className="font-semibold">{index+1}. {step.action}</span><span className="block mt-1">{step.actor==='team_a'?teamAName:step.actor==='team_b'?teamBName:'System'}</span></button> : <><span className="font-semibold">{index+1}. {step.action}</span><span className="block mt-1">{step.actor==='team_a'?teamAName:step.actor==='team_b'?teamBName:'System'}</span></>}

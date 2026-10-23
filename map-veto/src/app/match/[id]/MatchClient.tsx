@@ -325,7 +325,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 </div>
             </header>
 
-            {(userRole==='observer' || userRole==='admin' || userRole==='referee') && <p role="status" className="px-4 py-2 border-b border-white/20 text-sm text-white/70">Read-only view{isAdmin?' · Head Admin controls available.':isReferee?' · Referee: veto reset requests only.':''}</p>}
+            {(userRole==='observer' || userRole==='admin' || userRole==='referee') && <p role="status" className="px-4 py-2 border-b border-white/20 text-sm text-white/70">Read-only view{isAdmin?' · Head Ref controls available.':isReferee?' · Referee: veto reset requests only.':''}</p>}
             {/* Teams Banner */}
             <div className="bg-black/40 border-b border-white/5 px-4 md:px-6 py-4 md:py-6">
                 <div className="max-w-4xl mx-auto flex items-center justify-center gap-3 md:gap-8">
@@ -486,7 +486,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                             </div>
                         )}
                     </Fragment>
-            {/* Timeline (Head Admin only) */}
+            {/* Timeline (Head Ref only) */}
             {isAdmin && <div className="match-panel w-full min-w-0 !p-0">
                 <VetoTimeline
                     steps={templateSteps}

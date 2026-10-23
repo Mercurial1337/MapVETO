@@ -108,14 +108,14 @@ try {
  const concurrentId=randomUUID();await post('/api/veto/reset-requests',{...resetBody,request_id:concurrentId,token:tokens.referee});
  await Promise.all([tokens.team_a,tokens.team_b].map(token=>post('/api/veto/reset-requests',{operation:'answer',match_id:matchId,token,request_id:concurrentId,approve:true})));
  session=await post('/api/veto/session',{match_id:matchId,token:tokens.observer});assert.equal(session.logs.filter(log=>log.metadata?.team_approved && log.metadata?.request_id===concurrentId).length,1);
- // Head Admin remains able to directly reset and pause.
- await post('/api/veto/admin/override',{match_id:matchId,token:tokens.admin,operation:'reset',reason:'Head Admin QA'});
+ // Head Ref remains able to directly reset and pause.
+ await post('/api/veto/admin/override',{match_id:matchId,token:tokens.admin,operation:'reset',reason:'Head Ref QA'});
  await Promise.all([tokens.team_a,tokens.team_b].map(token=>post('/api/veto/ready',{match_id:matchId,token})));
  session=await post('/api/veto/session',{match_id:matchId,token:tokens.observer});
  await post('/api/veto/position-choice',{match_id:matchId,token:tokens[session.match.coin_toss_winner],pick_first:false});
- await post('/api/veto/admin/override',{match_id:matchId,token:tokens.admin,operation:'pause',reason:'Head Admin QA'});
- await post('/api/veto/admin/override',{match_id:matchId,token:tokens.admin,operation:'resume',reason:'Head Admin QA'});
- console.log('PASS HTTP staff roles: owner assignment, referee-only links, override/coin/delete/export/import/roster denial, pending reset continues unchanged, both approvals reset once, concurrent approvals, Head Admin controls retained');
+ await post('/api/veto/admin/override',{match_id:matchId,token:tokens.admin,operation:'pause',reason:'Head Ref QA'});
+ await post('/api/veto/admin/override',{match_id:matchId,token:tokens.admin,operation:'resume',reason:'Head Ref QA'});
+ console.log('PASS HTTP staff roles: owner assignment, referee-only links, override/coin/delete/export/import/roster denial, pending reset continues unchanged, both approvals reset once, concurrent approvals, Head Ref controls retained');
  const finishedId=matches[1].id;
  const {data:finishedLinks}=await db.from('match_links').select('link_type,token').eq('match_id',finishedId);
  const finishedTokens=Object.fromEntries(finishedLinks.map(link=>[link.link_type,link.token]));
@@ -132,7 +132,7 @@ try {
  }
  const unrelated=await account();
  const unrelatedResponse=await fetch(`${base}/api/admin/notifications`,{headers:{Cookie:unrelated.cookie}});assert.equal(unrelatedResponse.status,200);assert.equal((await unrelatedResponse.json()).notifications.length,0);
- console.log('PASS staff completion notifications: authenticated ownership/membership scope, Head Admin and Referee access, persisted completion timestamp, no magic-link exposure, unrelated account isolation');
+ console.log('PASS staff completion notifications: authenticated ownership/membership scope, Head Ref and Referee access, persisted completion timestamp, no magic-link exposure, unrelated account isolation');
  await post('/api/veto/admin/override',{match_id:matchId,token:tokens.admin,operation:'reset',reason:'Browser notification QA check-in'});
  if(keep){writeFileSync('.qa-bulk-session.json',JSON.stringify({base,eventId,userIds:users,owner,referee:outsider,matchId,tokens,batchId,secondBatchId:second.batch_id},(key,value)=>key==='client'||key==='cookie'?undefined:value));retained=true;console.log('QA fixtures retained for browser testing');}
 } finally {

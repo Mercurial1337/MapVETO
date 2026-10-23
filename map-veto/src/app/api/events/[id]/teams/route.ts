@@ -71,9 +71,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         const role = await getEventRole(user.id, id);
-        if (role !== 'owner' && role !== 'admin') {
+        if (role !== 'owner' && role !== 'admin' && role !== 'vanguard') {
             return NextResponse.json(
-                { error: 'Head Admin access required' },
+                { error: 'Head Ref access required' },
                 { status: 403 }
             );
         }

@@ -16,7 +16,7 @@ interface Event {
     is_active: boolean;
     created_at: string;
     matches: { count: number }[];
-    role: 'owner' | 'admin' | 'referee';
+    role: 'owner' | 'admin' | 'referee' | 'vanguard';
 }
 
 export default function EventsPage() {
@@ -147,7 +147,7 @@ export default function EventsPage() {
                                 ) : (
                                     <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 flex items-center gap-1">
                                         <Shield size={10} />
-                                        {event.role==='referee'?'Referee':'Head Admin'}
+                                        {event.role==='vanguard'?'Vanguard':event.role==='referee'?'Referee':'Head Ref'}
                                     </span>
                                 )}
                             </div>
@@ -194,6 +194,7 @@ export default function EventsPage() {
                                     <FileSpreadsheet size={14} />
                                     Export
                                 </button>
+                                {event.role === 'vanguard' && <Link href={`/admin/events/${event.id}/edit`} className="btn-secondary flex items-center px-3 py-2 text-sm">Manage staff</Link>}
                                 {event.role === 'owner' && (
                                     <Link
                                         href={`/admin/events/${event.id}/edit`}

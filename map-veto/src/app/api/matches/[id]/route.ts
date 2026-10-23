@@ -92,7 +92,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                 ? match.team_a_name
                 : link.link_type === 'team_b'
                     ? match.team_b_name
-                      : link.link_type==='admin'?'Head Admin':link.link_type==='referee'?'Referee':'Observer';
+                      : link.link_type==='admin'?'Head Ref':link.link_type==='referee'?'Referee':'Observer';
 
             magicLinks[link.link_type] = {
                 token: link.token,

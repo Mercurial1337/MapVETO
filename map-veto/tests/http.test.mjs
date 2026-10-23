@@ -48,12 +48,12 @@ console.log('PASS HTTP check-in: concurrent readiness, coin toss, role confirmat
 for(const token of [tokens.team_a,tokens.referee,tokens.admin]){const r=await fetch(base+'/api/veto/timeouts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({operation:'request',match_id:id,token,request_id:randomUUID(),reason:'Removed'})});assert.equal(r.status,404);}
 const hiddenReports=await anon.from('veto_timeout_requests').select('*').eq('match_id',id);assert.equal(hiddenReports.data?.length || 0,0);
 const directRequest=await anon.rpc('veto_request_timeout',{p_match_id:id,p_token:tokens.team_b,p_request_id:randomUUID(),p_reason:'Bypass API'});assert.ok(directRequest.error);
-// Only Head Admins pause; Referees and teams cannot.
+// Only Head Refs pause; Referees and teams cannot.
 for(const role of ['referee','team_a','observer']) await post('/api/veto/admin/override',{match_id:id,token:tokens[role],operation:'pause',reason:'Not allowed'},403);
-const paused=await post('/api/veto/admin/override',{match_id:id,token:tokens.admin,operation:'pause',reason:'Head Admin pause'});
+const paused=await post('/api/veto/admin/override',{match_id:id,token:tokens.admin,operation:'pause',reason:'Head Ref pause'});
 session=await post('/api/veto/session',{match_id:id,token:tokens.team_a});assert.equal(session.state.is_paused,true);assert.equal(session.state.paused_remaining_seconds,paused.new_state.paused_remaining_seconds);
 await post('/api/veto/admin/override',{match_id:id,token:tokens.admin,operation:'resume',reason:'Resume'});
-console.log('PASS HTTP staff controls: timeout endpoint removed, timeout data private, only Head Admin pauses/resumes');
+console.log('PASS HTTP staff controls: timeout endpoint removed, timeout data private, only Head Ref pauses/resumes');
 for(let i=0;i<30;i++) {
  session=await post('/api/veto/session',{match_id:id,token:tokens.observer});
  if(session.state.is_complete) break;
@@ -88,7 +88,7 @@ assert.equal(session.logs.filter(log=>log.metadata?.request_id===reopenPayload.r
 assert.ok(session.logs.some(log=>log.action_type==='decider' && log.metadata?.superseded));
 // A reopened veto is live again, so it is private until it completes again.
 assert.equal((await fetch(`${base}/api/matches/${id}/public`)).status,404);
-console.log('PASS HTTP reopening: Head Admin only, validation, stale guard, completed-veto restoration, idempotency, audit, and the reopened veto is private again');
+console.log('PASS HTTP reopening: Head Ref only, validation, stale guard, completed-veto restoration, idempotency, audit, and the reopened veto is private again');
 // Complete the disposable match again so browser QA can choose any earlier step.
 while(!session.state.is_complete) {
  const step=template.sequence.steps[session.state.current_step];

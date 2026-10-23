@@ -14,7 +14,7 @@ interface ImportBatch {id:string;file_name:string;match_count:number;format:stri
 interface Event {
     id: string;
     name: string;
-    role?: 'owner'|'admin'|'referee';
+    role?: 'owner'|'admin'|'referee'|'vanguard';
 }
 
 interface Match {

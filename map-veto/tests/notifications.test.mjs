@@ -19,7 +19,7 @@ const report={id:'log1',action_type:'timeout_request',actor:'team_a',created_at:
 const resolution={id:'log2',action_type:'timeout_resolved',actor:'admin',created_at:'2026-10-04T12:01:00Z',metadata:{timeout_request_id:'request1',request_actor:'team_a',resolution:'Game restarted'}};
 assert.equal(timeoutNotice(report,match),null);
 assert.ok(formatLog(report,{team_a:'Alpha'},{}).includes('Alpha requested a timeout: Game crashed'));
-assert.ok(formatLog(resolution,{team_a:'Alpha'},{}).includes("Head Admin resolved Alpha's timeout: Game restarted"));
+assert.ok(formatLog(resolution,{team_a:'Alpha'},{}).includes("Head Ref resolved Alpha's timeout: Game restarted"));
 assert.ok(formatLog({...report,action_type:'pick',metadata:{timeout:true}},{team_a:'Alpha'},{}).includes('move timer expired'));
 const ack={id:'log3',action_type:'timeout_acknowledged',actor:'admin',created_at:'2026-10-04T12:00:30Z',metadata:{timeout_request_id:'request1',request_actor:'team_a',staff_role:'referee'}};
 assert.ok(formatLog(ack,{team_a:'Alpha'},{}).includes("Referee acknowledged Alpha's timeout request"));

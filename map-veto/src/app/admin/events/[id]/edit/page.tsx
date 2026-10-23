@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Upload, Image as ImageIcon, Check, ArrowLeft, X, UserPlus, Trash2, Crown, Shield } from 'lucide-react';
 import Link from 'next/link';
+import {canAddEventStaff, eventRoleLabel, type EventRole, type EventStaffRole} from '@/lib/auth/eventRoles';
 import { createClient } from '@/lib/supabase/client';
 
 export const dynamic = 'force-dynamic';
@@ -38,12 +39,12 @@ export default function EditEventPage({ params }: PageProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState('');
     const [uploading, setUploading] = useState<string | null>(null);
-    const [userRole, setUserRole] = useState<'owner' | 'admin' | 'referee' | null>(null);
+    const [userRole, setUserRole] = useState<EventRole>(null);
 
     // Admin management state
     const [admins, setAdmins] = useState<EventAdmin[]>([]);
     const [adminEmail, setAdminEmail] = useState('');
-    const [staffRole,setStaffRole]=useState<'admin'|'referee'>('admin');
+    const [staffRole,setStaffRole]=useState<EventStaffRole>('admin');
     const [adminError, setAdminError] = useState('');
     const [adminSuccess, setAdminSuccess] = useState('');
     const [isAddingAdmin, setIsAddingAdmin] = useState(false);
@@ -87,7 +88,7 @@ export default function EditEventPage({ params }: PageProps) {
     }, [id]);
 
     useEffect(() => {
-        if (userRole === 'owner') {
+        if (canAddEventStaff(userRole)) {
             fetchAdmins();
         }
     }, [userRole, fetchAdmins]);
@@ -111,7 +112,7 @@ export default function EditEventPage({ params }: PageProps) {
             if (!response.ok) {
                 setAdminError(data.error || 'Failed to add admin');
             } else {
-                setAdminSuccess(`${adminEmail.trim()} has been added as ${staffRole==='referee'?'Referee':'Head Admin'}`);
+                setAdminSuccess(`${adminEmail.trim()} has been added as ${eventRoleLabel(staffRole)}`);
                 setAdminEmail('');
                 fetchAdmins();
                 // Clear success message after 3s
@@ -318,10 +319,10 @@ export default function EditEventPage({ params }: PageProps) {
                 <Link href="/admin/events" className="p-2 hover:bg-white/10 rounded-lg transition-colors">
                     <ArrowLeft size={20} className="text-white/70" />
                 </Link>
-                <h1 className="text-2xl font-bold text-white">Edit Event</h1>
+                <h1 className="text-2xl font-bold text-white">{userRole==='vanguard'?'Manage Event Staff':'Edit Event'}</h1>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            {userRole==='owner' && <form onSubmit={handleSubmit} className="space-y-6">
                 {error && (
                     <div className="p-4 bg-red-500/10 border border-red-500/20 rounded text-red-400 text-sm">
                         {error}
@@ -397,22 +398,22 @@ export default function EditEventPage({ params }: PageProps) {
                         )}
                     </button>
                 </div>
-            </form>
+            </form>}
 
             {/* Manage Admins Section (Owner Only) */}
-            {userRole === 'owner' && (
+            {canAddEventStaff(userRole) && (
                 <div className="mt-8 space-y-4">
                     <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                         <Shield size={20} className="text-blue-400" />
-                        Manage Event Staff
+                        Event Staff
                     </h2>
                     <p className="text-sm text-white/50">
-                        Head Admins can manage matches, export data and use all overrides. Referees can only request a veto reset, which requires approval from both teams. Only the event owner can edit branding or manage staff.
+                        Head Refs can manage matches, export data and use all overrides. Vanguard has the same permissions and can also add existing accounts as Head Ref or Referee. Referees can only request a veto reset, which requires approval from both teams. Only the event owner can assign Vanguard, remove staff or edit branding.
                     </p>
 
                     {/* Add Admin Form */}
                     <div className="glass rounded p-4">
-                        <label className="block text-sm mb-2">Staff role<select className="ml-3 bg-black border border-white/30 p-2" value={staffRole} onChange={e=>setStaffRole(e.target.value as 'admin'|'referee')}><option value="admin">Head Admin</option><option value="referee">Referee</option></select></label>
+                        <label className="block text-sm mb-2">Staff role<select className="ml-3 bg-black border border-white/30 p-2" value={staffRole} onChange={e=>setStaffRole(e.target.value as EventStaffRole)}><option value="admin">Head Ref</option><option value="referee">Referee</option>{userRole==='owner' && <option value="vanguard">Vanguard</option>}</select></label>
                         <div className="flex gap-2">
                             <input
                                 type="email"
@@ -421,7 +422,8 @@ export default function EditEventPage({ params }: PageProps) {
                                     setAdminEmail(e.target.value);
                                     setAdminError('');
                                 }}
-                                placeholder="Enter user's email address"
+                                aria-label="Existing account email"
+                                placeholder="Enter existing account email"
                                 className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded text-white placeholder-white/30 focus:outline-none focus:border-blue-500/50"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
@@ -466,13 +468,13 @@ export default function EditEventPage({ params }: PageProps) {
                                         </div>
                                         <div>
                                             <p className="text-sm text-white">{admin.email}</p>
-                                            <p className="text-sm text-white/70">{admin.role==='referee'?'Referee':'Head Admin'}</p>
+                                            <p className="text-sm text-white/70">{eventRoleLabel(admin.role as EventStaffRole)}</p>
                                             <p className="text-xs text-white/40">
                                                 Added {new Date(admin.created_at).toLocaleDateString()}
                                             </p>
                                         </div>
                                     </div>
-                                    {removeConfirm === admin.id ? (
+                                    {userRole === 'owner' && (removeConfirm === admin.id ? (
                                         <div className="flex gap-1">
                                             <button
                                                 onClick={() => handleRemoveAdmin(admin.id)}
@@ -491,11 +493,11 @@ export default function EditEventPage({ params }: PageProps) {
                                         <button
                                             onClick={() => setRemoveConfirm(admin.id)}
                                             className="p-2 hover:bg-red-500/20 rounded-lg text-red-400 transition-colors"
-                                            title="Remove admin"
+                                            title="Remove staff"
                                         >
                                             <Trash2 size={14} />
                                         </button>
-                                    )}
+                                    ))}
                                 </div>
                             ))}
                         </div>

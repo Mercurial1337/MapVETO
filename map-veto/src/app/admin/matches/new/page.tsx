@@ -405,9 +405,9 @@ function NewMatchContent() {
                         {/* Admin Link */}
                         <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded">
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-yellow-400">Head Admin</span>
+                                <span className="text-sm font-medium text-yellow-400">Head Ref</span>
                                 <button
-                                    onClick={() => copyToClipboard(createdMatch.links.admin.url, 'Head Admin')}
+                                    onClick={() => copyToClipboard(createdMatch.links.admin.url, 'Head Ref')}
                                     className="text-xs px-3 py-1 bg-yellow-500/20 hover:bg-yellow-500/30 rounded-lg text-yellow-300 transition-colors"
                                 >
                                     Copy

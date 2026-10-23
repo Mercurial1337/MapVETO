@@ -29,5 +29,5 @@ try{
  s=await snapshot(single);assert.equal(s.match.veto_schedule_enforced,false);assert.equal(s.match.veto_scheduled_at,null);assert.deepEqual(s.match.veto_no_show_teams,[]);
  await post('/api/veto/ready',team(single,'team_a'));await post('/api/veto/ready',team(single,'team_b'));
  assert.equal((await snapshot(single)).match.status,'side_selection');
- console.log('PASS scheduled HTTP + real pg_cron: early/late check-in denied, no-browser deadline completion, BO3/BO5 alphabetical defaults and random sides, present team plays, absent turn automatic, Head Admin restart restores ordinary check-in');
+ console.log('PASS scheduled HTTP + real pg_cron: early/late check-in denied, no-browser deadline completion, BO3/BO5 alphabetical defaults and random sides, present team plays, absent turn automatic, Head Ref restart restores ordinary check-in');
 }finally{for(const id of ids)assert.ifError((await db.from('matches').delete().eq('id',id)).error);}

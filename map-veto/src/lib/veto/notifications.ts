@@ -21,7 +21,7 @@ export function matchNotices(previous:{match:Match|null;state:MatchState|null},c
  if(match.status==='in_progress' && !state.is_complete && state.current_turn===role && (starts || old.current_step!==state.current_step || old.current_turn!==state.current_turn)) notices.push({kind:'info',message:'Your turn. Confirm your selection within 60 seconds.',cue:'turn'});
  if(!old.is_complete && state.is_complete) notices.push({kind:'success',message:'The veto is complete. Record the match start when play begins.',cue:'complete'});
  if(oldMatch.status!=='ready_check' && match.status==='ready_check') notices.push({kind:'info',message:'The veto was reset. Both teams must check in again.'});
- if(!old.is_paused && state.is_paused) notices.push({kind:'warning',message:'The Head Admin paused the veto.'});
+ if(!old.is_paused && state.is_paused) notices.push({kind:'warning',message:'The Head Ref paused the veto.'});
  if(old.is_paused && !state.is_paused) notices.push({kind:'info',message:'The veto resumed.'});
  return notices;
 }

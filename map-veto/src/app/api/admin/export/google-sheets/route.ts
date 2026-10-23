@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
 
         const serviceClient = createServiceClient();
         if (event_id && !['all','standalone'].includes(event_id) && await getEventRole(user.id,event_id) === 'referee') {
-            return NextResponse.json({error:'Head Admin access required'}, {status:403});
+            return NextResponse.json({error:'Head Ref access required'}, {status:403});
         }
         const {data:refereeEvents,error:roleError} = await serviceClient.from('event_admins').select('event_id').eq('user_id',user.id).eq('role','referee');
         if (roleError) throw roleError;

@@ -150,7 +150,7 @@ const logCount=(await db.query('SELECT count(*)::int n FROM match_logs WHERE mat
 const reset=await rpc('veto_admin',[f.id,f.admin,'reset',null,null,'Restart match',null]);assert.equal(reset.match.status,'ready_check');assert.equal(reset.new_state.available_maps.length,4);assert.equal(reset.new_state.is_paused,false);
 assert.equal((await db.query('SELECT count(*)::int n FROM match_logs WHERE match_id=$1',[f.id])).rows[0].n,logCount+1);
 assert.ok((await db.query("SELECT * FROM match_logs WHERE match_id=$1 AND metadata->>'superseded'='true'",[f.id])).rows.length>0);
-console.log('PASS Head Admin: authorization, reopen completed veto, unwind decider, preserve paused time, force/correct exact map and side, reset retains pool and history');
+console.log('PASS Head Ref: authorization, reopen completed veto, unwind decider, preserve paused time, force/correct exact map and side, reset retains pool and history');
 
 const background=await fixture(true);await rpc('veto_ready',[background.id,background.a]);await rpc('veto_ready',[background.id,background.b]);
 await db.query("UPDATE match_state SET turn_started_at=now()-interval '61 seconds' WHERE match_id=$1",[background.id]);
@@ -270,11 +270,11 @@ const resetLogs=(await db.query('SELECT * FROM match_logs WHERE match_id=$1 ORDE
 assert.equal(resetLogs.filter(log=>log.action_type==='reset_request').length,1);assert.equal(resetLogs.filter(log=>log.action_type==='reset_answer').length,2);assert.equal(resetLogs.filter(log=>log.metadata?.team_approved).length,1);
 const declined=randomUUID();await rpc('veto_request_reset',[approval.id,referee,declined,'Decline scenario']);await rpc('veto_answer_reset',[approval.id,approval.a,declined,false]);
 assert.equal((await rpc('veto_answer_reset',[approval.id,approval.b,declined,true])).status,'rejected');
-const stale=randomUUID();await rpc('veto_request_reset',[approval.id,referee,stale,'Head Admin cancellation']);await rpc('veto_answer_reset',[approval.id,approval.a,stale,true]);await rpc('veto_admin',[approval.id,approval.admin,'reset',null,null,'Head Admin independent reset',null]);
+const stale=randomUUID();await rpc('veto_request_reset',[approval.id,referee,stale,'Head Ref cancellation']);await rpc('veto_answer_reset',[approval.id,approval.a,stale,true]);await rpc('veto_admin',[approval.id,approval.admin,'reset',null,null,'Head Ref independent reset',null]);
 assert.equal((await rpc('veto_answer_reset',[approval.id,approval.b,stale,true])).status,'cancelled');
 await db.query("INSERT INTO event_admins(event_id,user_id,role) VALUES($1,$2,'referee')",[event,outsider]);await rejects('bulk_create_matches',[event,outsider,randomUUID(),'denied.csv',template,JSON.stringify(bulkRows),mapIds],/administrator/);
 for(const fn of ['veto_request_reset(uuid,uuid,uuid,text)','veto_answer_reset(uuid,uuid,uuid,boolean)','veto_admin_internal(uuid,uuid,text,uuid,text,text,timestamptz)'])assert.equal((await db.query("SELECT has_function_privilege('authenticated',$1,'EXECUTE') allowed",[fn])).rows[0].allowed,false);
-console.log('PASS staff/reset approval: referee overrides denied, scoped/expired access denied, one request and vote per team, first approval preserves clock, both reset once to check-in, decline, Head Admin cancellation and importer/RPC restrictions');
+console.log('PASS staff/reset approval: referee overrides denied, scoped/expired access denied, one request and vote per team, first approval preserves clock, both reset once to check-in, decline, Head Ref cancellation and importer/RPC restrictions');
 const rewind=await fixture(true);
 await rpc('veto_ready',[rewind.id,rewind.a]);await rpc('veto_ready',[rewind.id,rewind.b]);
 let rw=await rpc('veto_position',[rewind.id,rewind.b,true,false,null]);
@@ -287,14 +287,14 @@ async function finishRewind() {
 await finishRewind();
 const rewindRef=(await db.query("SELECT token FROM match_links WHERE match_id=$1 AND link_type='referee'",[rewind.id])).rows[0].token;
 const args=[rewind.id,rewind.admin,1,'Correct disputed pick',rw.new_state.turn_started_at,rw.new_state.current_step,randomUUID()];
-for(const token of [rewindRef,rewind.a,rewind.b,rewind.observer,f.admin])await rejects('veto_reopen_step',[rewind.id,token,...args.slice(2)],/Head Admin/);
+for(const token of [rewindRef,rewind.a,rewind.b,rewind.observer,f.admin])await rejects('veto_reopen_step',[rewind.id,token,...args.slice(2)],/Head Ref/);
 for(const step of [-1,6,7])await rejects('veto_reopen_step',[...args.slice(0,2),step,...args.slice(3)],/earlier completed/);
 await rejects('veto_reopen_step',[...args.slice(0,2),4,...args.slice(3)],/decider is automatic/);
 await rejects('veto_reopen_step',[...args.slice(0,3),' ',...args.slice(4)],/reason/);
 await rejects('veto_reopen_step',[...args.slice(0,4),'2000-01-01T00:00:00Z',...args.slice(5)],/Veto changed/);
 await rejects('veto_reopen_step',[...args.slice(0,5),5,args[6]],/Veto changed/);
 await db.query("UPDATE match_links SET expires_at=now()-interval '1 second' WHERE token=$1",[rewind.admin]);
-await rejects('veto_reopen_step',args,/Head Admin/);
+await rejects('veto_reopen_step',args,/Head Ref/);
 await db.query('UPDATE match_links SET expires_at=NULL WHERE token=$1',[rewind.admin]);
 const original=(await db.query("SELECT state FROM veto_snapshots WHERE match_id=$1 AND (state->>'current_step')::int=1 AND NOT undone",[rewind.id])).rows[0].state;
 rw=await rpc('veto_reopen_step',args);
@@ -317,7 +317,7 @@ rw=await rpc('veto_reopen_step',[rewind.id,rewind.admin,0,'Reopen first ban',rw.
 assert.deepEqual(rw.new_state.available_maps,mapIds);assert.deepEqual(rw.new_state.results,[]);
 await rejects('veto_reopen_step',[rewind.id,rewind.admin,0,'No forward jumps',rw.new_state.turn_started_at,0,randomUUID()],/earlier completed/);
 for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'veto_reopen_step(uuid,uuid,integer,text,timestamptz,integer,uuid)','EXECUTE') allowed",[role])).rows[0].allowed,false);
-console.log('PASS reopen step: Head Admin only, completed-veto restoration, exact maps/results/roles, side and first-step replay, superseded decider audit, stale state protection, idempotent retry and preserved pause');
+console.log('PASS reopen step: Head Ref only, completed-veto restoration, exact maps/results/roles, side and first-step replay, superseded decider audit, stale state protection, idempotent retry and preserved pause');
 for(const token of [rewind.a,rewind.b,rewind.admin,rewind.observer,rewindRef]) {
  const snapshot=await rpc('veto_session_snapshot',[rewind.id,token]);
  assert.equal(snapshot.state.current_step,rw.new_state.current_step);
@@ -365,11 +365,11 @@ assert.equal((await applyDay(dayRows)).created,1);assert.equal((await applyDay([
 const pw2=await sourceRow('PW2');assert.ok(await lockRow(pw2.match_id));assert.equal(pw2.selection,'C');
 assert.deepEqual((await applyDay(dayRows,[{source_id:'PW1',selection:'A'}])).results,[{source_id:'PW1',outcome:'already_imported'}]);
 assert.equal((await db.query('SELECT count(*)::int n FROM matches WHERE event_id=$1',[sheetEvent])).rows[0].n,2);
-// A changed sheet password is a conflict until a Head Admin approves it; approval bumps the session version.
+// A changed sheet password is a conflict until a Head Ref approves it; approval bumps the session version.
 dayRows[0]=prow('PW1',{password_fingerprint:fingerprint('New-0042')});
 const changed=await applyDay(dayRows);assert.equal(changed.conflicts,1);assert.match((await sourceRow('PW1')).issue,/Password changed/);assert.equal((await lockRow(pw1.match_id)).password_hash,sheetHash);
 const newHash=await hashPassword('New-0042');
-await rejects('sheet_replace_password',[sheetEvent,sheetOutsider,pw1.id,fingerprint('New-0042'),newHash],/Head Admin/);
+await rejects('sheet_replace_password',[sheetEvent,sheetOutsider,pw1.id,fingerprint('New-0042'),newHash],/Head Ref/);
 await rejects('sheet_replace_password',[sheetEvent,sheetOwner,pw1.id,'not-a-fingerprint',newHash],/Invalid password update/);
 await rejects('sheet_replace_password',[sheetEvent,sheetOwner,(await sourceRow('PW3')).id,fingerprint('New-0042'),newHash],/imported match/);
 assert.equal(await rpc('sheet_replace_password',[sheetEvent,sheetOwner,pw1.id,fingerprint('New-0042'),newHash]),2);
@@ -407,24 +407,24 @@ assert.equal((await lockRow(pairSource.match_id)).team_b_password_hash,pairHash)
 for(const snapshot of [pairSource.snapshot,pairSource.created_snapshot]) {
  assert.equal('password_hash' in snapshot,false);assert.equal('team_b_password_hash' in snapshot,false);
 }
-await rejects('sheet_replace_team_passwords',[sheetEvent,sheetOutsider,pairSource.id,pairFingerprint,newHash,pairHash],/Head Admin/);
+await rejects('sheet_replace_team_passwords',[sheetEvent,sheetOutsider,pairSource.id,pairFingerprint,newHash,pairHash],/Head Ref/);
 await rejects('sheet_replace_team_passwords',[sheetEvent,sheetOwner,pairSource.id,pairFingerprint,newHash,null],/Invalid password update/);
 assert.equal(await rpc('sheet_replace_team_passwords',[sheetEvent,sheetOwner,pairSource.id,pairFingerprint,newHash,pairHash]),2);
 assert.equal((await lockRow(pairSource.match_id)).password_hash,newHash);
 assert.equal((await lockRow(pairSource.match_id)).team_b_password_hash,pairHash);
 for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'sheet_replace_team_passwords(uuid,uuid,uuid,text,text,text)','EXECUTE') allowed",[role])).rows[0].allowed,false);
-console.log('PASS separate sheet passwords: two hashes stored, missing second hash rejected, no snapshot leaks, Head Admin replacement and version bump, service-only RPC');
+console.log('PASS separate sheet passwords: two hashes stored, missing second hash rejected, no snapshot leaks, Head Ref replacement and version bump, service-only RPC');
 // Timeout acknowledgment: staff-only, idempotent, separate from resolution and pausing.
 const ackMatch=await fixture(),ackRef=(await db.query("SELECT token FROM match_links WHERE match_id=$1 AND link_type='referee'",[ackMatch.id])).rows[0].token,ackRequest=randomUUID();
 await rpc('veto_ready',[ackMatch.id,ackMatch.a]);
 await rpc('veto_request_timeout',[ackMatch.id,ackMatch.a,'Discord crashed',ackRequest]);
 const ackBefore=(await db.query('SELECT * FROM match_state WHERE match_id=$1',[ackMatch.id])).rows[0];
-for(const token of [ackMatch.a,ackMatch.b,ackMatch.observer,f.admin,randomUUID()])await rejects('veto_acknowledge_timeout',[ackMatch.id,token,ackRequest,null,'Someone'],/Head Admin or Referee/);
+for(const token of [ackMatch.a,ackMatch.b,ackMatch.observer,f.admin,randomUUID()])await rejects('veto_acknowledge_timeout',[ackMatch.id,token,ackRequest,null,'Someone'],/Head Ref or Referee/);
 await rejects('veto_acknowledge_timeout',[ackMatch.id,ackRef,randomUUID(),null,'Referee link'],/not found/);
 await rejects('veto_acknowledge_timeout',[ackMatch.id,ackRef,ackRequest,null,'  '],/Staff name/);
 const firstAck=await rpc('veto_acknowledge_timeout',[ackMatch.id,ackRef,ackRequest,sheetOwner,'referee@example.invalid']);
 assert.equal(firstAck.request.acknowledged_role,'referee');assert.equal(firstAck.request.status,'open');assert.equal('acknowledged_by' in firstAck.request,false);
-const secondAck=await rpc('veto_acknowledge_timeout',[ackMatch.id,ackMatch.admin,ackRequest,null,'Head Admin link']);assert.equal(secondAck.request.acknowledged_label,'referee@example.invalid');assert.equal(secondAck.request.acknowledged_at,firstAck.request.acknowledged_at);
+const secondAck=await rpc('veto_acknowledge_timeout',[ackMatch.id,ackMatch.admin,ackRequest,null,'Head Ref link']);assert.equal(secondAck.request.acknowledged_label,'referee@example.invalid');assert.equal(secondAck.request.acknowledged_at,firstAck.request.acknowledged_at);
 const ackLogs=(await db.query("SELECT * FROM match_logs WHERE match_id=$1 AND action_type='timeout_acknowledged'",[ackMatch.id])).rows;
 assert.equal(ackLogs.length,1);assert.deepEqual(Object.keys(ackLogs[0].metadata).sort(),['confirmed_at','request_actor','staff_role','timeout_request_id']);assert.equal(JSON.stringify(ackLogs[0]).includes('referee@example.invalid'),false);
 const ackAfter=(await db.query('SELECT * FROM match_state WHERE match_id=$1',[ackMatch.id])).rows[0];
@@ -433,7 +433,7 @@ await rpc('veto_resolve_timeout',[ackMatch.id,ackMatch.admin,ackRequest,'Reconne
 const lateRequest=randomUUID();await rpc('veto_request_timeout',[ackMatch.id,ackMatch.b,'Lost connection',lateRequest]);await rpc('veto_resolve_timeout',[ackMatch.id,ackMatch.admin,lateRequest,'Back online']);
 await rejects('veto_acknowledge_timeout',[ackMatch.id,ackRef,lateRequest,null,'Referee link'],/already resolved/);
 for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'veto_acknowledge_timeout(uuid,uuid,uuid,uuid,text)','EXECUTE') allowed",[role])).rows[0].allowed,false);
-console.log('PASS timeout acknowledgment: Head Admin/Referee links only, idempotent first acknowledger kept, one audit entry without staff email, clock and pause unchanged, resolved requests not acknowledged, service-only access');
-console.log('PASS sheet passwords: hash stored only with created match, no plaintext or hash in snapshots, fail-closed creation, itemized confirmation, approved-only background creation, change/removal conflicts, Head Admin replacement with version bump, manual link approval, attempt limits and service-only access');
+console.log('PASS timeout acknowledgment: Head Ref/Referee links only, idempotent first acknowledger kept, one audit entry without staff email, clock and pause unchanged, resolved requests not acknowledged, service-only access');
+console.log('PASS sheet passwords: hash stored only with created match, no plaintext or hash in snapshots, fail-closed creation, itemized confirmation, approved-only background creation, change/removal conflicts, Head Ref replacement with version bump, manual link approval, attempt limits and service-only access');
 await db.close();
 

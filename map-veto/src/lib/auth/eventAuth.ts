@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server';
 
-export type EventRole = 'owner' | 'admin' | 'referee' | null;
+import {canManageEventMatches, type EventRole} from './eventRoles';
+export type {EventRole} from './eventRoles';
 
 /**
  * Returns the user's role for a given event:
@@ -29,7 +30,7 @@ export async function getEventRole(userId: string, eventId: string): Promise<Eve
         .eq('user_id', userId)
         .single();
 
-    if (adminEntry) return adminEntry.role === 'referee' ? 'referee' : 'admin';
+    if (adminEntry && ['admin','referee','vanguard'].includes(adminEntry.role)) return adminEntry.role;
 
     return null;
 }
@@ -40,5 +41,5 @@ export async function getEventRole(userId: string, eventId: string): Promise<Eve
  */
 export async function canAccessEvent(userId: string, eventId: string): Promise<boolean> {
     const role = await getEventRole(userId, eventId);
-    return role === 'owner' || role === 'admin';
+    return canManageEventMatches(role);
 }

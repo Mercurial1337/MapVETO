@@ -48,6 +48,21 @@ try{
  for(const name of ['veto_apply_schedule(uuid)','veto_no_show_moves(uuid)','veto_ready(uuid,uuid)','sheet_apply_day(uuid,uuid,text,bigint,text,jsonb,jsonb)'])assert.equal((await db.query('SELECT has_function_privilege($1,$2,$3) allowed',['anon',name,'EXECUTE'])).rows[0].allowed,false);
  const owner=randomUUID(),event=randomUUID(),sheet='schedule_test_workbook_123456';
  await db.query('INSERT INTO auth.users(id) VALUES($1)',[owner]);await db.query(`INSERT INTO events(id,name,created_by,google_sheet_id) VALUES($1,'Schedule QA',$2,$3)`,[event,owner,sheet]);
+ // Vanguard shares match-management RPC authority; Referees still cannot import.
+ const vanguard=randomUUID(),referee=randomUUID();
+ for(const [user,role] of [[vanguard,'vanguard'],[referee,'referee']]){
+  await db.query('INSERT INTO auth.users(id) VALUES($1)',[user]);
+  await db.query('INSERT INTO event_admins(event_id,user_id,role,added_by) VALUES($1,$2,$3,$4)',[event,user,role,owner]);
+ }
+ const importAs=user=>rpc('sheet_apply_day',[event,user,sheet,8,'D8 - Matches','[]','[]']);
+ assert.equal((await importAs(vanguard)).created,0);
+ await assert.rejects(()=>importAs(referee),/Head Ref access required/);
+ for(const name of ['bulk_create_matches','sheet_apply_day_without_schedule','sheet_link_existing','sheet_replace_password','sheet_replace_team_passwords']){
+  const definitions=(await db.query("SELECT prosrc FROM pg_proc WHERE proname=$1 AND pronamespace='public'::regnamespace",[name])).rows;
+  assert.equal(definitions.length,1);assert.match(definitions[0].prosrc,/role IN \('admin','vanguard'\)/);
+ }
+ assert.match((await db.query("SELECT prosrc FROM pg_proc WHERE proname='veto_notify_staff_timeout'")).rows[0].prosrc,/a.role IN \('admin','referee','vanguard'\)/);
+ console.log('PASS Vanguard database permissions: membership accepted, imports allowed, referee imports denied, all restricted import RPCs and staff timeout notifications include Vanguard');
  const row={source_id:'S1',round:'R1',team_a:'Schedule Alpha',team_b:'Schedule Beta',format:'bo3',status:'ready',issue:'',maps:ids,scheduled_at:'2099-10-24T15:00:00.000Z',schedule_error:null};
  const apply=(rows,choices)=>rpc('sheet_apply_day',[event,owner,sheet,1,'D1',JSON.stringify(rows),choices===null?null:JSON.stringify(choices)]);
  assert.equal((await apply([row],[{source_id:'S1',selection:'C',scheduled_at:'2099-10-24T16:00:00.000Z'}])).created,1);

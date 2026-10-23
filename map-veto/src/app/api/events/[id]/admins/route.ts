@@ -1,19 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient, createClient } from '@/lib/supabase/server';
 import { getEventRole } from '@/lib/auth/eventAuth';
+import {canAddEventStaff, canAssignEventRole} from '@/lib/auth/eventRoles';
 import { z } from 'zod';
 import { isSuperAdmin, SUPER_ADMIN_ONLY } from '@/lib/auth/superAdminRole';
 
 const AddAdminSchema = z.object({
     email: z.string().email(),
-    role: z.enum(['admin','referee']).default('admin'),
+    role: z.enum(['admin','referee','vanguard']).default('admin'),
 });
 
 interface RouteParams {
     params: Promise<{ id: string }>;
 }
 
-// GET: List all admins for an event (owner only)
+// GET: Owners and Vanguard staff can review staff before adding accounts.
 export async function GET(request: NextRequest, { params }: RouteParams) {
     try {
         const { id: eventId } = await params;
@@ -26,8 +27,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         }
 
         const role = await getEventRole(user.id, eventId);
-        if (role !== 'owner') {
-            return NextResponse.json({ error: 'Only the event owner can manage admins' }, { status: 403 });
+        if (!canAddEventStaff(role)) {
+            return NextResponse.json({ error: 'Event owner or Vanguard access required' }, { status: 403 });
         }
 
         const supabase = createServiceClient();
@@ -62,7 +63,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 }
 
-// POST: Add an admin by email (owner only)
+// POST: Vanguard can add Head Refs and Referees; only owners grant Vanguard.
 export async function POST(request: NextRequest, { params }: RouteParams) {
     try {
         const { id: eventId } = await params;
@@ -75,8 +76,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         const role = await getEventRole(user.id, eventId);
-        if (role !== 'owner') {
-            return NextResponse.json({ error: 'Only the event owner can manage admins' }, { status: 403 });
+        if (!canAddEventStaff(role)) {
+            return NextResponse.json({ error: 'Event owner or Vanguard access required' }, { status: 403 });
         }
 
         const body = await request.json();
@@ -89,6 +90,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         const { email,role:staffRole } = validationResult.data;
+        if (!canAssignEventRole(role, staffRole)) {
+            return NextResponse.json({error:'Only the event owner can assign Vanguard'}, {status:403});
+        }
         const supabase = createServiceClient();
 
         // Look up the user by email
@@ -108,9 +112,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         }
 
         // Can't add the owner as an admin
-        if (targetUser.id === user.id) {
+        if (await getEventRole(targetUser.id, eventId) === 'owner') {
             return NextResponse.json(
-                { error: 'You are already the owner of this event' },
+                { error: 'This account is already the event owner' },
                 { status: 400 }
             );
         }

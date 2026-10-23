@@ -62,13 +62,13 @@ try {
   assert.equal(snapshot.userRole,'observer');
   assert.equal(snapshot.match.can_admin,false);assert.equal(snapshot.match.can_referee,false);
   const page=await (await fetch(`${base}/match/${matchId}?token=${observer.token}`,{headers:{Cookie:user.cookie}})).text();
-  assert.ok(!page.includes('Head Admin override controls'));assert.ok(!page.includes('Request veto reset'));
+  assert.ok(!page.includes('Head Ref override controls'));assert.ok(!page.includes('Request veto reset'));
   for(const token of [observer.token,result.links.referee.token,randomUUID()]) {
    await post('/api/veto/admin/override',{match_id:matchId,token,operation:'pause',reason:'Observer must stay read-only'},user.cookie,403);
   }
  }
  // A referee creating a standalone match is its owner, but its observer link
- // still must not inherit that creator's Head Admin access.
+ // still must not inherit that creator's Head Ref access.
  assert.ifError((await db.from('matches').update({event_id:null,created_by:referee.id}).eq('id',matchId)).error);
  const creatorView=(await post('/api/veto/session',observer,referee.cookie,200)).data;
  assert.equal(creatorView.match.can_admin,false);assert.equal(creatorView.match.can_referee,false);
