@@ -57,9 +57,13 @@ export function SheetMatchImport({eventId}:{eventId:string}) {
   {notice && <p role="status" className="border border-green-400/50 p-3">{notice}</p>}
   {info?.connection && <section className="space-y-3">
    <div className="flex flex-wrap items-end gap-3"><label>Day tab<select className="block min-h-11 bg-black border border-white/30 p-2 mt-1" value={tab} disabled={busy} onChange={e=>{const day=e.target.value;setTab(day);setPreview(null);setResult(null);if(day)void run(()=>loadPreview(day));}}><option value="">Choose a day</option>{info.tabs.map(t=><option key={t.id} value={t.id}>{t.title}</option>)}</select></label>
-    {tab && <button className="btn-secondary min-h-11 px-3 py-2" disabled={busy} onClick={()=>void run(()=>loadPreview(tab,!!preview))}>Refresh preview</button>}
-    {!readOnly && <button className="btn-secondary min-h-11 px-3 py-2" disabled={busy||!info.connection.active_tabs.length} onClick={()=>void run(async()=>{const result=await request(url,{operation:'sync'});await reload();if(tab)await loadPreview(tab);setNotice(`Sync complete: ${result.created} created, ${result.waiting} waiting, ${result.conflicts} need review.`);})}>Sync approved matches now</button>}
+    {tab && <button aria-describedby="sheet-refresh-help" className="btn-secondary min-h-11 px-3 py-2" disabled={busy} onClick={()=>void run(()=>loadPreview(tab,!!preview))}>Refresh preview</button>}
+    {!readOnly && <button aria-describedby="sheet-sync-help" className="btn-secondary min-h-11 px-3 py-2" disabled={busy||!info.connection.active_tabs.length} onClick={()=>void run(async()=>{const result=await request(url,{operation:'sync'});await reload();if(tab)await loadPreview(tab);setNotice(`Sync complete: ${result.created} created, ${result.waiting} waiting, ${result.conflicts} need review.`);})}>Sync approved matches now</button>}
    </div>
+   <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/70">
+    {tab && <span id="sheet-refresh-help"><strong>Refresh preview:</strong> Reloads this day for review; creates no matches.</span>}
+    {!readOnly && <span id="sheet-sync-help"><strong>Sync approved:</strong> Checks all active days and creates already-approved matches once both opponents are known.</span>}
+   </p>
    <p className="text-sm text-white/70">Active days: {info.connection.active_tabs.map(t=>t.title).join(', ')||'None'}. {info.backgroundSync?'Approved days sync in the background every minute.':'Background sync starts after deployment with a configured production URL. Use Sync now for local testing.'}</p>
    {info.connection.last_sync_at && <p className="text-xs text-white/60">Last sync: {new Date(info.connection.last_sync_at).toLocaleString()}</p>}
    {info.connection.last_error && <p role="alert" className="text-red-300">Last sync error: {info.connection.last_error}</p>}
