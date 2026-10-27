@@ -6,6 +6,7 @@ const state={team_a_ready:false,team_b_ready:false,current_step:0,current_turn:n
 const old={match,state};const ready={match:{...match,status:'coin_toss'},state:{...state,team_a_ready:true,team_b_ready:true}};
 assert.deepEqual(matchNotices(old,ready,'team_a').map(n=>n.message),['Beta checked in.','Both teams are ready.']);
 assert.equal(matchNotices(ready,ready,'team_a').length,0);
+assert.equal(matchNotices(ready,{...ready,match:{...match,status:'side_selection',coin_toss_animation_ms:4000}},'team_a').some(n=>n.message.startsWith('Choose Team')),false);
 const start={match:{...match,status:'in_progress'},state:{...ready.state,current_turn:'team_a'}};
 assert.ok(matchNotices(ready,start,'team_a').some(n=>n.message.startsWith('Your turn')));
 const sameTeamNext={...start,state:{...start.state,current_step:1}};

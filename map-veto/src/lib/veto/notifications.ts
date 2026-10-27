@@ -17,7 +17,7 @@ export function matchNotices(previous:{match:Match|null;state:MatchState|null},c
  if((!old.team_a_ready || !old.team_b_ready) && state.team_a_ready && state.team_b_ready) notices.push({kind:'success',message:'Both teams are ready.',cue:'ready'});
  const starts=oldMatch.status!=='in_progress' && match.status==='in_progress';
  if(starts) notices.push({kind:'success',message:'The veto has started.',cue:'ready'});
- if(oldMatch.status!=='side_selection' && match.status==='side_selection' && role===match.coin_toss_winner) notices.push({kind:'info',message:'Choose Team A or Team B within 60 seconds.',cue:'turn'});
+ if(oldMatch.status!=='side_selection' && match.status==='side_selection' && role===match.coin_toss_winner && !match.coin_toss_animation_ms) notices.push({kind:'info',message:'Choose Team A or Team B within 60 seconds.',cue:'turn'});
  if(match.status==='in_progress' && !state.is_complete && state.current_turn===role && (starts || old.current_step!==state.current_step || old.current_turn!==state.current_turn)) notices.push({kind:'info',message:'Your turn. Confirm your selection within 60 seconds.',cue:'turn'});
  if(!old.is_complete && state.is_complete) notices.push({kind:'success',message:'The veto is complete. Record the match start when play begins.',cue:'complete'});
  if(oldMatch.status!=='ready_check' && match.status==='ready_check') notices.push({kind:'info',message:'The veto was reset. Both teams must check in again.'});

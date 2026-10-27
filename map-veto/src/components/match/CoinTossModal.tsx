@@ -5,7 +5,7 @@ interface Props {
  isOpen: boolean; teamAName: string; teamBName: string; isAdmin?: boolean;
  winner?: VetoActor | null; isSeeded?: boolean; userRole?: VetoActor | 'observer' | 'admin' | 'referee' | null;
  onFlip?: (forcedWinner?: VetoActor) => Promise<VetoActor | null>;
- onAnimationComplete?: () => void; coinImageA?: string | null; coinImageB?: string | null;inline?:boolean;
+ inline?:boolean;
 }
 export function CoinTossModal({isOpen,teamAName,teamBName,isAdmin,onFlip,inline=false}: Props) {
  const [busy,setBusy]=useState(false);

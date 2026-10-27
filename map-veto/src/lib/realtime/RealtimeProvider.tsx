@@ -159,6 +159,14 @@ export function RealtimeProvider({ matchId, token, initialData, passwordRequired
     const seenLogs = useRef(new Set(initialData.logs.map(log=>log.id)));
     const delivery = noticeDelivery(userRole);
     const playSound = useNotificationSound(delivery==='sound');
+    useEffect(()=>{
+        if(delivery!=='sound' || !clockReady || match?.status!=='side_selection' || userRole!==match.coin_toss_winner || !match.coin_toss_reveal_at || !match.coin_toss_animation_ms)return;
+        const now=clock.now();if(now===null)return;
+        const left=Date.parse(match.coin_toss_reveal_at)-now;
+        if(left<=0)return;
+        const timer=setTimeout(()=>playSound('turn'),left);
+        return()=>clearTimeout(timer);
+    },[delivery,clockReady,clock,match?.status,match?.coin_toss_winner,match?.coin_toss_reveal_at,match?.coin_toss_animation_ms,userRole,playSound]);
     useEffect(() => {
         const notices=matchNotices({match:prevMatchRef.current,state:prevStateRef.current},{match,state},userRole);
         if (delivery==='toast') for(const notice of notices) toast[notice.kind](notice.message);

@@ -8,6 +8,9 @@ import { MapCard } from '@/components/match/MapCard';
 import { VetoTimeline, TurnIndicator } from '@/components/match/VetoTimeline';
 import { TurnTimer } from '@/components/match/TurnTimer';
 import { CoinTossModal } from '@/components/match/CoinTossModal';
+import {CoinTossPlayback} from '@/components/match/CoinTossPlayback';
+import {useCoinTossReveal} from '@/hooks/useCoinTossReveal';
+import {hideCoinResult} from '@/lib/veto/coinPresentation';
 import { PositionSelectionModal } from '@/components/match/PositionSelectionModal';
 import { SideSelectionModal } from '@/components/match/SideSelectionModal';
 import { ReadyCheckModal } from '@/components/match/ReadyCheckModal';
@@ -62,6 +65,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     // Get the coin toss winner from match data
     const matchExt = match as MatchWithTemplate | null;
     const coinTossWinner = matchExt?.coin_toss_winner;
+    const coinRevealPending=useCoinTossReveal(match);
+    const visibleLogs=useMemo(()=>hideCoinResult(logs,coinRevealPending),[logs,coinRevealPending]);
 
     const templateSteps: VetoStep[] = useMemo(() => {
         const matchExt = match as MatchWithTemplate | null;
@@ -207,18 +212,14 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
         setSelectedMap(null);
     };
 
-    // === Coin Toss Modal Visibility ===
-    // Managed by local state. Opens when match status is 'coin_toss'.
-    // Stays open until CoinTossModal signals that the animation is complete.
     const coinTossModalOpen = match?.status === 'coin_toss';
-    const handleCoinTossAnimationComplete = useCallback(() => {}, []);
     const showCoinToss = coinTossModalOpen;
 
     // Ready Check Modal
     const showReadyCheck = match?.status === 'ready_check';
 
     // Position selection modal: only show after coin toss modal has closed
-    const showPositionSelection = match?.status === 'side_selection' && !coinTossModalOpen;
+    const showPositionSelection = match?.status === 'side_selection' && !coinRevealPending;
 
     // Get maps with fallback images and filter based on the current pool
     const mapsWithImages = useMemo(() => {
@@ -388,9 +389,10 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 winner={coinTossWinner}
                 isSeeded={!!match.coin_toss_forced}
                 onFlip={coinToss}
-                onAnimationComplete={handleCoinTossAnimationComplete}
                 userRole={userRole}
             />
+            {coinRevealPending && coinTossWinner && match.coin_toss_reveal_at && <CoinTossPlayback key={`${matchId}:${match.coin_toss_reveal_at}`}
+                winner={coinTossWinner} revealAt={match.coin_toss_reveal_at} durationMs={match.coin_toss_animation_ms||0}/>}
 
             {/* Position Selection Modal */}
             <PositionSelectionModal inline
@@ -505,7 +507,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                     {isAdmin && <AdminPanel matchId={matchId} matchStatus={match.status} isPaused={state?.is_paused} token={token}/>}
                     {isReferee && !isAdmin && <RefereePanel matchId={matchId} token={token}/>}
                     <section aria-label="Match activity" className="match-panel">
-                    <div className="panel-head"><h2>Action log</h2></div><ActionLog logs={logs} dbTeamAName={match.team_a_name} dbTeamBName={match.team_b_name} displayTeam1Name={match.team_a_name} displayTeam2Name={match.team_b_name} mapNames={mapNames}/>
+                    <div className="panel-head"><h2>Action log</h2></div><ActionLog logs={visibleLogs} dbTeamAName={match.team_a_name} dbTeamBName={match.team_b_name} displayTeam1Name={match.team_a_name} displayTeam2Name={match.team_b_name} mapNames={mapNames}/>
                     </section>
                 </aside>
             </div>
