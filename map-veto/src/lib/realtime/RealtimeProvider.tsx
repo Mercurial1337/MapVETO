@@ -94,7 +94,8 @@ export function RealtimeProvider({ matchId, token, initialData, passwordRequired
     const [error, setError] = useState<string | null>(null);
     // Password-protected team links stay locked until the server issues a match session.
     const [passwordRequired,setPasswordRequired]=useState(initiallyLocked);
-    const locked=useCallback((data:{password_required?:boolean})=>{if(!data?.password_required)return false;setPasswordRequired(true);setError(null);return true;},[]);
+    const [staffBlocked,setStaffBlocked]=useState(false);
+    const locked=useCallback((data:{password_required?:boolean;staff_access_required?:boolean;login_required?:boolean;error?:string})=>{if(data?.staff_access_required){setStaffBlocked(true);setMatch(null);setState(null);setMaps([]);setLogs([]);setUserRole(null);setError(data.error||'Staff access required');if(data.login_required)window.location.assign('/?next='+encodeURIComponent(window.location.pathname+window.location.search));return true;}if(!data?.password_required)return false;setPasswordRequired(true);setError(null);return true;},[]);
 
     const supabase = createClient();
     const [clock]=useState(()=>new VetoClock());
@@ -180,6 +181,7 @@ export function RealtimeProvider({ matchId, token, initialData, passwordRequired
     useEffect(() => {
         // No subscription or polling before the password is accepted; another tab
         // that unlocks the same link is picked up when this one regains focus.
+        if(staffBlocked)return;
         if(passwordRequired) {
             const retry=()=>{if(document.visibilityState==='visible')void fetchData();};
             window.addEventListener('focus',retry);document.addEventListener('visibilitychange',retry);
@@ -204,7 +206,7 @@ export function RealtimeProvider({ matchId, token, initialData, passwordRequired
         const interval=setInterval(recover,15000);
         window.addEventListener('focus',recover);document.addEventListener('visibilitychange',recover);
         return ()=>{clearTimeout(timer);clearInterval(interval);window.removeEventListener('focus',recover);document.removeEventListener('visibilitychange',recover);void supabase.removeChannel(channel);};
-    },[matchId,supabase,fetchData,passwordRequired]);
+    },[matchId,supabase,fetchData,passwordRequired,staffBlocked]);
 
     // Perform veto action
     const performAction = useCallback(

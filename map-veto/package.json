@@ -21,7 +21,9 @@
     "test:analytics-http": "node tests/analytics-http.test.mjs",
     "test:super-admin-http": "node tests/super-admin-http.test.mjs",
     "test:sheet-logos-http": "node tests/sheet-logos-http.test.mjs",
-    "test:vanguard-http": "node tests/vanguard-http.test.mjs"
+    "test:vanguard-http": "node tests/vanguard-http.test.mjs",
+    "test:staff-access-http": "node tests/staff-access-http.test.mjs",
+    "test:sheet-recreation-http": "node tests/sheet-recreation-http.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

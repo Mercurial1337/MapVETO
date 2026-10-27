@@ -1,5 +1,6 @@
 'use client';
 
+import {loginDestination} from '@/lib/auth/loginDestination';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -29,7 +30,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/admin');
+      router.push(loginDestination(new URLSearchParams(window.location.search).get('next')));
     } catch {
       setError('An unexpected error occurred');
       setIsLoading(false);

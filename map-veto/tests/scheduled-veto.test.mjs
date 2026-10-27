@@ -69,6 +69,26 @@ try{
  const imported=(await db.query(`SELECT m.* FROM matches m WHERE m.event_id=$1`,[event])).rows[0];assert.equal(imported.veto_scheduled_at.toISOString(),'2099-10-24T16:00:00.000Z');
  const admin=(await db.query(`SELECT token FROM match_links WHERE match_id=$1 AND link_type='admin'`,[imported.id])).rows[0].token;
  await rpc('veto_admin',[imported.id,admin,'reset',null,null,'Disable schedule',null]);await apply([row],null);assert.equal((await db.query('SELECT veto_schedule_enforced FROM matches WHERE id=$1',[imported.id])).rows[0].veto_schedule_enforced,false);
+ // Deletion remains a tombstone until an explicit, authorized recreation.
+ const sourceForRecreation=(await db.query('SELECT * FROM sheet_match_sources WHERE event_id=$1 AND source_id=$2',[event,'S1'])).rows[0];
+ const oldTokens=(await db.query('SELECT token FROM match_links WHERE match_id=$1',[imported.id])).rows.map(link=>link.token);
+ await db.query('DELETE FROM matches WHERE id=$1',[imported.id]);
+ assert.equal((await apply([row],null)).created,0);
+ assert.equal((await db.query('SELECT status FROM sheet_match_sources WHERE id=$1',[sourceForRecreation.id])).rows[0].status,'deleted');
+ const requestId=randomUUID(),recreate=(user,request=requestId,data=row)=>rpc('sheet_recreate_match',[event,user,sheet,1,sourceForRecreation.id,request,JSON.stringify(data)]);
+ await assert.rejects(()=>recreate(referee),/Head Ref access required/);
+ await assert.rejects(()=>recreate(owner,randomUUID(),{...row,status:'waiting'}),/resolve this match/);
+ await assert.rejects(()=>recreate(owner,randomUUID(),{...row,password_status:'supplied',password_hash:'scrypt$x'}),/Both team passwords/);
+ const configBefore=(await db.query('SELECT active_tabs FROM event_sheet_connections WHERE event_id=$1',[event])).rows[0];
+ const recreated=await recreate(vanguard);assert.equal(recreated.created,1);assert.notEqual(recreated.match_id,imported.id);
+ assert.equal((await recreate(vanguard)).created,0);
+ await assert.rejects(()=>recreate(owner,randomUUID()),/Only a deleted/);
+ assert.deepEqual((await db.query('SELECT active_tabs FROM event_sheet_connections WHERE event_id=$1',[event])).rows[0],configBefore);
+ assert.equal((await db.query('SELECT count(*)::int n FROM match_links WHERE match_id=$1',[recreated.match_id])).rows[0].n,5);
+ assert.equal((await db.query('SELECT count(*)::int n FROM match_links WHERE token=ANY($1::uuid[])',[oldTokens])).rows[0].n,0);
+ assert.equal((await apply([row],null)).created,0);
+ for(const role of ['anon','authenticated'])assert.equal((await db.query("SELECT has_function_privilege($1,'sheet_recreate_match(uuid,uuid,text,bigint,uuid,uuid,jsonb)','EXECUTE') allowed",[role])).rows[0].allowed,false);
+ console.log('PASS explicit sheet recreation: sync never recreates deleted matches, new ID and five new links, role/row/password validation, idempotent retries, existing-match denial, other day approvals unchanged and private RPC');
  const waiting={...row,source_id:'WAIT',team_a:'Waiting Alpha',team_b:'Winner #1',status:'waiting',scheduled_at:null,schedule_error:'Needs a full date'};
  await assert.rejects(()=>apply([row,waiting],[{source_id:'WAIT',selection:'A'}]),/MapVETO Time/);
  await apply([row,waiting],[{source_id:'WAIT',selection:'A',scheduled_at:'2099-10-24T17:00:00.000Z'}]);

@@ -44,7 +44,7 @@ export async function loadDay(eventId:string,tabId:number) {
  if(sourceError)throw new Error('Could not load import history.');
  // Fingerprints stay on the server; the preview only learns that a new password awaits approval.
  const scoped=scopeDayPreview(rows.map(visibleRow),saved||[],tab.id);
- const sources=scoped.sources.map(({created_password,...source})=>{const fingerprint=safe.find(row=>row.source_id===source.source_id)?.password_fingerprint;return {...source,password_update:!!(source.was_created && source.match_id && fingerprint && fingerprint!==created_password)};});
+ const sources=scoped.sources.map(({created_password,...source})=>{const fingerprint=safe.find(row=>row.source_id===source.source_id)?.password_fingerprint;return {...source,...(source.was_created && !source.match_id?{status:'deleted',issue:'This veto was deleted. Automatic recreation is blocked; use Recreate match to start a fresh veto.'}:{}),password_update:!!(source.was_created && source.match_id && fingerprint && fingerprint!==created_password)};});
  const {data:existing,error:existingError}=await db.from('matches').select('id,team_a_name,team_b_name,format').eq('event_id',eventId).is('sheet_source_id',null).neq('status','cancelled').limit(500);
  if(existingError)throw new Error('Could not check existing matches.');
  return {connection,tab,rows,preview:scoped.rows,hash:previewHash(safe),sources,existing:existing||[]};

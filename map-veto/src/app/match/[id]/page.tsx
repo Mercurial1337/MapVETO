@@ -1,6 +1,7 @@
 import { createServiceClient } from '@/lib/supabase/server';
 import MatchClient from './MatchClient';
-import { matchStaffAccess } from '@/lib/auth/matchAdmin';
+import {redirect} from 'next/navigation';
+import { matchStaffAccess, staffLinkAccess } from '@/lib/auth/matchAdmin';
 import { validateToken } from '@/lib/auth/token';
 import { teamPasswordRequired } from '@/lib/auth/teamAccess';
 
@@ -22,6 +23,11 @@ export default async function MatchPage({ params, searchParams }: MatchPageProps
 
     const access=await validateToken(matchId,token);
     if(!access.isValid) return <div role="alert" className="p-8">Invalid or expired match link.</div>;
+    if(access.linkType==='admin' || access.linkType==='referee'){
+        const staff=await staffLinkAccess(matchId,token);
+        if(staff.loginRequired)redirect('/?next='+encodeURIComponent(`/match/${matchId}?token=${token}`));
+        if(!staff.access)return <div role="alert" className="p-8">Your account does not have permission for this staff link. Contact the event organizer.</div>;
+    }
     // A protected team link renders nothing about the match until its password is verified.
     if((access.linkType==='team_a' || access.linkType==='team_b') && await teamPasswordRequired(matchId,token).catch(()=>true)) {
         return <MatchClient matchId={matchId} token={token} passwordRequired initialData={{ match: null, state: null, maps: [], logs: [], eventBranding: null, userRole: access.linkType }} />;

@@ -26,6 +26,7 @@ export async function GET(request:NextRequest,{params}:Context){
 const schema=z.discriminatedUnion('operation',[
  z.object({operation:z.literal('connect'),sheet:z.string().max(300)}),
  z.object({operation:z.literal('confirm'),tab:z.number().int().nonnegative(),hash:z.string().length(64),choices:z.array(z.object({source_id:z.string().min(1).max(100),selection:z.enum(['A','B','C']),scheduled_at:z.iso.datetime().nullable().optional()})).max(500)}),
+ z.object({operation:z.literal('recreate'),tab:z.number().int().nonnegative(),hash:z.string().length(64),source:z.string().uuid(),request_id:z.string().uuid()}),
  z.object({operation:z.literal('sync')}),z.object({operation:z.literal('stop'),tab:z.number().int().nonnegative()}),
  z.object({operation:z.literal('link'),source:z.string().uuid(),match:z.string().uuid()}),
  z.object({operation:z.literal('password'),tab:z.number().int().nonnegative(),hash:z.string().length(64),source:z.string().uuid()}),
@@ -53,6 +54,16 @@ export async function POST(request:NextRequest,{params}:Context){
    const {error:updateError}=await db.from('event_sheet_connections').update({connected_by:auth.user!.id}).eq('event_id',id);if(updateError)throw new Error(updateError.message);
    queueSheetLogos(id,day.connection.spreadsheet_id,day.tab);
    return json({success:true,...data,backgroundSync:await configureWorker()});
+  }
+  if(body.operation==='recreate'){
+   const day=await loadDay(id,body.tab);if(body.hash!==day.hash)return stale();
+   const source=day.sources.find(s=>s.id===body.source),row=source && day.rows.find(r=>r.source_id===source.source_id);
+   if(!source?.was_created || !row || day.rows.filter(r=>r.source_id===source.source_id).length!==1 || row.status!=='ready' || row.schedule_error)return NextResponse.json({error:'Refresh preview and resolve this match before recreating it.'},{status:409});
+   const [prepared]=await withCompetitiveMaps(await protectRows([row],[],[{source_id:row.source_id,selection:source.selection}]));
+   const {data,error}=await db.rpc('sheet_recreate_match',{p_event:id,p_user:auth.user!.id,p_spreadsheet:day.connection.spreadsheet_id,p_tab:body.tab,p_source:source.id,p_request:body.request_id,p_row:prepared});
+   if(error)return NextResponse.json({error:error.message},{status:409});
+   queueSheetLogos(id,day.connection.spreadsheet_id,day.tab);
+   return json({success:true,...data});
   }
   // Approving a changed sheet password replaces the active one and signs out both teams.
   if(body.operation==='password'){

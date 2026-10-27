@@ -1,3 +1,4 @@
+import {loginDestination} from '@/lib/auth/loginDestination';
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { isSuperAdmin } from '@/lib/auth/superAdminRole';
@@ -55,9 +56,8 @@ export async function updateSession(request: NextRequest) {
     // Redirect authenticated users away from login page
     // Only on mapveto subdomain (not root domain landing page)
     if (request.nextUrl.pathname === '/' && user) {
-        const url = request.nextUrl.clone();
-        url.pathname = '/admin';
-        return NextResponse.redirect(url);
+        const destination=new URL(loginDestination(request.nextUrl.searchParams.get('next')),request.url);
+        return NextResponse.redirect(destination);
     }
 
     return supabaseResponse;

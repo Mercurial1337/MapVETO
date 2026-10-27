@@ -73,7 +73,7 @@ try {
  const creatorView=(await post('/api/veto/session',observer,referee.cookie,200)).data;
  assert.equal(creatorView.match.can_admin,false);assert.equal(creatorView.match.can_referee,false);
  await post('/api/veto/admin/override',{...observer,operation:'pause',reason:'Creator observer must stay read-only'},referee.cookie,403);
- for(const [role,cookie] of [['admin',owner.cookie],['referee',referee.cookie]]) {
+ for(const [role,cookie] of [['admin',referee.cookie],['referee',referee.cookie]]) {
   const staffView=(await post('/api/veto/session',{match_id:matchId,token:all.links[role].token},cookie,200)).data;
   assert.equal(staffView.match.can_admin,role==='admin');assert.equal(staffView.match.can_referee,role==='referee');
  }
