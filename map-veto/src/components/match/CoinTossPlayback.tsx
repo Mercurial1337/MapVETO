@@ -48,6 +48,5 @@ export function CoinTossPlayback({matchId,winner,revealAt,durationMs,onPlaybackS
      onCanPlayThrough={start} onPlaying={playing} onEnded={()=>finish()} onError={()=>finish(true)}/>
    </> : <span className="text-sm text-white/70">Revealing the coin toss…</span>}
   </div>
-  <p role="status" className="text-sm text-white/70">The winner will appear here, then choose Team A or Team B.</p>
  </section>;
 }
