@@ -1,33 +1,39 @@
-# Coin toss media handoff
+# Coin toss video assets
 
-Production media is intentionally absent. Database duration defaults to zero, so
-the live toss stays immediate and these URLs are not requested until activation.
+These MP4s contain the full original Green/Purple animations, converted from the
+media team's GIFs without trimming, resizing, changing speed, or dropping frames.
 
-Supply two **512 × 512 px** GIFs with identical canvas and duration:
+| File | Dimensions | Frames / FPS | Duration | Bytes |
+|---|---|---|---|---|
+| green-wins.mp4 | 448 × 448 | 133 / 25 | 5.32 seconds | 631510 |
+| purple-wins.mp4 | 448 × 448 | 133 / 25 | 5.32 seconds | 618805 |
 
-- `green-wins.gif`: spinning coin, ends on Green.
-- `purple-wins.gif`: spinning coin, ends on Purple.
+Both use H.264, yuv420p, no audio, and MP4 faststart. Only the backend winner's
+clip is requested. The player is muted, inline, has no controls, never loops,
+and finishes through the native `ended` event. It retains the final frame until
+the shared reveal deadline. The winner and Team A/B controls are hidden until
+the reveal completes; the server reserves the full 60-second choice clock.
+The page renders the square video at 192 px on small screens / 256 px on larger
+screens. Reduced-motion, late-arrival, media-error and blocked-autoplay cases
+use a neutral waiting panel and cannot indefinitely block the match.
+A refresh does not replay the same toss in that tab; a new toss can play again.
 
-The page displays them at 192 px on small screens and 256 px on larger screens,
-centered in the match page. Keep the coin inside the canvas with some padding.
-Use a transparent background or match the site's dark background. Recommend
-around 4 seconds, including a short final-frame hold; export **one playback, no
-loop**, and aim for under 2 MB each. Supply the exact duration with the files.
+## Release is intentionally pending
 
-Activation (only after both final files are supplied):
+Do not push, deploy, or activate without the owner's instruction. Production
+`coin_toss_presentation_settings.duration_ms` remains **0**. For release:
 
-1. Verify both GIFs, equal dimensions/duration, first frame neutral, winner and
-   final-frame hold correct, single playback. Put the files in this directory.
-2. Deploy assets and code to VG Veto and verify both URLs work before enabling.
-3. Set `public.coin_toss_presentation_settings.duration_ms` to their exact duration
-   in milliseconds using a server credential. Supported range: 500–10000 ms;
-   set to `0` to disable future animations immediately. No team can edit this.
-4. Test both outcomes, team/observer/staff views, seeded bypass, failed media,
-   refresh, reduced motion, and reset. Do not enable against the old EMEA project.
+1. Deploy both MP4s and their player together, verify their public URLs.
+2. Set the VG Veto setting to **5320** milliseconds with a server credential.
+   Keep it 0 until the assets and player are deployed. No migration in this
+   commit enables production animations.
+3. Check both outcomes and the full 5.32-second playback before choices appear.
+   Confirm the 60-second server clock, resets, seeded bypass and error fallback.
+4. To disable future animations set the duration to 0. Do not change old EMEA.
 
-Backend result is authoritative. The reveal window is GIF duration plus a
-2-second loading allowance; the winner's full 60 seconds starts at its end.
-Late arrivals with insufficient playback time see a neutral waiting panel and
-then the same result. Missing/slow media and reduced-motion users cannot block
-the match. The winner is hidden in the on-page log until reveal; this is a
-presentation feature, not a cryptographic secret from browser developer tools.
+Conversion used FFmpeg libx264, preset slow, CRF 23, yuv420p, 25 FPS, no audio,
+metadata removed and `+faststart`. The original large GIFs are not shipped.
+The reveal window includes a bounded 2-second loading allowance. Clips start
+only when a full playback fits in that window. An already-playing clip is not
+cut short by the reveal clock; a stalled decoder has a bounded error fallback.
+This hides the result in the page UI, not from browser developer tools.

@@ -1,5 +1,5 @@
 'use client';
-import {useEffect,useState} from 'react';
+import {useCallback,useEffect,useState} from 'react';
 import type {Match} from '@/types';
 import {useRealtime} from '@/lib/realtime';
 import {coinRevealKey} from '@/lib/veto/coinPresentation';
@@ -8,6 +8,9 @@ export function useCoinTossReveal(match:Match|null) {
  const {clock,clockReady}=useRealtime();
  const key=coinRevealKey(match),revealAt=match?.coin_toss_reveal_at;
  const [released,setReleased]=useState<string|null>(null);
+ const [playing,setPlaying]=useState<string|null>(null);
+ const onPlaybackStart=useCallback(()=>setPlaying(key),[key]);
+ const onPlaybackFinish=useCallback(()=>setPlaying(previous=>previous===key?null:previous),[key]);
  useEffect(()=>{
   if(!key || !revealAt || !clockReady)return;
   let timer:ReturnType<typeof setTimeout>;
@@ -19,5 +22,6 @@ export function useCoinTossReveal(match:Match|null) {
   window.addEventListener('focus',recover);document.addEventListener('visibilitychange',recover);
   return()=>{clearTimeout(timer);window.removeEventListener('focus',recover);document.removeEventListener('visibilitychange',recover);};
  },[key,revealAt,clock,clockReady]);
- return !!key && key!==released;
+ // A clock update must never cut off a clip that is already playing.
+ return {pending:!!key && (key!==released || key===playing),onPlaybackStart,onPlaybackFinish};
 }

@@ -65,7 +65,7 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
     // Get the coin toss winner from match data
     const matchExt = match as MatchWithTemplate | null;
     const coinTossWinner = matchExt?.coin_toss_winner;
-    const coinRevealPending=useCoinTossReveal(match);
+    const {pending:coinRevealPending,onPlaybackStart,onPlaybackFinish}=useCoinTossReveal(match);
     const visibleLogs=useMemo(()=>hideCoinResult(logs,coinRevealPending),[logs,coinRevealPending]);
 
     const templateSteps: VetoStep[] = useMemo(() => {
@@ -392,7 +392,8 @@ function MatchVetoInterface({ token, matchId }: MatchVetoInterfaceProps) {
                 userRole={userRole}
             />
             {coinRevealPending && coinTossWinner && match.coin_toss_reveal_at && <CoinTossPlayback key={`${matchId}:${match.coin_toss_reveal_at}`}
-                winner={coinTossWinner} revealAt={match.coin_toss_reveal_at} durationMs={match.coin_toss_animation_ms||0}/>}
+                matchId={matchId} winner={coinTossWinner} revealAt={match.coin_toss_reveal_at} durationMs={match.coin_toss_animation_ms||0}
+                onPlaybackStart={onPlaybackStart} onPlaybackFinish={onPlaybackFinish}/>}
 
             {/* Position Selection Modal */}
             <PositionSelectionModal inline
